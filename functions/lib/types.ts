@@ -7,6 +7,8 @@ export type AppEnv = {
   DEV_AUTH_EMAIL?: string;
   CF_ACCESS_HOSTNAME?: string;
   CF_ACCESS_LOGOUT_URL?: string;
+  GOOGLE_CONTACTS_RANGE?: string;
+  GOOGLE_SITES_RANGE?: string;
 };
 
 export type PagesContext = {

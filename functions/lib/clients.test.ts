@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { clientEmails, findClientForEmail, parseClientRows } from "./clients";
+import {
+  clientEmails,
+  findClientForEmail,
+  findClientForEmailInWorkbook,
+  parseClientRows
+} from "./clients";
 
 const sheetValues = [
   [
@@ -73,6 +78,123 @@ const sheetValues = [
   ]
 ];
 
+const structuredWorkbook = {
+  clients: [
+    [
+      "client_id",
+      "nom_compte",
+      "organisation",
+      "statut_client",
+      "espace_client_actif",
+      "contact_principal_id",
+      "email_principal",
+      "nb_sites",
+      "date_creation",
+      "date_mise_a_jour",
+      "notes"
+    ],
+    [
+      "CLI-0001",
+      "Celine HEMING",
+      "HBINT",
+      "Actif",
+      "Oui",
+      "CON-0001",
+      "tdacunha@exedigit.fr",
+      "2",
+      "2026-07-06",
+      "2026-07-06",
+      "Premier client MVP"
+    ],
+    [
+      "CLI-0002",
+      "Client Suspendu",
+      "SUSPENDU",
+      "Actif",
+      "Non",
+      "CON-0002",
+      "pause@example.com",
+      "0",
+      "2026-07-06",
+      "2026-07-06",
+      ""
+    ]
+  ],
+  contacts: [
+    [
+      "contact_id",
+      "client_id",
+      "prenom",
+      "nom",
+      "email",
+      "role_contact",
+      "contact_principal",
+      "statut_contact",
+      "date_creation",
+      "notes"
+    ],
+    [
+      "CON-0001",
+      "CLI-0001",
+      "Celine",
+      "HEMING",
+      "tdacunha@exedigit.fr",
+      "Decisionnaire",
+      "Oui",
+      "Actif",
+      "2026-07-06",
+      "Contact initial MVP"
+    ],
+    [
+      "CON-0002",
+      "CLI-0002",
+      "Camille",
+      "Martin",
+      "pause@example.com",
+      "Decisionnaire",
+      "Oui",
+      "Actif",
+      "2026-07-06",
+      ""
+    ]
+  ],
+  sites: [
+    [
+      "site_id",
+      "client_id",
+      "domaine",
+      "url",
+      "type_site",
+      "statut_site",
+      "suivi_actif",
+      "date_ajout",
+      "notes"
+    ],
+    [
+      "SITE-0001",
+      "CLI-0001",
+      "hbint.com",
+      "https://www.hbint.com",
+      "Principal",
+      "Actif",
+      "Oui",
+      "2026-07-06",
+      "Site public"
+    ],
+    [
+      "SITE-0002",
+      "CLI-0001",
+      "trial.hbint.com",
+      "https://trial.hbint.com",
+      "Environnement de test",
+      "Actif",
+      "Oui",
+      "2026-07-06",
+      "Site trial"
+    ]
+  ]
+};
+
 describe("client sheet parsing", () => {
   it("parses rows and keeps empty fields safe", () => {
     const rows = parseClientRows(sheetValues);
@@ -114,5 +236,26 @@ describe("client sheet parsing", () => {
 
     expect(result.status).toBe("not_found");
   });
-});
 
+  it("matches the normalized FluxPerf workbook by principal email", () => {
+    const result = findClientForEmailInWorkbook(structuredWorkbook, "TDACUNHA@EXEDIGIT.FR");
+
+    expect(result.status).toBe("ok");
+    if (result.status === "ok") {
+      expect(result.client.id).toBe("CLI-0001");
+      expect(result.client.companyName).toBe("HBINT");
+      expect(result.client.firstName).toBe("Celine");
+      expect(result.client.lastName).toBe("HEMING");
+      expect(result.client.services).toEqual([
+        "Site suivi : hbint.com",
+        "Site suivi : trial.hbint.com"
+      ]);
+    }
+  });
+
+  it("rejects a normalized workbook client when the portal is disabled", () => {
+    const result = findClientForEmailInWorkbook(structuredWorkbook, "pause@example.com");
+
+    expect(result.status).toBe("inactive");
+  });
+});

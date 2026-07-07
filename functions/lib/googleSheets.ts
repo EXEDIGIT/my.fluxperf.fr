@@ -1,10 +1,12 @@
-import { demoSheetValues } from "./clients";
+import { demoSheetValues, type ClientWorkbookValues } from "./clients";
 import { isProduction } from "./auth";
 import type { AppEnv } from "./types";
 
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GOOGLE_SCOPE = "https://www.googleapis.com/auth/spreadsheets.readonly";
 const DEFAULT_RANGE = "Clients!A1:Z1000";
+const DEFAULT_CONTACTS_RANGE = "Contacts!A1:Z1000";
+const DEFAULT_SITES_RANGE = "Sites!A1:Z1000";
 
 type Fetcher = typeof fetch;
 
@@ -139,8 +141,18 @@ export async function readGoogleSheetValues(
   }
 
   const accessToken = await getGoogleAccessToken(env, fetcher);
+
+  return readGoogleSheetRange(env, accessToken, env.GOOGLE_SHEET_RANGE || DEFAULT_RANGE, fetcher);
+}
+
+async function readGoogleSheetRange(
+  env: AppEnv,
+  accessToken: string,
+  rangeName: string,
+  fetcher: Fetcher
+): Promise<string[][]> {
   const sheetId = encodeURIComponent(env.GOOGLE_SHEET_ID as string);
-  const range = encodeURIComponent(env.GOOGLE_SHEET_RANGE || DEFAULT_RANGE);
+  const range = encodeURIComponent(rangeName);
   const response = await fetcher(
     `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}`,
     {
@@ -152,9 +164,56 @@ export async function readGoogleSheetValues(
   const data = (await response.json()) as GoogleSheetResponse;
 
   if (!response.ok) {
-    throw new Error(data.error?.message || "Unable to read Google Sheet.");
+    throw new Error(data.error?.message || `Unable to read Google Sheet range ${rangeName}.`);
   }
 
   return data.values ?? [];
 }
 
+async function readOptionalGoogleSheetRange(
+  env: AppEnv,
+  accessToken: string,
+  rangeName: string,
+  fetcher: Fetcher
+): Promise<string[][]> {
+  try {
+    return await readGoogleSheetRange(env, accessToken, rangeName, fetcher);
+  } catch {
+    return [];
+  }
+}
+
+export async function readGoogleWorkbookValues(
+  env: AppEnv,
+  fetcher: Fetcher = fetch
+): Promise<ClientWorkbookValues> {
+  if (!isSheetsConfigured(env)) {
+    if (!isProduction(env)) {
+      return {
+        clients: demoSheetValues,
+        contacts: [],
+        sites: []
+      };
+    }
+
+    throw new Error("Google Sheets configuration is missing.");
+  }
+
+  const accessToken = await getGoogleAccessToken(env, fetcher);
+  const [clients, contacts, sites] = await Promise.all([
+    readGoogleSheetRange(env, accessToken, env.GOOGLE_SHEET_RANGE || DEFAULT_RANGE, fetcher),
+    readOptionalGoogleSheetRange(
+      env,
+      accessToken,
+      env.GOOGLE_CONTACTS_RANGE || DEFAULT_CONTACTS_RANGE,
+      fetcher
+    ),
+    readOptionalGoogleSheetRange(env, accessToken, env.GOOGLE_SITES_RANGE || DEFAULT_SITES_RANGE, fetcher)
+  ]);
+
+  return {
+    clients,
+    contacts,
+    sites
+  };
+}

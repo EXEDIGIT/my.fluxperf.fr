@@ -1,6 +1,6 @@
 import { getAuthenticatedEmail } from "../lib/auth";
-import { findClientForEmail } from "../lib/clients";
-import { readGoogleSheetValues } from "../lib/googleSheets";
+import { findClientForEmailInWorkbook } from "../lib/clients";
+import { readGoogleWorkbookValues } from "../lib/googleSheets";
 import { json, jsonError } from "../lib/response";
 import type { PagesContext } from "../lib/types";
 
@@ -12,8 +12,8 @@ export async function onRequestGet(context: PagesContext): Promise<Response> {
   }
 
   try {
-    const values = await readGoogleSheetValues(context.env);
-    const result = findClientForEmail(values, email);
+    const workbook = await readGoogleWorkbookValues(context.env);
+    const result = findClientForEmailInWorkbook(workbook, email);
 
     if (result.status !== "ok") {
       return jsonError(
