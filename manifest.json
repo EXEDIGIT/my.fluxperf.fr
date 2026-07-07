@@ -1,0 +1,26 @@
+{
+  "name": "My FluxPerf",
+  "short_name": "My FluxPerf",
+  "description": "Votre espace client FluxPerf.",
+  "lang": "fr-FR",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#fbf7ef",
+  "theme_color": "#f9b900",
+  "icons": [
+    {
+      "src": "/assets/img/meta/favicon-fluxperf-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/img/meta/favicon-fluxperf-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
+

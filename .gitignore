@@ -1,0 +1,14 @@
+node_modules
+.pnpm-store
+dist
+.wrangler
+.agents
+.codex-tmp
+_elmts
+.dev.vars
+.env
+.env.local
+coverage
+*.log
+*.key
+*service-account*.json
