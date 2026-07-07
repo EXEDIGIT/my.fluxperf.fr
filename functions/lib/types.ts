@@ -5,6 +5,7 @@ export type AppEnv = {
   GOOGLE_SERVICE_ACCOUNT_EMAIL?: string;
   GOOGLE_PRIVATE_KEY?: string;
   DEV_AUTH_EMAIL?: string;
+  CF_ACCESS_HOSTNAME?: string;
   CF_ACCESS_LOGOUT_URL?: string;
 };
 
@@ -60,4 +61,3 @@ export type RawClientRow = {
   last_action_3_label: string;
   last_action_3_date: string;
 };
-
