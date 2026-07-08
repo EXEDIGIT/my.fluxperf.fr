@@ -813,16 +813,24 @@ svg {
   animation: spin 1.1s linear infinite;
 }
 
-.error-center a {
+.error-center a,
+.error-center button {
   min-height: 44px;
   display: inline-flex;
   align-items: center;
   gap: 10px;
   padding: 0 18px;
+  border: 0;
   border-radius: 999px;
   background: var(--yellow);
   color: var(--ink);
+  cursor: pointer;
   font-weight: 700;
+}
+
+.error-center button:disabled {
+  cursor: wait;
+  opacity: 0.66;
 }
 
 .auth-page {

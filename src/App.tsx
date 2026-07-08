@@ -2,6 +2,7 @@ import { BarChart3, FilePenLine, LifeBuoy, Mail, MessageCircle, ShieldCheck } fr
 import { useEffect, useMemo, useState } from "react";
 import { ActionCard } from "./components/ActionCard";
 import { AuthCallbackPage } from "./components/AuthCallbackPage";
+import { AuthConfirmPage } from "./components/AuthConfirmPage";
 import { ErrorState } from "./components/ErrorState";
 import { Header } from "./components/Header";
 import { JotformModal } from "./components/JotformModal";
@@ -39,9 +40,10 @@ export function App() {
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [modal, setModal] = useState<ModalState>(null);
   const isAuthCallback = window.location.pathname === "/auth/callback";
+  const isAuthConfirm = window.location.pathname === "/auth/confirm";
 
   useEffect(() => {
-    if (isAuthCallback) {
+    if (isAuthCallback || isAuthConfirm) {
       return;
     }
 
@@ -110,7 +112,7 @@ export function App() {
       isMounted = false;
       listener?.data.subscription.unsubscribe();
     };
-  }, [isAuthCallback]);
+  }, [isAuthCallback, isAuthConfirm]);
 
   useEffect(() => {
     if (state.status === "ready" && window.location.pathname === "/login") {
@@ -139,6 +141,10 @@ export function App() {
 
   if (isAuthCallback) {
     return <AuthCallbackPage />;
+  }
+
+  if (isAuthConfirm) {
+    return <AuthConfirmPage />;
   }
 
   if (state.status === "anonymous") {
