@@ -12,6 +12,20 @@ function normalizeEmail(value: string): string {
   return value.trim().toLowerCase();
 }
 
+function signInErrorMessage(error: { message?: string; status?: number }) {
+  const message = error.message?.toLowerCase() ?? "";
+
+  if (error.status === 429 || message.includes("rate limit") || message.includes("security purposes")) {
+    return "Trop de demandes de connexion ont ete envoyees. Patientez une minute, puis demandez un nouveau lien.";
+  }
+
+  if (message.includes("signup") || message.includes("user not found") || message.includes("not found")) {
+    return "Cette adresse email ne semble pas rattachee a un espace FluxPerf. Verifiez l'adresse ou contactez le support.";
+  }
+
+  return "Le lien de connexion n'a pas pu etre envoye pour le moment. Patientez quelques instants, puis reessayez.";
+}
+
 export function LoginPage() {
   const [email, setEmail] = useState("");
   const [state, setState] = useState<LoginState>({ status: "idle" });
@@ -54,8 +68,7 @@ export function LoginPage() {
     if (error) {
       setState({
         status: "error",
-        message:
-          "Cette adresse email ne semble pas rattachee a un espace FluxPerf. Verifiez l'adresse ou contactez le support."
+        message: signInErrorMessage(error)
       });
       return;
     }
