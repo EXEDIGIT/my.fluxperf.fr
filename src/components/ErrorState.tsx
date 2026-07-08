@@ -9,29 +9,28 @@ function getErrorContent(error: unknown) {
   if (error instanceof ApiError) {
     if (error.status === 401) {
       return {
-        title: "Accès non authentifié",
-        message:
-          "Connectez-vous via Cloudflare Access pour ouvrir votre espace client FluxPerf."
+        title: "Connexion requise",
+        message: "Connectez-vous a votre espace FluxPerf pour continuer."
       };
     }
 
     if (error.status === 403) {
       return {
-        title: "Espace client non configuré",
+        title: "Espace client non configure",
         message:
-          "Votre accès est bien authentifié, mais votre espace client n'est pas encore configuré. Merci de contacter FluxPerf."
+          "Votre adresse est authentifiee, mais aucun espace client FluxPerf n'est encore rattache a cet email."
       };
     }
 
     return {
-      title: "Données indisponibles",
+      title: "Donnees indisponibles",
       message: error.message
     };
   }
 
   return {
-    title: "Données indisponibles",
-    message: "Une erreur empêche l'affichage de votre espace client pour le moment."
+    title: "Donnees indisponibles",
+    message: "Une erreur empeche l'affichage de votre espace client pour le moment."
   };
 }
 

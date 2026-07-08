@@ -1,6 +1,13 @@
 import type { AppEnv } from "./types";
 
-const DEFAULT_ACCESS_HOSTNAME = "my.fluxperf.fr";
+type Fetcher = typeof fetch;
+
+type SupabaseUserResponse = {
+  email?: string;
+  user?: {
+    email?: string;
+  };
+};
 
 export function isProduction(env: AppEnv): boolean {
   return env.APP_ENV === "production";
@@ -10,113 +17,71 @@ export function normalizeEmail(value: string): string {
   return value.trim().toLowerCase();
 }
 
-function requestHostname(request: Request): string {
-  try {
-    return new URL(request.url).hostname.toLowerCase();
-  } catch {
-    return request.headers.get("Host")?.toLowerCase() ?? "";
-  }
-}
+function getBearerToken(request: Request): string | null {
+  const authorization = request.headers.get("Authorization");
+  const [scheme, token] = authorization?.split(" ") ?? [];
 
-function accessHostname(env: AppEnv): string {
-  return (env.CF_ACCESS_HOSTNAME || DEFAULT_ACCESS_HOSTNAME).trim().toLowerCase();
-}
-
-function shouldTrustAccessIdentity(request: Request, env: AppEnv): boolean {
-  if (!isProduction(env)) {
-    return true;
-  }
-
-  return requestHostname(request) === accessHostname(env);
-}
-
-function getCookieValue(request: Request, name: string): string | null {
-  const cookieHeader = request.headers.get("Cookie");
-
-  if (!cookieHeader) {
+  if (scheme?.toLowerCase() !== "bearer" || !token?.trim()) {
     return null;
   }
 
-  const matchingCookie = cookieHeader
-    .split(";")
-    .map((cookie) => cookie.trim())
-    .find((cookie) => cookie.startsWith(`${name}=`));
-
-  if (!matchingCookie) {
-    return null;
-  }
-
-  const value = matchingCookie.slice(name.length + 1);
-
-  try {
-    return decodeURIComponent(value);
-  } catch {
-    return value;
-  }
+  return token.trim();
 }
 
-function decodeBase64Url(value: string): string | null {
-  try {
-    const base64 = value.replace(/-/g, "+").replace(/_/g, "/");
-    const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, "=");
+function getSupabaseConfig(env: AppEnv) {
+  const url = env.SUPABASE_URL?.trim();
+  const publishableKey = (env.SUPABASE_PUBLISHABLE_KEY || env.SUPABASE_ANON_KEY)?.trim();
 
-    return atob(padded);
-  } catch {
+  if (!url || !publishableKey) {
     return null;
   }
+
+  return {
+    url: url.replace(/\/+$/, ""),
+    publishableKey
+  };
 }
 
-function emailFromAccessJwt(token: string | null): string | null {
-  const payloadSegment = token?.split(".")[1];
+async function emailFromSupabaseToken(
+  token: string,
+  env: AppEnv,
+  fetcher: Fetcher
+): Promise<string | null> {
+  const config = getSupabaseConfig(env);
 
-  if (!payloadSegment) {
+  if (!config) {
     return null;
   }
 
-  const decodedPayload = decodeBase64Url(payloadSegment);
-
-  if (!decodedPayload) {
-    return null;
-  }
-
-  try {
-    const claims = JSON.parse(decodedPayload) as Record<string, unknown>;
-    const emailClaim = claims.email;
-    const subjectClaim = claims.sub;
-
-    if (typeof emailClaim === "string" && emailClaim.trim()) {
-      return normalizeEmail(emailClaim);
+  const response = await fetcher(`${config.url}/auth/v1/user`, {
+    headers: {
+      apikey: config.publishableKey,
+      Authorization: `Bearer ${token}`
     }
+  });
 
-    if (typeof subjectClaim === "string" && subjectClaim.includes("@")) {
-      return normalizeEmail(subjectClaim);
-    }
-  } catch {
+  if (!response.ok) {
     return null;
   }
 
-  return null;
+  const data = (await response.json()) as SupabaseUserResponse;
+  const email = data.email || data.user?.email;
+
+  return email?.trim() ? normalizeEmail(email) : null;
 }
 
-function getAccessJwtEmail(request: Request): string | null {
-  const assertionHeader = request.headers.get("Cf-Access-Jwt-Assertion");
-  const authorizationCookie = getCookieValue(request, "CF_Authorization");
+export async function getAuthenticatedEmail(
+  request: Request,
+  env: AppEnv,
+  fetcher: Fetcher = fetch
+): Promise<string | null> {
+  const bearerToken = getBearerToken(request);
 
-  return emailFromAccessJwt(assertionHeader) || emailFromAccessJwt(authorizationCookie);
-}
+  if (bearerToken) {
+    const supabaseEmail = await emailFromSupabaseToken(bearerToken, env, fetcher);
 
-export function getAuthenticatedEmail(request: Request, env: AppEnv): string | null {
-  if (shouldTrustAccessIdentity(request, env)) {
-    const accessEmail = request.headers.get("Cf-Access-Authenticated-User-Email");
-
-    if (accessEmail?.trim()) {
-      return normalizeEmail(accessEmail);
-    }
-
-    const accessJwtEmail = getAccessJwtEmail(request);
-
-    if (accessJwtEmail) {
-      return accessJwtEmail;
+    if (supabaseEmail) {
+      return supabaseEmail;
     }
   }
 

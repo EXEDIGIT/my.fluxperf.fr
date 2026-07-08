@@ -1,4 +1,5 @@
 import type { ApiErrorResponse, MeResponse } from "../types/client";
+import { getSupabaseAccessToken } from "./supabase";
 
 export class ApiError extends Error {
   readonly status: number;
@@ -56,10 +57,17 @@ function shouldUseViteDemoFallback(): boolean {
 
 export async function getMe(): Promise<MeResponse> {
   try {
+    const accessToken = await getSupabaseAccessToken();
+    const headers: HeadersInit = {
+      Accept: "application/json"
+    };
+
+    if (accessToken) {
+      headers.Authorization = `Bearer ${accessToken}`;
+    }
+
     const response = await fetch("/api/me", {
-      headers: {
-        Accept: "application/json"
-      }
+      headers
     });
     const contentType = response.headers.get("Content-Type") ?? "";
 
@@ -86,4 +94,3 @@ export async function getMe(): Promise<MeResponse> {
     throw error;
   }
 }
-

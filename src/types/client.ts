@@ -27,9 +27,6 @@ export type MeResponse = {
     email: string;
   };
   client: Client;
-  meta?: {
-    logoutUrl?: string;
-  };
 };
 
 export type ApiErrorResponse = {
@@ -38,4 +35,3 @@ export type ApiErrorResponse = {
     message?: string;
   };
 };
-

@@ -5,8 +5,9 @@ export type AppEnv = {
   GOOGLE_SERVICE_ACCOUNT_EMAIL?: string;
   GOOGLE_PRIVATE_KEY?: string;
   DEV_AUTH_EMAIL?: string;
-  CF_ACCESS_HOSTNAME?: string;
-  CF_ACCESS_LOGOUT_URL?: string;
+  SUPABASE_URL?: string;
+  SUPABASE_PUBLISHABLE_KEY?: string;
+  SUPABASE_ANON_KEY?: string;
   GOOGLE_CONTACTS_RANGE?: string;
   GOOGLE_SITES_RANGE?: string;
 };

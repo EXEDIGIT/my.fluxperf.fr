@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Architecture My FluxPerf</title>
+    <style>
+      :root {
+        --bg: #fbf7ef;
+        --white: #ffffff;
+        --teal: #006f78;
+        --night: #082d42;
+        --yellow: #f9b900;
+        --line: #d5e8e5;
+        --muted: #4d6672;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--night);
+        font-family: Comfortaa, Arial, sans-serif;
+        line-height: 1.55;
+      }
+
+      main {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 56px 24px 80px;
+      }
+
+      header {
+        border-bottom: 1px solid var(--line);
+        margin-bottom: 32px;
+        padding-bottom: 28px;
+      }
+
+      h1 {
+        color: var(--teal);
+        font-size: clamp(2rem, 5vw, 4.5rem);
+        line-height: 1.05;
+        margin: 0 0 16px;
+      }
+
+      h2 {
+        color: var(--teal);
+        font-size: 1.65rem;
+        margin: 40px 0 14px;
+      }
+
+      h3 {
+        margin: 22px 0 8px;
+      }
+
+      p {
+        margin: 0 0 14px;
+      }
+
+      .intro {
+        color: var(--muted);
+        font-size: 1.1rem;
+        max-width: 780px;
+      }
+
+      .card {
+        background: var(--white);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        box-shadow: 0 18px 40px rgba(8, 45, 66, 0.08);
+        padding: 24px;
+      }
+
+      .grid {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      }
+
+      .tool strong {
+        color: var(--teal);
+        display: block;
+        margin-bottom: 8px;
+      }
+
+      .tag {
+        background: #e8f7f5;
+        border-radius: 999px;
+        color: var(--teal);
+        display: inline-flex;
+        font-size: 0.9rem;
+        margin: 0 8px 8px 0;
+        padding: 8px 12px;
+      }
+
+      img {
+        background: var(--white);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        box-shadow: 0 18px 40px rgba(8, 45, 66, 0.08);
+        display: block;
+        height: auto;
+        max-width: 100%;
+      }
+
+      table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid var(--line);
+        padding: 12px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        color: var(--teal);
+      }
+
+      code,
+      pre {
+        background: #f1ece2;
+        border-radius: 8px;
+        color: var(--night);
+        font-family: Consolas, Monaco, monospace;
+      }
+
+      code {
+        padding: 2px 5px;
+      }
+
+      pre {
+        overflow: auto;
+        padding: 16px;
+      }
+
+      .warning {
+        border-left: 5px solid var(--yellow);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <p class="tag">Document d'archive</p>
+        <p class="tag">My FluxPerf</p>
+        <p class="tag">Cloudflare + Google Sheets</p>
+        <h1>Comprendre le portail client My FluxPerf</h1>
+        <p class="intro">
+          Cette page explique le role de chaque brique, le chemin d'une connexion,
+          les erreurs courantes et les points a verifier pour reprendre le projet.
+        </p>
+      </header>
+
+      <section class="card">
+        <h2>L'histoire simple</h2>
+        <p>
+          Le portail fonctionne comme une agence privee. Cloudflare Access joue le
+          role du vigile, Cloudflare Pages heberge la salle d'accueil, l'API
+          serveur va chercher uniquement la bonne fiche client, et Google Sheets
+          reste le classeur de reference.
+        </p>
+      </section>
+
+      <h2>Le role de chaque outil</h2>
+      <section class="grid">
+        <article class="card tool">
+          <strong>Cloudflare DNS</strong>
+          Oriente l'adresse <code>my.fluxperf.fr</code> vers le bon service Cloudflare.
+        </article>
+        <article class="card tool">
+          <strong>Cloudflare Access</strong>
+          Controle l'entree avec un code temporaire par email et une strategie d'acces.
+        </article>
+        <article class="card tool">
+          <strong>Cloudflare Pages</strong>
+          Heberge le site React et publie automatiquement chaque version poussee sur GitHub.
+        </article>
+        <article class="card tool">
+          <strong>Pages Functions</strong>
+          Execute l'API privee <code>/api/me</code> cote serveur, la ou les secrets restent caches.
+        </article>
+        <article class="card tool">
+          <strong>Google Service Account</strong>
+          Badge technique qui permet au serveur de lire le Google Sheet sans compte humain.
+        </article>
+        <article class="card tool">
+          <strong>Google Sheets API</strong>
+          Verifie le badge, puis renvoie les lignes demandees au serveur.
+        </article>
+        <article class="card tool">
+          <strong>Google Sheet</strong>
+          BDD simple du MVP : onglets <code>Clients</code>, <code>Contacts</code>, <code>Sites</code>.
+        </article>
+        <article class="card tool">
+          <strong>GitHub</strong>
+          Atelier source du code. Un push sur <code>main</code> declenche le redeploiement.
+        </article>
+      </section>
+
+      <h2>Schema de fonctionnement</h2>
+      <img src="schema-my-fluxperf.svg" alt="Schema de fonctionnement My FluxPerf" />
+
+      <h2>Chemin d'une connexion</h2>
+      <section class="card">
+        <ol>
+          <li>Le client ouvre <code>https://my.fluxperf.fr</code>.</li>
+          <li>Cloudflare Access demande un email et envoie un code OTP.</li>
+          <li>Si l'email est autorise, Access pose un jeton de session.</li>
+          <li>React charge le dashboard et appelle <code>/api/me</code>.</li>
+          <li>L'API lit l'email connecte depuis Cloudflare Access.</li>
+          <li>L'API lit Google Sheets via le Service Account.</li>
+          <li>L'API cherche un client actif correspondant a cet email.</li>
+          <li>React recoit uniquement cette fiche client et affiche le dashboard.</li>
+        </ol>
+      </section>
+
+      <h2>Conditions pour afficher un client</h2>
+      <section class="card">
+        <p>Le client doit respecter ces conditions dans Google Sheets :</p>
+        <ul>
+          <li><code>Clients.statut_client = Actif</code></li>
+          <li><code>Clients.espace_client_actif = Oui</code></li>
+          <li>l'email connecte est dans <code>Clients.email_principal</code> ou dans <code>Contacts.email</code></li>
+          <li>le contact correspondant n'est pas inactif</li>
+        </ul>
+      </section>
+
+      <h2>Erreurs utiles a connaitre</h2>
+      <section class="card">
+        <table>
+          <thead>
+            <tr>
+              <th>Erreur</th>
+              <th>Signification</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>AUTH_REQUIRED</code></td>
+              <td>L'API ne voit pas l'identite Cloudflare Access.</td>
+              <td>Verifier Access, le domaine protege et le correctif JWT.</td>
+            </tr>
+            <tr>
+              <td><code>CLIENT_NOT_CONFIGURED</code></td>
+              <td>L'utilisateur est connecte, mais aucun client actif ne correspond.</td>
+              <td>Verifier email, statut client et espace client actif dans le Google Sheet.</td>
+            </tr>
+            <tr>
+              <td><code>DATA_UNAVAILABLE</code></td>
+              <td>L'API n'arrive pas a lire Google Sheets.</td>
+              <td>Verifier les secrets Cloudflare, le partage du Sheet et les ranges.</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <h2>Variables Cloudflare importantes</h2>
+      <section class="card warning">
+        <pre>APP_ENV=production
+GOOGLE_SHEET_ID=...
+GOOGLE_SHEET_RANGE=Clients!A1:Z1000
+GOOGLE_CONTACTS_RANGE=Contacts!A1:Z1000
+GOOGLE_SITES_RANGE=Sites!A1:Z1000
+GOOGLE_SERVICE_ACCOUNT_EMAIL=...
+GOOGLE_PRIVATE_KEY=...
+CF_ACCESS_HOSTNAME=my.fluxperf.fr</pre>
+        <p>
+          La cle <code>GOOGLE_PRIVATE_KEY</code> doit rester un secret Cloudflare.
+          Elle ne doit jamais etre ajoutee au repository GitHub.
+        </p>
+      </section>
+
+      <h2>Tests a faire apres chaque mise a jour</h2>
+      <section class="card">
+        <ol>
+          <li><code>/api/health</code> doit repondre <code>status: ok</code>.</li>
+          <li>En navigation privee, Access doit demander un OTP email.</li>
+          <li>Un email autorise et actif doit arriver sur le dashboard.</li>
+          <li>Un email absent doit afficher un refus propre.</li>
+          <li>Les cartes sans URL doivent rester propres et desactivees.</li>
+          <li>Verifier rapidement desktop et mobile.</li>
+        </ol>
+      </section>
+    </main>
+  </body>
+</html>

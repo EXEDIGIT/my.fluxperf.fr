@@ -11,7 +11,7 @@ import {
 import { useState } from "react";
 
 type SidebarProps = {
-  logoutUrl?: string;
+  onLogout?: () => void;
 };
 
 const navigation = [
@@ -42,7 +42,7 @@ const navigation = [
   }
 ];
 
-export function Sidebar({ logoutUrl }: SidebarProps) {
+export function Sidebar({ onLogout }: SidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   const navLinks = (
@@ -77,11 +77,11 @@ export function Sidebar({ logoutUrl }: SidebarProps) {
           <span>My FluxPerf</span>
         </a>
         {navLinks}
-        {logoutUrl ? (
-          <a className="logout-link" href={logoutUrl}>
+        {onLogout ? (
+          <button className="logout-link" type="button" onClick={onLogout}>
             <LogOut aria-hidden="true" />
-            <span>Déconnexion</span>
-          </a>
+            <span>Deconnexion</span>
+          </button>
         ) : null}
       </aside>
 
@@ -94,15 +94,14 @@ export function Sidebar({ logoutUrl }: SidebarProps) {
             </button>
           </div>
           {navLinks}
-          {logoutUrl ? (
-            <a className="logout-link" href={logoutUrl}>
+          {onLogout ? (
+            <button className="logout-link" type="button" onClick={onLogout}>
               <LogOut aria-hidden="true" />
-              <span>Déconnexion</span>
-            </a>
+              <span>Deconnexion</span>
+            </button>
           ) : null}
         </div>
       </div>
     </>
   );
 }
-

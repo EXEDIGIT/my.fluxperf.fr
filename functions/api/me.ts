@@ -5,7 +5,7 @@ import { json, jsonError } from "../lib/response";
 import type { PagesContext } from "../lib/types";
 
 export async function onRequestGet(context: PagesContext): Promise<Response> {
-  const email = getAuthenticatedEmail(context.request, context.env);
+  const email = await getAuthenticatedEmail(context.request, context.env);
 
   if (!email) {
     return jsonError(401, "AUTH_REQUIRED", "Authentification requise.");
@@ -27,12 +27,7 @@ export async function onRequestGet(context: PagesContext): Promise<Response> {
       user: {
         email
       },
-      client: result.client,
-      meta: {
-        ...(context.env.CF_ACCESS_LOGOUT_URL
-          ? { logoutUrl: context.env.CF_ACCESS_LOGOUT_URL }
-          : {})
-      }
+      client: result.client
     });
   } catch {
     return jsonError(

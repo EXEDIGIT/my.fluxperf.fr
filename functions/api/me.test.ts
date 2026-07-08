@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { onRequestGet } from "./me";
 import type { AppEnv, PagesContext } from "../lib/types";
 
@@ -14,7 +14,11 @@ async function bodyOf(response: Response) {
 }
 
 describe("GET /api/me", () => {
-  it("returns 401 when no Cloudflare Access email or local demo email exists", async () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("returns 401 when no Supabase session or local demo email exists", async () => {
     const response = await onRequestGet(
       context("https://my.fluxperf.fr/api/me", { APP_ENV: "development" })
     );
@@ -57,12 +61,25 @@ describe("GET /api/me", () => {
     expect(body.error).toMatchObject({ code: "CLIENT_NOT_CONFIGURED" });
   });
 
-  it("uses the Cloudflare Access email header first", async () => {
+  it("uses the Supabase bearer token when present", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json({
+          email: "direction@a2-cm.fr"
+        })
+      )
+    );
+
     const response = await onRequestGet(
       context(
-        "https://my.fluxperf.fr/api/me?email=unknown@example.com",
-        { APP_ENV: "development" },
-        { "Cf-Access-Authenticated-User-Email": "direction@a2-cm.fr" }
+        "https://my.fluxperf.fr/api/me",
+        {
+          APP_ENV: "development",
+          SUPABASE_URL: "https://example.supabase.co",
+          SUPABASE_PUBLISHABLE_KEY: "sb_publishable_test"
+        },
+        { Authorization: "Bearer valid-token" }
       )
     );
     const body = await bodyOf(response);
@@ -71,4 +88,3 @@ describe("GET /api/me", () => {
     expect(body.user).toEqual({ email: "direction@a2-cm.fr" });
   });
 });
-

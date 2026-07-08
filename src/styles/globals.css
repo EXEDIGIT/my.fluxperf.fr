@@ -161,6 +161,10 @@ svg {
 .logout-link {
   margin-top: auto;
   border: 1px solid var(--line);
+  width: 100%;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
 }
 
 .mobile-menu-button {
@@ -239,12 +243,12 @@ svg {
 
 .dashboard-header {
   position: relative;
-  min-height: 330px;
+  min-height: 240px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 340px;
   align-items: center;
-  gap: 34px;
-  padding: 42px;
+  gap: 30px;
+  padding: 34px;
   overflow: hidden;
   border: 1px solid rgba(0, 111, 120, 0.16);
   border-radius: var(--radius);
@@ -289,17 +293,17 @@ svg {
 }
 
 .dashboard-header h1 {
-  max-width: 760px;
+  max-width: 620px;
   margin: 0;
   color: var(--green);
-  font-size: clamp(2rem, 4vw, 3.75rem);
-  line-height: 1.08;
+  font-size: clamp(1.55rem, 2.2vw, 2.2rem);
+  line-height: 1.2;
   letter-spacing: 0;
 }
 
 .header-copy {
   max-width: 700px;
-  margin: 20px 0 0;
+  margin: 14px 0 0;
   color: var(--muted);
   font-size: 1rem;
 }
@@ -821,6 +825,173 @@ svg {
   font-weight: 700;
 }
 
+.auth-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(231, 244, 243, 0.82)),
+    var(--cream);
+}
+
+.auth-panel {
+  width: min(100%, 460px);
+  display: grid;
+  gap: 24px;
+  padding: 34px;
+  border: 1px solid rgba(0, 111, 120, 0.16);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: var(--shadow);
+}
+
+.auth-brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.auth-brand img {
+  width: 154px;
+  height: auto;
+}
+
+.auth-brand span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.auth-copy {
+  display: grid;
+  gap: 12px;
+}
+
+.auth-kicker {
+  width: fit-content;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--green-soft);
+  color: var(--green);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.auth-copy h1 {
+  margin: 0;
+  color: var(--green);
+  font-size: 2rem;
+  line-height: 1.12;
+}
+
+.auth-copy p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.auth-form {
+  display: grid;
+  gap: 12px;
+}
+
+.auth-form label {
+  color: var(--ink);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.auth-input-row {
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--white);
+}
+
+.auth-input-row:focus-within {
+  border-color: var(--green);
+  box-shadow: 0 0 0 4px rgba(0, 111, 120, 0.1);
+}
+
+.auth-input-row svg {
+  flex: 0 0 auto;
+  color: var(--green);
+}
+
+.auth-input-row input {
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+}
+
+.auth-form button {
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--yellow);
+  color: var(--ink);
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 14px 24px rgba(249, 185, 0, 0.24);
+}
+
+.auth-form button:disabled {
+  cursor: wait;
+  opacity: 0.66;
+}
+
+.auth-message {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+}
+
+.auth-message strong,
+.auth-message p {
+  margin: 0;
+}
+
+.auth-message.success {
+  border: 1px solid rgba(0, 111, 120, 0.18);
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.auth-message.error {
+  border: 1px solid rgba(249, 185, 0, 0.32);
+  background: var(--yellow-soft);
+  color: var(--ink);
+}
+
+.auth-support {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--green);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
 @keyframes spin {
   to {
     transform: rotate(360deg);
@@ -879,7 +1050,7 @@ svg {
   }
 
   .dashboard-header h1 {
-    font-size: 2rem;
+    font-size: 1.65rem;
   }
 
   .client-panel {

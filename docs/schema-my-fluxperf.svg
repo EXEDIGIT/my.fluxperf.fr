@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" role="img" aria-labelledby="title desc">
+  <title id="title">Schema de fonctionnement My FluxPerf</title>
+  <desc id="desc">Illustration du chemin entre le client, Cloudflare Access, Cloudflare Pages, l'API serveur et Google Sheets.</desc>
+  <defs>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#082d42" flood-opacity="0.14"/>
+    </filter>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#006f78"/>
+    </marker>
+    <linearGradient id="panel" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#eefafa"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1440" height="900" fill="#fbf7ef"/>
+  <circle cx="1180" cy="120" r="220" fill="#f9b900" opacity="0.10"/>
+  <circle cx="210" cy="780" r="260" fill="#006f78" opacity="0.07"/>
+
+  <text x="90" y="96" font-family="Comfortaa, Arial, sans-serif" font-size="46" font-weight="700" fill="#006f78">My FluxPerf</text>
+  <text x="90" y="136" font-family="Comfortaa, Arial, sans-serif" font-size="20" fill="#082d42">Comment le portail client securise fonctionne, de l'email OTP jusqu'aux donnees Google Sheet.</text>
+
+  <g filter="url(#shadow)">
+    <rect x="80" y="205" width="230" height="150" rx="8" fill="url(#panel)" stroke="#cfe8e6"/>
+    <text x="110" y="250" font-family="Comfortaa, Arial, sans-serif" font-size="23" font-weight="700" fill="#082d42">1. Client</text>
+    <text x="110" y="286" font-family="Comfortaa, Arial, sans-serif" font-size="16" fill="#24495a">Ouvre my.fluxperf.fr</text>
+    <text x="110" y="316" font-family="Comfortaa, Arial, sans-serif" font-size="16" fill="#24495a">depuis son navigateur.</text>
+    <circle cx="265" cy="246" r="22" fill="#f9b900"/>
+    <text x="258" y="254" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#082d42">👤</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="390" y="205" width="250" height="150" rx="8" fill="#ffffff" stroke="#cfe8e6"/>
+    <text x="420" y="250" font-family="Comfortaa, Arial, sans-serif" font-size="23" font-weight="700" fill="#082d42">2. Access</text>
+    <text x="420" y="286" font-family="Comfortaa, Arial, sans-serif" font-size="16" fill="#24495a">Demande un code email.</text>
+    <text x="420" y="316" font-family="Comfortaa, Arial, sans-serif" font-size="16" fill="#24495a">Verifie la strategie.</text>
+    <rect x="563" y="228" width="46" height="46" rx="23" fill="#e8f7f5"/>
+    <text x="574" y="260" font-family="Arial, sans-serif" font-size="26">🔐</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="720" y="205" width="270" height="150" rx="8" fill="url(#panel)" stroke="#cfe8e6"/>
+    <text x="750" y="250" font-family="Comfortaa, Arial, sans-serif" font-size="23" font-weight="700" fill="#082d42">3. Pages</text>
+    <text x="750" y="286" font-family="Comfortaa, Arial, sans-serif" font-size="16" fill="#24495a">Sert l'app React</text>
+    <text x="750" y="316" font-family="Comfortaa, Arial, sans-serif" font-size="16" fill="#24495a">et appelle /api/me.</text>
+    <rect x="914" y="228" width="46" height="46" rx="23" fill="#fff4c7"/>
+    <text x="925" y="260" font-family="Arial, sans-serif" font-size="26">🖥</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="1080" y="205" width="280" height="150" rx="8" fill="#ffffff" stroke="#cfe8e6"/>
+    <text x="1110" y="250" font-family="Comfortaa, Arial, sans-serif" font-size="23" font-weight="700" fill="#082d42">4. API serveur</text>
+    <text x="1110" y="286" font-family="Comfortaa, Arial, sans-serif" font-size="16" fill="#24495a">Lit l'email connecte</text>
+    <text x="1110" y="316" font-family="Comfortaa, Arial, sans-serif" font-size="16" fill="#24495a">et filtre les donnees.</text>
+    <rect x="1284" y="228" width="46" height="46" rx="23" fill="#e8f7f5"/>
+    <text x="1294" y="260" font-family="Arial, sans-serif" font-size="26">⚙</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="245" y="545" width="300" height="155" rx="8" fill="#ffffff" stroke="#cfe8e6"/>
+    <text x="275" y="590" font-family="Comfortaa, Arial, sans-serif" font-size="23" font-weight="700" fill="#082d42">5. Service Account</text>
+    <text x="275" y="626" font-family="Comfortaa, Arial, sans-serif" font-size="16" fill="#24495a">Badge technique qui signe</text>
+    <text x="275" y="656" font-family="Comfortaa, Arial, sans-serif" font-size="16" fill="#24495a">une demande Google.</text>
+    <rect x="468" y="568" width="46" height="46" rx="23" fill="#fff4c7"/>
+    <text x="478" y="600" font-family="Arial, sans-serif" font-size="26">🎫</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="625" y="545" width="300" height="155" rx="8" fill="url(#panel)" stroke="#cfe8e6"/>
+    <text x="655" y="590" font-family="Comfortaa, Arial, sans-serif" font-size="23" font-weight="700" fill="#082d42">6. Google API</text>
+    <text x="655" y="626" font-family="Comfortaa, Arial, sans-serif" font-size="16" fill="#24495a">Controle le badge puis</text>
+    <text x="655" y="656" font-family="Comfortaa, Arial, sans-serif" font-size="16" fill="#24495a">renvoie les lignes utiles.</text>
+    <rect x="848" y="568" width="46" height="46" rx="23" fill="#e8f7f5"/>
+    <text x="858" y="600" font-family="Arial, sans-serif" font-size="26">📡</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="1005" y="545" width="300" height="155" rx="8" fill="#ffffff" stroke="#cfe8e6"/>
+    <text x="1035" y="590" font-family="Comfortaa, Arial, sans-serif" font-size="23" font-weight="700" fill="#082d42">7. Google Sheet</text>
+    <text x="1035" y="626" font-family="Comfortaa, Arial, sans-serif" font-size="16" fill="#24495a">Clients, Contacts, Sites.</text>
+    <text x="1035" y="656" font-family="Comfortaa, Arial, sans-serif" font-size="16" fill="#24495a">Jamais expose en entier.</text>
+    <rect x="1228" y="568" width="46" height="46" rx="23" fill="#fff4c7"/>
+    <text x="1238" y="600" font-family="Arial, sans-serif" font-size="26">📊</text>
+  </g>
+
+  <path d="M310 280 H380" stroke="#006f78" stroke-width="4" fill="none" marker-end="url(#arrow)"/>
+  <path d="M640 280 H710" stroke="#006f78" stroke-width="4" fill="none" marker-end="url(#arrow)"/>
+  <path d="M990 280 H1070" stroke="#006f78" stroke-width="4" fill="none" marker-end="url(#arrow)"/>
+  <path d="M1220 355 C1220 450 395 450 395 535" stroke="#006f78" stroke-width="4" fill="none" marker-end="url(#arrow)"/>
+  <path d="M545 622 H615" stroke="#006f78" stroke-width="4" fill="none" marker-end="url(#arrow)"/>
+  <path d="M925 622 H995" stroke="#006f78" stroke-width="4" fill="none" marker-end="url(#arrow)"/>
+  <path d="M1155 545 C1155 485 855 475 855 365" stroke="#006f78" stroke-width="4" fill="none" marker-end="url(#arrow)"/>
+
+  <rect x="88" y="770" width="1264" height="66" rx="8" fill="#006f78"/>
+  <text x="118" y="812" font-family="Comfortaa, Arial, sans-serif" font-size="20" font-weight="700" fill="#ffffff">Principe cle :</text>
+  <text x="260" y="812" font-family="Comfortaa, Arial, sans-serif" font-size="20" fill="#ffffff">le navigateur ne recoit jamais la BDD complete ni la cle Google. Il recoit seulement sa fiche client filtree cote serveur.</text>
+</svg>
