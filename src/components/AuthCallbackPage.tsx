@@ -6,6 +6,27 @@ type CallbackState =
   | { status: "loading" }
   | { status: "error"; message: string };
 
+function getHashSession() {
+  const hash = window.location.hash.replace(/^#/, "");
+
+  if (!hash) {
+    return null;
+  }
+
+  const params = new URLSearchParams(hash);
+  const accessToken = params.get("access_token");
+  const refreshToken = params.get("refresh_token");
+
+  if (!accessToken || !refreshToken) {
+    return null;
+  }
+
+  return {
+    access_token: accessToken,
+    refresh_token: refreshToken
+  };
+}
+
 export function AuthCallbackPage() {
   const [state, setState] = useState<CallbackState>({ status: "loading" });
 
@@ -14,16 +35,32 @@ export function AuthCallbackPage() {
 
     async function finishLogin() {
       const supabase = getSupabaseClient();
-      const code = new URLSearchParams(window.location.search).get("code");
+      const searchParams = new URLSearchParams(window.location.search);
+      const code = searchParams.get("code");
+      const callbackError = searchParams.get("error_description") || searchParams.get("error");
 
-      if (!supabase || !code) {
+      if (!supabase || callbackError) {
         throw new Error("Lien de connexion invalide ou expire.");
       }
 
-      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
 
-      if (error) {
-        throw error;
+        if (error) {
+          throw error;
+        }
+      } else {
+        const hashSession = getHashSession();
+
+        if (!hashSession) {
+          throw new Error("Lien de connexion invalide ou expire.");
+        }
+
+        const { error } = await supabase.auth.setSession(hashSession);
+
+        if (error) {
+          throw error;
+        }
       }
 
       window.history.replaceState({}, "", "/");
