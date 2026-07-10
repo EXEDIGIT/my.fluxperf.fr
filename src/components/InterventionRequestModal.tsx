@@ -20,7 +20,7 @@ import {
   X,
   Zap
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ApiError,
   submitInterventionRequest,
@@ -162,13 +162,21 @@ export function InterventionRequestModal({
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [requestId, setRequestId] = useState<string | null>(null);
+  const hasResetOnOpen = useRef(false);
 
   const selectedService = serviceOptions.find((option) => option.id === service) ?? serviceOptions[0];
   const SelectedServiceIcon = selectedService.icon;
   const selectedSites = sites.filter((site) => siteIds.includes(site.id));
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) {
+      hasResetOnOpen.current = false;
+      return;
+    }
+
+    if (hasResetOnOpen.current) return;
+
+    hasResetOnOpen.current = true;
 
     setStep(0);
     setService("visibility_acquisition");
