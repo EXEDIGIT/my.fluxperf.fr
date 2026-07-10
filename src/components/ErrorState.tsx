@@ -10,7 +10,7 @@ function getErrorContent(error: unknown) {
     if (error.status === 401) {
       return {
         title: "Connexion requise",
-        message: "Connectez-vous a votre espace FluxPerf pour continuer."
+        message: "Connectez-vous a votre espace Fluxperf pour continuer."
       };
     }
 
@@ -18,7 +18,7 @@ function getErrorContent(error: unknown) {
       return {
         title: "Espace client non configure",
         message:
-          "Votre adresse est authentifiee, mais aucun espace client FluxPerf n'est encore rattache a cet email."
+          "Votre adresse est authentifiee, mais aucun espace client Fluxperf n'est encore rattache a cet email."
       };
     }
 
@@ -39,13 +39,13 @@ export function ErrorState({ error }: ErrorStateProps) {
 
   return (
     <main className="center-state error-center">
-      <img src="/assets/img/logo-fluxperf.svg" alt="FluxPerf" />
+      <img src="/assets/img/logo-fluxperf.svg" alt="Fluxperf" />
       <AlertTriangle aria-hidden="true" />
       <h1>{content.title}</h1>
       <p>{content.message}</p>
       <a href="mailto:hello@fluxperf.fr">
         <LifeBuoy aria-hidden="true" />
-        Contacter FluxPerf
+        Contacter Fluxperf
       </a>
     </main>
   );

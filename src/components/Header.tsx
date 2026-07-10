@@ -10,7 +10,7 @@ export function Header({ client, email }: HeaderProps) {
   return (
     <header className="dashboard-header" id="accueil">
       <div>
-        <p className="eyebrow">Votre espace client FluxPerf</p>
+        <p className="eyebrow">Votre espace client Fluxperf</p>
         <h1>Bonjour {client.firstName || client.companyName}, bienvenue dans votre espace client.</h1>
         <p className="header-copy">
           Retrouvez ici vos demandes, vos rapports, vos ressources et les accès utiles pour piloter
@@ -33,4 +33,3 @@ export function Header({ client, email }: HeaderProps) {
     </header>
   );
 }
-

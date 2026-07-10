@@ -36,7 +36,7 @@ export function JotformModal({ title, url, isOpen, onClose }: JotformModalProps)
       <div className="jotform-modal">
         <header className="modal-header">
           <div>
-            <span className="section-kicker">Formulaire FluxPerf</span>
+            <span className="section-kicker">Formulaire Fluxperf</span>
             <h2>{title}</h2>
           </div>
           <button type="button" aria-label="Fermer la fenêtre" onClick={onClose}>
@@ -59,4 +59,3 @@ export function JotformModal({ title, url, isOpen, onClose }: JotformModalProps)
     </div>
   );
 }
-

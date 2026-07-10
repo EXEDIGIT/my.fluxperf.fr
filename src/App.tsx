@@ -134,7 +134,7 @@ export function App() {
     if (state.status !== "ready") return "#";
 
     const { client } = state.data;
-    const subject = encodeURIComponent(`Espace client FluxPerf - ${client.companyName}`);
+    const subject = encodeURIComponent(`Espace client Fluxperf - ${client.companyName}`);
 
     return `mailto:${client.fluxperfContact.email}?subject=${subject}`;
   }, [state]);
@@ -174,7 +174,7 @@ export function App() {
       <main className="app-shell">
         <Header client={client} email={user.email} />
 
-        <section className="trust-strip" aria-label="Garanties FluxPerf">
+        <section className="trust-strip" aria-label="Garanties Fluxperf">
           <span>
             <ShieldCheck aria-hidden="true" />
             Connexion securisee
@@ -194,7 +194,7 @@ export function App() {
           <div className="action-grid">
             <ActionCard
               title="Faire une demande"
-              description="Transmettez une nouvelle demande a l'equipe FluxPerf."
+              description="Transmettez une nouvelle demande a l'equipe Fluxperf."
               disabled={!requestUrl}
               disabledText="Le formulaire de demande n'est pas encore relie a votre espace."
               icon={FilePenLine}
@@ -228,7 +228,7 @@ export function App() {
               }}
             />
             <ActionCard
-              title="Contacter FluxPerf"
+              title="Contacter Fluxperf"
               description={`Echangez directement avec ${client.fluxperfContact.name}.`}
               icon={Mail}
               actionLabel="Ecrire"
@@ -256,7 +256,7 @@ export function App() {
                 <BarChart3 aria-hidden="true" />
                 <div>
                   <strong>Rapport disponible</strong>
-                  <p>Ouvrir vos derniers indicateurs FluxPerf.</p>
+                  <p>Ouvrir vos derniers indicateurs Fluxperf.</p>
                 </div>
               </a>
             ) : (
@@ -276,7 +276,7 @@ export function App() {
 
         <section className="support-band" id="support">
           <div>
-            <span className="section-kicker">Support FluxPerf</span>
+            <span className="section-kicker">Support Fluxperf</span>
             <h2>Une question specifique ?</h2>
             <p>Notre equipe reste disponible pour echanger sur votre projet et vos demandes.</p>
           </div>

@@ -237,7 +237,7 @@ describe("client sheet parsing", () => {
     expect(result.status).toBe("not_found");
   });
 
-  it("matches the normalized FluxPerf workbook by principal email", () => {
+  it("matches the normalized Fluxperf workbook by principal email", () => {
     const result = findClientForEmailInWorkbook(structuredWorkbook, "TDACUNHA@EXEDIGIT.FR");
 
     expect(result.status).toBe("ok");

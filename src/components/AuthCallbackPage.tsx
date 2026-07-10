@@ -84,7 +84,7 @@ export function AuthCallbackPage() {
   if (state.status === "error") {
     return (
       <main className="center-state error-center">
-        <img src="/assets/img/logo-fluxperf.svg" alt="FluxPerf" />
+        <img src="/assets/img/logo-fluxperf.svg" alt="Fluxperf" />
         <AlertTriangle aria-hidden="true" />
         <h1>Connexion impossible</h1>
         <p>{state.message}</p>
@@ -95,10 +95,10 @@ export function AuthCallbackPage() {
 
   return (
     <main className="center-state" aria-live="polite">
-      <img src="/assets/img/logo-fluxperf.svg" alt="FluxPerf" />
+      <img src="/assets/img/logo-fluxperf.svg" alt="Fluxperf" />
       <LoaderCircle className="loading-icon" aria-hidden="true" />
       <h1>Connexion en cours</h1>
-      <p>Nous securisons votre session FluxPerf.</p>
+      <p>Nous securisons votre session Fluxperf.</p>
     </main>
   );
 }

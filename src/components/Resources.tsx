@@ -9,7 +9,7 @@ type ResourcesProps = {
 const resources = [
   {
     title: "Guide de demande",
-    description: "Préparer une demande claire pour accélérer le traitement par l'équipe FluxPerf.",
+    description: "Préparer une demande claire pour accélérer le traitement par l'équipe Fluxperf.",
     icon: BookOpen
   },
   {
@@ -60,4 +60,3 @@ export function Resources({ resourcesUrl }: ResourcesProps) {
     </section>
   );
 }
-

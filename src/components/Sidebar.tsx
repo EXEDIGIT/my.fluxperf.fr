@@ -72,9 +72,9 @@ export function Sidebar({ onLogout }: SidebarProps) {
       </button>
 
       <aside className="sidebar desktop-sidebar">
-        <a className="sidebar-brand" href="#accueil" aria-label="My FluxPerf">
-          <img src="/assets/img/logo-fluxperf.svg" alt="FluxPerf" />
-          <span>My FluxPerf</span>
+        <a className="sidebar-brand" href="#accueil" aria-label="MyFluxperf">
+          <img src="/assets/img/logo-fluxperf.svg" alt="Fluxperf" />
+          <span>MyFluxperf</span>
         </a>
         {navLinks}
         {onLogout ? (
@@ -88,7 +88,7 @@ export function Sidebar({ onLogout }: SidebarProps) {
       <div className={`mobile-drawer ${isOpen ? "is-open" : ""}`} aria-hidden={!isOpen}>
         <div className="mobile-drawer-panel">
           <div className="mobile-drawer-header">
-            <img src="/assets/img/logo-fluxperf.svg" alt="FluxPerf" />
+            <img src="/assets/img/logo-fluxperf.svg" alt="Fluxperf" />
             <button type="button" aria-label="Fermer la navigation" onClick={() => setIsOpen(false)}>
               <X aria-hidden="true" />
             </button>

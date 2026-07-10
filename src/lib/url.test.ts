@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildPrefilledJotformUrl, isExternalUrl } from "./url";
 
 describe("Jotform URL helpers", () => {
-  it("adds FluxPerf prefill parameters without losing existing query params", () => {
+  it("adds Fluxperf prefill parameters without losing existing query params", () => {
     const url = buildPrefilledJotformUrl("https://form.jotform.com/123456?source=my", {
       clientId: "a2cm",
       company: "A2-CM",
@@ -24,4 +24,3 @@ describe("Jotform URL helpers", () => {
     expect(isExternalUrl(null)).toBe(false);
   });
 });
-

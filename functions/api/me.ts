@@ -19,7 +19,7 @@ export async function onRequestGet(context: PagesContext): Promise<Response> {
       return jsonError(
         403,
         "CLIENT_NOT_CONFIGURED",
-        "Votre acces est authentifie, mais votre espace client n'est pas encore configure. Contactez FluxPerf."
+        "Votre acces est authentifie, mais votre espace client n'est pas encore configure. Contactez Fluxperf."
       );
     }
 

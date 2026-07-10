@@ -1,7 +1,7 @@
 {
-  "name": "My FluxPerf",
-  "short_name": "My FluxPerf",
-  "description": "Votre espace client FluxPerf.",
+  "name": "MyFluxperf",
+  "short_name": "MyFluxperf",
+  "description": "Votre espace client Fluxperf.",
   "lang": "fr-FR",
   "start_url": "/",
   "scope": "/",
@@ -23,4 +23,3 @@
     }
   ]
 }
-

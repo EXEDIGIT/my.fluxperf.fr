@@ -186,7 +186,7 @@ export function toClientDto(row: RawClientRow): ClientDto {
     }))
     .filter((action) => action.label || action.date)
     .map((action) => ({
-      label: action.label || "Action FluxPerf",
+      label: action.label || "Action Fluxperf",
       date: action.date
     }));
 
@@ -205,7 +205,7 @@ export function toClientDto(row: RawClientRow): ClientDto {
       resources: row.resources_url || null
     },
     fluxperfContact: {
-      name: row.contact_fluxperf_name || "FluxPerf",
+      name: row.contact_fluxperf_name || "Fluxperf",
       email: row.contact_fluxperf_email || "hello@fluxperf.fr"
     },
     latestActions
@@ -300,7 +300,7 @@ function activeSitesForClient(client: SheetRecord, sites: SheetRecord[]): SheetR
 
 function servicesFromSites(sites: SheetRecord[]): string[] {
   if (sites.length === 0) {
-    return ["Espace client FluxPerf"];
+    return ["Espace client Fluxperf"];
   }
 
   return sites.slice(0, 4).map((site) => {
@@ -349,7 +349,7 @@ function structuredClientToDto(
 ): ClientDto {
   const contact = preferredContact(client, contacts, email);
   const activeSites = activeSitesForClient(client, sites);
-  const companyName = getValue(client, "organisation") || getValue(client, "nom_compte") || "Client FluxPerf";
+  const companyName = getValue(client, "organisation") || getValue(client, "nom_compte") || "Client Fluxperf";
 
   return {
     id: getValue(client, "client_id"),
@@ -366,7 +366,7 @@ function structuredClientToDto(
       resources: null
     },
     fluxperfContact: {
-      name: "FluxPerf",
+      name: "Fluxperf",
       email: "hello@fluxperf.fr"
     },
     latestActions: latestActionsFromStructuredClient(client, activeSites)

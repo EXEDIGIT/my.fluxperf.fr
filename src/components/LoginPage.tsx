@@ -20,7 +20,7 @@ function signInErrorMessage(error: { message?: string; status?: number }) {
   }
 
   if (message.includes("signup") || message.includes("user not found") || message.includes("not found")) {
-    return "Cette adresse email ne semble pas rattachee a un espace FluxPerf. Verifiez l'adresse ou contactez le support.";
+    return "Cette adresse email ne semble pas rattachee a un espace Fluxperf. Verifiez l'adresse ou contactez le support.";
   }
 
   return "Le lien de connexion n'a pas pu etre envoye pour le moment. Patientez quelques instants, puis reessayez.";
@@ -42,7 +42,7 @@ export function LoginPage() {
     if (!hasSupabaseConfig() || !supabase) {
       setState({
         status: "error",
-        message: "La connexion FluxPerf n'est pas encore configuree."
+        message: "La connexion Fluxperf n'est pas encore configuree."
       });
       return;
     }
@@ -78,10 +78,10 @@ export function LoginPage() {
 
   return (
     <main className="auth-page">
-      <section className="auth-panel" aria-label="Connexion a My FluxPerf">
+      <section className="auth-panel" aria-label="Connexion a MyFluxperf">
         <div className="auth-brand">
-          <img src="/assets/img/logo-fluxperf.svg" alt="FluxPerf" />
-          <span>My FluxPerf</span>
+          <img src="/assets/img/logo-fluxperf.svg" alt="Fluxperf" />
+          <span>MyFluxperf</span>
         </div>
 
         <div className="auth-copy">
@@ -90,7 +90,7 @@ export function LoginPage() {
             Espace client securise
           </span>
           <h1>Connexion a votre espace client</h1>
-          <p>Recevez un lien de connexion sur l'adresse email rattachee a votre espace FluxPerf.</p>
+          <p>Recevez un lien de connexion sur l'adresse email rattachee a votre espace Fluxperf.</p>
         </div>
 
         <form className="auth-form" onSubmit={handleSubmit}>
@@ -131,7 +131,7 @@ export function LoginPage() {
 
         <a className="auth-support" href="mailto:hello@fluxperf.fr">
           <LifeBuoy aria-hidden="true" />
-          Contacter le support FluxPerf
+          Contacter le support Fluxperf
         </a>
       </section>
     </main>

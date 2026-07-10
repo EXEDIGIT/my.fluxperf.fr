@@ -17,7 +17,7 @@ function iconForService(service: string) {
 }
 
 export function ServicesActive({ services }: ServicesActiveProps) {
-  const visibleServices = services.length > 0 ? services : ["Espace client FluxPerf"];
+  const visibleServices = services.length > 0 ? services : ["Espace client Fluxperf"];
 
   return (
     <section className="dashboard-section">
@@ -44,9 +44,8 @@ export function ServicesActive({ services }: ServicesActiveProps) {
       </div>
       <div className="section-note">
         <Sparkles aria-hidden="true" />
-        Les services affichés proviennent de votre fiche client FluxPerf.
+        Les services affichés proviennent de votre fiche client Fluxperf.
       </div>
     </section>
   );
 }
-
