@@ -46,11 +46,12 @@ Configurer `GOOGLE_PRIVATE_KEY` comme secret Cloudflare Pages. La cle doit reste
 
 ## Checklist n8n / Brevo
 
-1. Workflow n8n cree avec un Webhook `multipart/form-data`.
+1. Importer `docs/n8n/myfluxperf-intervention-workflow.json` dans n8n.
 2. `payload` parse pour creer la carte Trello, preparer l'accuse de reception et journaliser la demande.
-3. `files[]` rattaches a la carte ou stockes selon le dispositif interne.
-4. Envoi email Brevo configure dans n8n.
+3. `files[]` rattaches a la carte Trello.
+4. Envoi email Brevo configure depuis `notifications@fluxperf.fr`.
 5. Secret partage configure dans `N8N_INTERVENTION_WEBHOOK_SECRET`.
+6. Procedure detaillee : `docs/n8n/intervention-workflow-setup.md`.
 
 ## Test final
 

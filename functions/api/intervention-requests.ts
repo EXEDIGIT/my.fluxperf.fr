@@ -6,6 +6,7 @@ import type { ClientDto, ClientSiteDto, PagesContext } from "../lib/types";
 
 const MAX_FILES = 5;
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+const MAX_TOTAL_FILE_SIZE_BYTES = 15 * 1024 * 1024;
 
 const allowedServices = new Set(["visibility_acquisition", "automation_ai", "assistant_ai"]);
 const allowedPriorities = new Set(["normal", "urgent", "critical"]);
@@ -71,6 +72,16 @@ function buildRequestId(now = new Date()): string {
 function validateFiles(files: File[]): Response | null {
   if (files.length > MAX_FILES) {
     return jsonError(400, "TOO_MANY_FILES", `Vous pouvez joindre ${MAX_FILES} fichiers maximum.`);
+  }
+
+  const totalSize = files.reduce((sum, file) => sum + file.size, 0);
+
+  if (totalSize > MAX_TOTAL_FILE_SIZE_BYTES) {
+    return jsonError(
+      400,
+      "FILES_TOTAL_TOO_LARGE",
+      "L'ensemble des fichiers joints depasse la limite de 15 Mo."
+    );
   }
 
   const oversizedFile = files.find((file) => file.size > MAX_FILE_SIZE_BYTES);

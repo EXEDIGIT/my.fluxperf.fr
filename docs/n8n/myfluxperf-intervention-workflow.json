@@ -1,0 +1,339 @@
+{
+  "name": "MyFluxperf - Demande d'intervention",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "myfluxperf/intervention",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-myfluxperf-intervention",
+      "name": "Webhook - MyFluxperf",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-1180, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nconst headers = item.json.headers || {};\nconst receivedSecret = headers['x-fluxperf-webhook-secret'] || headers['X-Fluxperf-Webhook-Secret'];\nconst expectedSecret = $vars.MYFLUXPERF_WEBHOOK_SECRET;\n\nif (!expectedSecret) {\n  throw new Error('MYFLUXPERF_WEBHOOK_SECRET is not configured in n8n variables.');\n}\n\nif (receivedSecret !== expectedSecret) {\n  throw new Error('Unauthorized MyFluxperf webhook request.');\n}\n\nconst rawPayload = item.json.body?.payload ?? item.json.payload;\nconst payload = typeof rawPayload === 'string' ? JSON.parse(rawPayload) : rawPayload;\n\nif (!payload?.requestId || !payload?.requester?.email || !payload?.request?.message) {\n  throw new Error('Invalid MyFluxperf intervention payload.');\n}\n\nconst serviceLabels = {\n  visibility_acquisition: 'Flux Visibilite & Acquisition',\n  automation_ai: 'Flux Automatisation & IA',\n  assistant_ai: 'Flux Assistant IA'\n};\nconst needLabels = {\n  content_update: 'Mise a jour de contenus',\n  technical_issue: 'Anomalie technique',\n  new_creation: 'Nouvelle creation',\n  seo: 'Referencement SEO',\n  advertising_campaign: 'Campagne publicitaire',\n  automation: 'Automatisation',\n  ai_assistant: 'Assistant IA',\n  other: 'Autre demande'\n};\nconst priorityLabels = {\n  normal: 'Priorite normale',\n  urgent: 'Priorite urgente',\n  critical: 'Priorite critique'\n};\n\nconst request = payload.request;\nconst binary = item.binary || {};\nconst files = Object.entries(binary).map(([binaryProperty, file]) => ({\n  binaryProperty,\n  fileName: file.fileName || binaryProperty,\n  mimeType: file.mimeType || 'application/octet-stream',\n  fileSize: file.fileSize || null\n}));\n\nconst serviceLabel = serviceLabels[request.service] || request.service;\nconst priorityLabel = priorityLabels[request.priority] || request.priority;\nconst needText = (request.needs || []).map((need) => needLabels[need] || need).join(', ');\nconst siteText = (request.selectedSites || [])\n  .map((site) => `${site.domain || site.url || site.id}${site.type ? ` (${site.type})` : ''}`)\n  .join(', ') || 'Non applicable';\nconst requesterName = [payload.requester.firstName, payload.requester.lastName].filter(Boolean).join(' ');\nconst clientName = payload.client.companyName || 'Client Fluxperf';\n\nconst cardName = `[${payload.requestId}] ${clientName} - ${serviceLabel}`;\nconst cardDescription = [\n  `Reference : ${payload.requestId}`,\n  `Date : ${payload.submittedAt}`,\n  `Client : ${clientName} (${payload.client.id || 'sans id'})`,\n  `Demandeur : ${requesterName || payload.requester.email} <${payload.requester.email}>`,\n  `Service : ${serviceLabel}`,\n  `Site : ${siteText}`,\n  `Besoin : ${needText}`,\n  `Priorite : ${priorityLabel}`,\n  `Pieces jointes : ${files.length}`,\n  '',\n  'Message client :',\n  request.message\n].join('\\n');\n\nreturn [{\n  json: {\n    requestId: payload.requestId,\n    submittedAt: payload.submittedAt,\n    payload,\n    normalized: {\n      serviceLabel,\n      priorityLabel,\n      needText,\n      siteText,\n      requesterName,\n      clientName,\n      fileCount: files.length,\n      files\n    },\n    trello: {\n      cardName,\n      cardDescription\n    }\n  },\n  binary\n}];"
+      },
+      "id": "validate-normalize",
+      "name": "Validate + Normalize",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-940, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"status\": \"accepted\", \"requestId\": $json.requestId } }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "respond-ok",
+      "name": "Respond to MyFluxperf",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [-700, -160]
+    },
+    {
+      "parameters": {
+        "resource": "card",
+        "operation": "create",
+        "listId": "={{$vars.TRELLO_INTERVENTION_LIST_ID}}",
+        "name": "={{$json.trello.cardName}}",
+        "description": "={{$json.trello.cardDescription}}",
+        "additionalFields": {
+          "pos": "top"
+        }
+      },
+      "id": "trello-create-card",
+      "name": "Trello - Create Card",
+      "type": "n8n-nodes-base.trello",
+      "typeVersion": 1,
+      "position": [-700, 80],
+      "credentials": {
+        "trelloApi": {
+          "id": "__REPLACE_WITH_TRELLO_CREDENTIAL_ID__",
+          "name": "Trello account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const normalized = $('Validate + Normalize').first().json;\nconst createdCard = $('Trello - Create Card').first().json;\nconst binary = $('Validate + Normalize').first().binary || {};\nconst binaryKeys = Object.keys(binary);\n\nif (binaryKeys.length === 0) {\n  return [{\n    json: {\n      requestId: normalized.requestId,\n      cardId: createdCard.id,\n      skipAttachment: true\n    }\n  }];\n}\n\nreturn binaryKeys.map((binaryProperty) => ({\n  json: {\n    requestId: normalized.requestId,\n    cardId: createdCard.id,\n    binaryProperty,\n    skipAttachment: false\n  },\n  binary: {\n    data: binary[binaryProperty]\n  }\n}));"
+      },
+      "id": "prepare-attachments",
+      "name": "Prepare Trello Attachments",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-460, 80]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.skipAttachment}}",
+              "value2": false
+            }
+          ]
+        }
+      },
+      "id": "has-attachment",
+      "name": "Has Attachment?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [-220, 80]
+    },
+    {
+      "parameters": {
+        "resource": "attachment",
+        "operation": "create",
+        "cardId": "={{$json.cardId}}",
+        "binaryPropertyName": "data"
+      },
+      "id": "trello-add-attachment",
+      "name": "Trello - Add Attachment",
+      "type": "n8n-nodes-base.trello",
+      "typeVersion": 1,
+      "position": [20, -20],
+      "credentials": {
+        "trelloApi": {
+          "id": "__REPLACE_WITH_TRELLO_CREDENTIAL_ID__",
+          "name": "Trello account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const normalized = $('Validate + Normalize').first().json;\nconst payload = normalized.payload;\nconst prompt = [\n  'Tu es responsable de clientele pour Fluxperf.',\n  'Redige uniquement le corps d\\'un email d\\'accuse de reception.',\n  'Contraintes : moins de 300 caracteres, ton professionnel, reponse adaptee a la demande, pas d\\'objet, pas de variables non resolues.',\n  'Termine exactement par : L\\'equipe Fluxperf',\n  '',\n  `Client : ${normalized.normalized.clientName}`,\n  `Service : ${normalized.normalized.serviceLabel}`,\n  `Besoin : ${normalized.normalized.needText}`,\n  `Priorite : ${normalized.normalized.priorityLabel}`,\n  `Message client : ${payload.request.message}`\n].join('\\n');\n\nreturn [{\n  json: {\n    requestId: normalized.requestId,\n    requesterEmail: payload.requester.email,\n    requesterName: normalized.normalized.requesterName,\n    openaiBody: {\n      model: $vars.OPENAI_MODEL || 'gpt-5.6-luna',\n      input: prompt,\n      max_output_tokens: 140\n    }\n  }\n}];"
+      },
+      "id": "build-openai-body",
+      "name": "Build OpenAI Body",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [260, 160]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/responses",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$vars.OPENAI_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{$json.openaiBody}}",
+        "options": {}
+      },
+      "id": "openai-generate-reply",
+      "name": "OpenAI - Generate Reply",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [500, 160]
+    },
+    {
+      "parameters": {
+        "jsCode": "const openaiResponse = $input.first().json;\nconst normalized = $('Validate + Normalize').first().json;\nconst payload = normalized.payload;\n\nconst outputText = openaiResponse.output_text\n  || (openaiResponse.output || [])\n    .flatMap((output) => output.content || [])\n    .map((content) => content.text || '')\n    .join('')\n    .trim()\n  || 'Bonjour, nous avons bien recu votre demande. Notre equipe va l\\'examiner et reviendra vers vous dans les meilleurs delais. L\\'equipe Fluxperf';\n\nconst escapedText = outputText\n  .replace(/&/g, '&amp;')\n  .replace(/</g, '&lt;')\n  .replace(/>/g, '&gt;')\n  .replace(/\\n/g, '<br>');\n\nreturn [{\n  json: {\n    requestId: normalized.requestId,\n    cardId: $('Trello - Create Card').first().json.id,\n    aiReply: outputText,\n    brevoBody: {\n      sender: {\n        name: 'Fluxperf',\n        email: 'notifications@fluxperf.fr'\n      },\n      to: [\n        {\n          email: payload.requester.email,\n          name: normalized.normalized.requesterName || payload.requester.email\n        }\n      ],\n      subject: `Demande recue - ${normalized.requestId}`,\n      htmlContent: `<p>${escapedText}</p>`,\n      textContent: outputText\n    }\n  }\n}];"
+      },
+      "id": "build-brevo-body",
+      "name": "Build Brevo Body",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, 160]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.brevo.com/v3/smtp/email",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api-key",
+              "value": "={{$vars.BREVO_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{$json.brevoBody}}",
+        "options": {}
+      },
+      "id": "brevo-send-email",
+      "name": "Brevo - Send Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [980, 160]
+    },
+    {
+      "parameters": {
+        "resource": "cardComment",
+        "operation": "create",
+        "cardId": "={{$('Trello - Create Card').first().json.id}}",
+        "text": "=Email client envoye via Brevo.\\nReference : {{$('Validate + Normalize').first().json.requestId}}\\nMessage IA : {{$('Build Brevo Body').first().json.aiReply}}\\nBrevo messageId : {{$json.messageId || 'non retourne'}}"
+      },
+      "id": "trello-add-comment",
+      "name": "Trello - Add Comment",
+      "type": "n8n-nodes-base.trello",
+      "typeVersion": 1,
+      "position": [1220, 160],
+      "credentials": {
+        "trelloApi": {
+          "id": "__REPLACE_WITH_TRELLO_CREDENTIAL_ID__",
+          "name": "Trello account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook - MyFluxperf": {
+      "main": [
+        [
+          {
+            "node": "Validate + Normalize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate + Normalize": {
+      "main": [
+        [
+          {
+            "node": "Respond to MyFluxperf",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Trello - Create Card",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trello - Create Card": {
+      "main": [
+        [
+          {
+            "node": "Prepare Trello Attachments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Trello Attachments": {
+      "main": [
+        [
+          {
+            "node": "Has Attachment?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Attachment?": {
+      "main": [
+        [
+          {
+            "node": "Trello - Add Attachment",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build OpenAI Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Trello - Add Attachment": {
+      "main": [
+        [
+          {
+            "node": "Build OpenAI Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build OpenAI Body": {
+      "main": [
+        [
+          {
+            "node": "OpenAI - Generate Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI - Generate Reply": {
+      "main": [
+        [
+          {
+            "node": "Build Brevo Body",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Brevo Body": {
+      "main": [
+        [
+          {
+            "node": "Brevo - Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Brevo - Send Email": {
+      "main": [
+        [
+          {
+            "node": "Trello - Add Comment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2026-07-10T00:00:00.000Z",
+  "versionId": "myfluxperf-intervention-v1"
+}

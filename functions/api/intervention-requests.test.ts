@@ -92,6 +92,22 @@ describe("POST /api/intervention-requests", () => {
     expect(body.error).toMatchObject({ code: "FILE_TOO_LARGE" });
   });
 
+  it("rejects files larger than 15 MB in total", async () => {
+    const firstFile = new File([new Uint8Array(8 * 1024 * 1024)], "first.pdf", {
+      type: "application/pdf"
+    });
+    const secondFile = new File([new Uint8Array(8 * 1024 * 1024)], "second.pdf", {
+      type: "application/pdf"
+    });
+    const response = await onRequestPost(
+      context(buildFormData(validPayload, [firstFile, secondFile]))
+    );
+    const body = await responseBody(response);
+
+    expect(response.status).toBe(400);
+    expect(body.error).toMatchObject({ code: "FILES_TOTAL_TOO_LARGE" });
+  });
+
   it("forwards the structured payload and files to the n8n webhook", async () => {
     const webhookFetch = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
       Response.json({ ok: true })

@@ -110,8 +110,8 @@ La carte "Faire une demande" ouvre un formulaire natif MyFluxperf. Pour le flux
 de l'onglet `Sites` rattaches au client connecte.
 
 La Pages Function `POST /api/intervention-requests` verifie l'identite, controle les
-sites selectionnes, limite les pieces jointes a 5 fichiers de 10 Mo, puis transmet a
-n8n un `multipart/form-data` avec :
+sites selectionnes, limite les pieces jointes a 5 fichiers, 10 Mo par fichier et
+15 Mo au total, puis transmet a n8n un `multipart/form-data` avec :
 
 - `payload` : demande structuree, client, contact et reference Fluxperf
 - `files[]` : pieces jointes ajoutees par le client
@@ -119,6 +119,9 @@ n8n un `multipart/form-data` avec :
 Configurez `N8N_INTERVENTION_WEBHOOK_URL` et `N8N_INTERVENTION_WEBHOOK_SECRET` dans
 Cloudflare Pages. n8n prend ensuite le relais pour Trello, l'accuse de reception
 Brevo et la journalisation interne.
+
+Le workflow n8n importable et la procedure de configuration sont dans
+`docs/n8n/`.
 
 ## Support externe
 

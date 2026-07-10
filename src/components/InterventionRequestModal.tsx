@@ -63,6 +63,7 @@ type PriorityOption = {
 
 const maxFiles = 5;
 const maxFileSize = 10 * 1024 * 1024;
+const maxTotalFileSize = 15 * 1024 * 1024;
 
 const steps: Step[] = [
   { label: "Service", title: "Quel flux concerne votre demande ?" },
@@ -130,6 +131,10 @@ function formatFileSize(size: number): string {
   }
 
   return `${(size / (1024 * 1024)).toFixed(1)} Mo`;
+}
+
+function totalFileSize(files: File[]): number {
+  return files.reduce((sum, file) => sum + file.size, 0);
 }
 
 function labelFor<T extends { id: string; label: string }>(items: T[], id: string): string {
@@ -237,6 +242,10 @@ export function InterventionRequestModal({
       if (files.some((file) => file.size > maxFileSize)) {
         return "Chaque fichier doit peser 10 Mo maximum.";
       }
+
+      if (totalFileSize(files) > maxTotalFileSize) {
+        return "L'ensemble des fichiers doit peser 15 Mo maximum.";
+      }
     }
 
     return null;
@@ -289,6 +298,11 @@ export function InterventionRequestModal({
 
       if (next.length > maxFiles) {
         setFormError(`Ajoutez ${maxFiles} fichiers maximum.`);
+        return current;
+      }
+
+      if (totalFileSize(next) > maxTotalFileSize) {
+        setFormError("L'ensemble des fichiers doit peser 15 Mo maximum.");
         return current;
       }
 
@@ -484,7 +498,7 @@ export function InterventionRequestModal({
           <label className="upload-zone">
             <UploadCloud aria-hidden="true" />
             <strong>Ajouter des fichiers</strong>
-            <span>PDF, PNG, JPG, DOCX - 10 Mo maximum</span>
+            <span>PDF, PNG, JPG, DOCX - 10 Mo par fichier, 15 Mo au total</span>
             <input
               type="file"
               multiple
@@ -646,7 +660,8 @@ export function InterventionRequestModal({
             <div>
               <Paperclip aria-hidden="true" />
               <span>
-                {files.length}/{maxFiles} fichier{files.length > 1 ? "s" : ""}
+                {files.length}/{maxFiles} fichier{files.length > 1 ? "s" : ""} -{" "}
+                {formatFileSize(totalFileSize(files))}/15 Mo
               </span>
             </div>
             <div>
