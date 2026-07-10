@@ -1,3 +1,11 @@
+export type ClientSite = {
+  id: string;
+  domain: string;
+  url: string;
+  type: string;
+  status: string;
+};
+
 export type Client = {
   id: string;
   status: string;
@@ -6,6 +14,7 @@ export type Client = {
   lastName: string;
   planLabel: string;
   services: string[];
+  sites: ClientSite[];
   links: {
     request: string | null;
     support: string | null;

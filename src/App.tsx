@@ -5,6 +5,7 @@ import { AuthCallbackPage } from "./components/AuthCallbackPage";
 import { AuthConfirmPage } from "./components/AuthConfirmPage";
 import { ErrorState } from "./components/ErrorState";
 import { Header } from "./components/Header";
+import { InterventionRequestModal } from "./components/InterventionRequestModal";
 import { JotformModal } from "./components/JotformModal";
 import { LatestActions } from "./components/LatestActions";
 import { LoadingState } from "./components/LoadingState";
@@ -39,6 +40,7 @@ function buildSafeJotformUrl(url: string, client: Client, email: string): string
 export function App() {
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [modal, setModal] = useState<ModalState>(null);
+  const [isRequestOpen, setIsRequestOpen] = useState(false);
   const isAuthCallback = window.location.pathname === "/auth/callback";
   const isAuthConfirm = window.location.pathname === "/auth/confirm";
 
@@ -160,9 +162,6 @@ export function App() {
   }
 
   const { client, user } = state.data;
-  const requestUrl = client.links.request
-    ? buildSafeJotformUrl(client.links.request, client, user.email)
-    : null;
   const supportUrl = client.links.support
     ? buildSafeJotformUrl(client.links.support, client, user.email)
     : null;
@@ -194,15 +193,11 @@ export function App() {
           <div className="action-grid">
             <ActionCard
               title="Faire une demande"
-              description="Transmettez une nouvelle demande a l'equipe Fluxperf."
-              disabled={!requestUrl}
-              disabledText="Le formulaire de demande n'est pas encore relie a votre espace."
+              description="Transmettez une nouvelle demande d'intervention a l'equipe Fluxperf."
               icon={FilePenLine}
               tone="primary"
-              actionLabel="Ouvrir"
-              onAction={() =>
-                requestUrl ? setModal({ title: "Faire une demande", url: requestUrl }) : undefined
-              }
+              actionLabel="Demander"
+              onAction={() => setIsRequestOpen(true)}
             />
             <ActionCard
               title="Support"
@@ -299,6 +294,13 @@ export function App() {
         url={modal?.url ?? null}
         isOpen={Boolean(modal)}
         onClose={() => setModal(null)}
+      />
+
+      <InterventionRequestModal
+        client={client}
+        email={user.email}
+        isOpen={isRequestOpen}
+        onClose={() => setIsRequestOpen(false)}
       />
     </>
   );

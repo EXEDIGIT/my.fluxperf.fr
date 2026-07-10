@@ -250,6 +250,22 @@ describe("client sheet parsing", () => {
         "Site suivi : hbint.com",
         "Site suivi : trial.hbint.com"
       ]);
+      expect(result.client.sites).toEqual([
+        {
+          id: "SITE-0001",
+          domain: "hbint.com",
+          url: "https://www.hbint.com",
+          type: "Principal",
+          status: "Actif"
+        },
+        {
+          id: "SITE-0002",
+          domain: "trial.hbint.com",
+          url: "https://trial.hbint.com",
+          type: "Environnement de test",
+          status: "Actif"
+        }
+      ]);
     }
   });
 

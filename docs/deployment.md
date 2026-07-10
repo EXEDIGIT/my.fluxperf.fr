@@ -21,6 +21,8 @@ GOOGLE_CONTACTS_RANGE=Contacts!A1:Z1000
 GOOGLE_SITES_RANGE=Sites!A1:Z1000
 GOOGLE_SERVICE_ACCOUNT_EMAIL=
 GOOGLE_PRIVATE_KEY=
+N8N_INTERVENTION_WEBHOOK_URL=
+N8N_INTERVENTION_WEBHOOK_SECRET=
 ```
 
 Configurer `GOOGLE_PRIVATE_KEY` comme secret Cloudflare Pages. La cle doit rester cote serveur.
@@ -42,6 +44,14 @@ Configurer `GOOGLE_PRIVATE_KEY` comme secret Cloudflare Pages. La cle doit reste
 4. `GOOGLE_SHEET_ID` recupere depuis l'URL du Sheet.
 5. Onglets `Clients`, `Contacts` et `Sites` presents si le schema structure est utilise.
 
+## Checklist n8n / Brevo
+
+1. Workflow n8n cree avec un Webhook `multipart/form-data`.
+2. `payload` parse pour creer la carte Trello, preparer l'accuse de reception et journaliser la demande.
+3. `files[]` rattaches a la carte ou stockes selon le dispositif interne.
+4. Envoi email Brevo configure dans n8n.
+5. Secret partage configure dans `N8N_INTERVENTION_WEBHOOK_SECRET`.
+
 ## Test final
 
 1. Deployer sur Cloudflare Pages.
@@ -51,4 +61,5 @@ Configurer `GOOGLE_PRIVATE_KEY` comme secret Cloudflare Pages. La cle doit reste
 5. Verifier que `/auth/callback` ouvre bien une session.
 6. Verifier qu'un email configure dans le Sheet affiche le dashboard.
 7. Verifier qu'un email authentifie mais absent du Sheet retourne l'erreur client non configure.
-8. Tester les cartes Jotform, rapport, ressources et contact.
+8. Tester la demande d'intervention native avec et sans piece jointe.
+9. Tester la carte Support, le rapport, les ressources et le contact.

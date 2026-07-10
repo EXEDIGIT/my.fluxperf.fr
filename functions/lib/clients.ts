@@ -1,4 +1,4 @@
-import type { ClientDto, RawClientRow } from "./types";
+import type { ClientDto, ClientSiteDto, RawClientRow } from "./types";
 
 const expectedColumns: Array<keyof RawClientRow> = [
   "client_id",
@@ -120,6 +120,22 @@ function getValue(record: SheetRecord, ...keys: string[]): string {
   return "";
 }
 
+function domainFromUrl(value: string): string {
+  if (!value) {
+    return "";
+  }
+
+  try {
+    return new URL(value).hostname.replace(/^www\./, "");
+  } catch {
+    return value
+      .replace(/^https?:\/\//i, "")
+      .replace(/^www\./i, "")
+      .split("/")[0]
+      .trim();
+  }
+}
+
 function isAffirmative(value: string): boolean {
   const normalized = normalizeToken(value);
 
@@ -198,6 +214,7 @@ export function toClientDto(row: RawClientRow): ClientDto {
     lastName: row.contact_last_name,
     planLabel: row.plan_label || "Espace client actif",
     services: splitList(row.services_active),
+    sites: [],
     links: {
       request: row.jotform_request_url || null,
       support: row.jotform_support_url || null,
@@ -298,6 +315,19 @@ function activeSitesForClient(client: SheetRecord, sites: SheetRecord[]): SheetR
   });
 }
 
+function siteRecordToDto(site: SheetRecord): ClientSiteDto {
+  const url = getValue(site, "url");
+  const domain = getValue(site, "domaine", "domain") || domainFromUrl(url) || getValue(site, "site_id");
+
+  return {
+    id: getValue(site, "site_id") || domain || url,
+    domain,
+    url,
+    type: getValue(site, "type_site", "type") || "Site suivi",
+    status: getValue(site, "statut_site", "status") || "Actif"
+  };
+}
+
 function servicesFromSites(sites: SheetRecord[]): string[] {
   if (sites.length === 0) {
     return ["Espace client Fluxperf"];
@@ -359,6 +389,7 @@ function structuredClientToDto(
     lastName: contact ? getValue(contact, "nom", "last_name") : "",
     planLabel: "Espace client actif",
     services: servicesFromSites(activeSites),
+    sites: activeSites.map(siteRecordToDto),
     links: {
       request: null,
       support: null,

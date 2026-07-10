@@ -24,7 +24,9 @@ Imagine le portail comme une agence FluxPerf avec plusieurs personnes a l'accuei
 | Google Service Account | Le badge lecteur | Autorise l'API a lire le Google Sheet sans compte humain |
 | Google Sheets API | Le bibliothecaire | Donne les lignes demandees au serveur apres verification du badge |
 | GitHub | L'atelier source | Stocke le code et declenche les builds Cloudflare |
-| Jotform | Le comptoir demandes/support | Peut ouvrir des formulaires dans le dashboard quand les URLs sont renseignees |
+| Formulaire natif | Le comptoir demandes | Collecte les demandes d'intervention depuis MyFluxperf |
+| n8n | Le repartiteur | Recoit les demandes, cree les taches, declenche Brevo et journalise |
+| Jotform | Le comptoir support historique | Peut encore ouvrir un formulaire support quand l'URL est renseignee |
 | Looker Studio | La salle des rapports | Peut etre ouvert via une URL de rapport quand disponible |
 
 ## Chemin d'une connexion
@@ -56,6 +58,8 @@ flowchart LR
   GS --> DB["Google Sheet<br/>Clients / Contacts / Sites"]
   DB --> API
   API --> P
+  P --> REQ["/api/intervention-requests"]
+  REQ --> N8N["n8n webhook"]
 ```
 
 ## Donnees Google Sheet utilisees
@@ -88,6 +92,8 @@ GOOGLE_SITES_RANGE=Sites!A1:Z1000
 GOOGLE_SERVICE_ACCOUNT_EMAIL=my-fluxperf-reader@fluxperf.iam.gserviceaccount.com
 GOOGLE_PRIVATE_KEY=...
 CF_ACCESS_HOSTNAME=my.fluxperf.fr
+N8N_INTERVENTION_WEBHOOK_URL=...
+N8N_INTERVENTION_WEBHOOK_SECRET=...
 ```
 
 `GOOGLE_PRIVATE_KEY` doit rester en secret Cloudflare. Elle ne doit jamais etre mise dans GitHub.
@@ -99,6 +105,7 @@ Ce qui protege les donnees :
 - Cloudflare Access bloque les visiteurs non autorises avant le portail.
 - `/api/me` ignore les emails simules en production.
 - L'API ne renvoie qu'un seul client : celui associe a l'email connecte.
+- `/api/intervention-requests` reverifie l'identite et refuse les sites non rattaches au client.
 - La cle Google reste cote Cloudflare Pages Functions.
 - Le navigateur ne voit jamais la feuille complete ni la cle privee.
 - L'URL `pages.dev` ne doit pas servir de portail client principal.
@@ -110,6 +117,7 @@ Ce qui protege les donnees :
 | `AUTH_REQUIRED` | L'API ne recoit pas l'identite Cloudflare Access | Verifier Access, le domaine protege, le deploiement du correctif JWT |
 | `CLIENT_NOT_CONFIGURED` | L'utilisateur est connecte mais aucun client actif ne correspond | Verifier `email_principal`, `Contacts.email`, `statut_client`, `espace_client_actif` |
 | `DATA_UNAVAILABLE` | L'API n'arrive pas a lire Google Sheets | Verifier variables Cloudflare, cle privee, partage du Sheet au Service Account, onglets/ranges |
+| `WEBHOOK_FAILED` | n8n n'a pas accepte une demande | Verifier le workflow n8n, l'URL webhook et le secret partage |
 
 ## Checklist de reprise pour un developpeur
 
@@ -135,5 +143,7 @@ pnpm run build
 2. En navigation privee, Cloudflare Access demande un email et envoie un OTP.
 3. Un email autorise arrive sur le dashboard.
 4. Un email absent ou client inactif affiche un refus propre.
-5. Les actions rapides affichent un etat vide si les URLs Jotform/rapport ne sont pas encore renseignees.
-6. Desktop et mobile restent lisibles.
+5. La demande d'intervention s'envoie avec et sans piece jointe.
+6. Les sites proposes correspondent uniquement au client connecte.
+7. Les actions rapport/support affichent un etat vide si leurs URLs ne sont pas renseignees.
+8. Desktop et mobile restent lisibles.

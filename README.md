@@ -63,6 +63,8 @@ GOOGLE_CONTACTS_RANGE=Contacts!A1:Z1000
 GOOGLE_SITES_RANGE=Sites!A1:Z1000
 GOOGLE_SERVICE_ACCOUNT_EMAIL=
 GOOGLE_PRIVATE_KEY=
+N8N_INTERVENTION_WEBHOOK_URL=
+N8N_INTERVENTION_WEBHOOK_SECRET=
 ```
 
 `DEV_AUTH_EMAIL` ne doit pas etre renseigne en production.
@@ -97,18 +99,31 @@ Dans l'onglet `Clients`, ajoutez une ligne avec :
 - `status=active`
 - `primary_email` renseigne
 - `allowed_emails` optionnel, separe par des virgules
-- les URLs Jotform, rapport et ressources si disponibles
+- les URLs support, rapport et ressources si disponibles
 
 Voir [docs/google-sheet-template.md](docs/google-sheet-template.md).
 
-## Ajouter un formulaire Jotform
+## Demande d'intervention
 
-Renseignez `jotform_request_url` ou `jotform_support_url` dans la fiche client. L'application ouvre le formulaire en modale et ajoute ces parametres non sensibles :
+La carte "Faire une demande" ouvre un formulaire natif MyFluxperf. Pour le flux
+"Visibilite & Acquisition", l'application propose automatiquement les sites actifs
+de l'onglet `Sites` rattaches au client connecte.
 
-- `client_id`
-- `company`
-- `email`
-- `first_name`
+La Pages Function `POST /api/intervention-requests` verifie l'identite, controle les
+sites selectionnes, limite les pieces jointes a 5 fichiers de 10 Mo, puis transmet a
+n8n un `multipart/form-data` avec :
+
+- `payload` : demande structuree, client, contact et reference Fluxperf
+- `files[]` : pieces jointes ajoutees par le client
+
+Configurez `N8N_INTERVENTION_WEBHOOK_URL` et `N8N_INTERVENTION_WEBHOOK_SECRET` dans
+Cloudflare Pages. n8n prend ensuite le relais pour Trello, l'accuse de reception
+Brevo et la journalisation interne.
+
+## Support externe
+
+`jotform_support_url` peut encore etre renseigne pour la carte Support tant que ce
+parcours n'a pas ete migre.
 
 ## Limitations MVP
 

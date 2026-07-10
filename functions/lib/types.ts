@@ -10,11 +10,21 @@ export type AppEnv = {
   SUPABASE_ANON_KEY?: string;
   GOOGLE_CONTACTS_RANGE?: string;
   GOOGLE_SITES_RANGE?: string;
+  N8N_INTERVENTION_WEBHOOK_URL?: string;
+  N8N_INTERVENTION_WEBHOOK_SECRET?: string;
 };
 
 export type PagesContext = {
   request: Request;
   env: AppEnv;
+};
+
+export type ClientSiteDto = {
+  id: string;
+  domain: string;
+  url: string;
+  type: string;
+  status: string;
 };
 
 export type ClientDto = {
@@ -25,6 +35,7 @@ export type ClientDto = {
   lastName: string;
   planLabel: string;
   services: string[];
+  sites: ClientSiteDto[];
   links: {
     request: string | null;
     support: string | null;

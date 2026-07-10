@@ -62,5 +62,5 @@ last_action_3_date: Il y a 2j
 - `services_active` est une liste séparée par des virgules.
 - Les champs vides sont acceptés.
 - Si `report_url` est vide, l'interface affiche un état vide élégant.
-- Si une URL Jotform est vide, la carte concernée est désactivée.
-
+- `jotform_request_url` est conserve pour compatibilite, mais la demande d'intervention utilise maintenant le formulaire natif.
+- Si `jotform_support_url` est vide, la carte Support est desactivee.
