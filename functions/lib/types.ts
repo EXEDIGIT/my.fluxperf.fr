@@ -12,6 +12,7 @@ export type AppEnv = {
   GOOGLE_SITES_RANGE?: string;
   N8N_INTERVENTION_WEBHOOK_URL?: string;
   N8N_INTERVENTION_WEBHOOK_SECRET?: string;
+  BREVO_API_KEY?: string;
 };
 
 export type PagesContext = {

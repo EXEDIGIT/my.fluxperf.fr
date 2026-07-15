@@ -74,7 +74,9 @@ export function Sidebar({ onLogout }: SidebarProps) {
       <aside className="sidebar desktop-sidebar">
         <a className="sidebar-brand" href="#accueil" aria-label="MyFluxperf">
           <img src="/assets/img/logo-fluxperf.svg" alt="Fluxperf" />
-          <span>MyFluxperf</span>
+          <span>
+            <strong>My</strong>Fluxperf &bull; Espace client
+          </span>
         </a>
         {navLinks}
         {onLogout ? (

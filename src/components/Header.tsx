@@ -14,7 +14,7 @@ export function Header({ client, email }: HeaderProps) {
         <h1>Bonjour {client.firstName || client.companyName}, bienvenue dans votre espace client.</h1>
         <p className="header-copy">
           Retrouvez ici vos demandes, vos rapports, vos ressources et les accès utiles pour piloter
-          votre présence digitale avec notre équipe.
+          votre solution Fluxperf® avec notre équipe.
         </p>
       </div>
 

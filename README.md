@@ -65,6 +65,7 @@ GOOGLE_SERVICE_ACCOUNT_EMAIL=
 GOOGLE_PRIVATE_KEY=
 N8N_INTERVENTION_WEBHOOK_URL=
 N8N_INTERVENTION_WEBHOOK_SECRET=
+BREVO_API_KEY=
 ```
 
 `DEV_AUTH_EMAIL` ne doit pas etre renseigne en production.
@@ -123,10 +124,19 @@ Brevo et la journalisation interne.
 Le workflow n8n importable et la procedure de configuration sont dans
 `docs/n8n/`.
 
-## Support externe
+## Support MyFluxperf
 
-`jotform_support_url` peut encore etre renseigne pour la carte Support tant que ce
-parcours n'a pas ete migre.
+La carte Support ouvre un formulaire natif MyFluxperf avec un objet et une
+description. La Pages Function `POST /api/support-requests` reverifie l'identite,
+retrouve le client connecte dans Google Sheets, puis envoie l'email via Brevo
+Transactional :
+
+- expediteur : `notifications@fluxperf.fr`
+- destinataire : `support@fluxperf.fr`
+- reply-to : email authentifie du client
+
+Configurez `BREVO_API_KEY` dans Cloudflare Pages. En local, si la cle n'est pas
+renseignee, l'API retourne une reception simulee pour faciliter les tests.
 
 ## Limitations MVP
 

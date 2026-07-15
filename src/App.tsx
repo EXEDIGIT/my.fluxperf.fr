@@ -1,22 +1,23 @@
-import { BarChart3, FilePenLine, LifeBuoy, Mail, MessageCircle, ShieldCheck } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { BarChart3, FilePenLine, LifeBuoy, MessageCircle, ShieldCheck, Sparkles } from "lucide-react";
+import { useEffect, useState } from "react";
 import { ActionCard } from "./components/ActionCard";
 import { AuthCallbackPage } from "./components/AuthCallbackPage";
 import { AuthConfirmPage } from "./components/AuthConfirmPage";
 import { ErrorState } from "./components/ErrorState";
 import { Header } from "./components/Header";
 import { InterventionRequestModal } from "./components/InterventionRequestModal";
-import { JotformModal } from "./components/JotformModal";
 import { LatestActions } from "./components/LatestActions";
 import { LoadingState } from "./components/LoadingState";
 import { LoginPage } from "./components/LoginPage";
 import { Resources } from "./components/Resources";
 import { ServicesActive } from "./components/ServicesActive";
 import { Sidebar } from "./components/Sidebar";
+import { SolutionsModal } from "./components/SolutionsModal";
+import { SupportRequestModal } from "./components/SupportRequestModal";
 import { ApiError, getMe } from "./lib/api";
 import { getSupabaseClient, hasSupabaseConfig } from "./lib/supabase";
-import { buildPrefilledJotformUrl, isExternalUrl, prefillFromClient } from "./lib/url";
-import type { Client, MeResponse } from "./types/client";
+import { isExternalUrl } from "./lib/url";
+import type { MeResponse } from "./types/client";
 
 type LoadState =
   | { status: "loading" }
@@ -24,23 +25,22 @@ type LoadState =
   | { status: "ready"; data: MeResponse }
   | { status: "error"; error: unknown };
 
-type ModalState = {
-  title: string;
-  url: string;
-} | null;
-
-function buildSafeJotformUrl(url: string, client: Client, email: string): string {
-  try {
-    return buildPrefilledJotformUrl(url, prefillFromClient(client, email));
-  } catch {
-    return url;
-  }
-}
+type SupportPreset = {
+  key: number;
+  subject: string;
+  message: string;
+};
 
 export function App() {
   const [state, setState] = useState<LoadState>({ status: "loading" });
-  const [modal, setModal] = useState<ModalState>(null);
   const [isRequestOpen, setIsRequestOpen] = useState(false);
+  const [isSupportOpen, setIsSupportOpen] = useState(false);
+  const [isSolutionsOpen, setIsSolutionsOpen] = useState(false);
+  const [supportPreset, setSupportPreset] = useState<SupportPreset>({
+    key: 0,
+    subject: "",
+    message: ""
+  });
   const isAuthCallback = window.location.pathname === "/auth/callback";
   const isAuthConfirm = window.location.pathname === "/auth/confirm";
 
@@ -132,14 +132,23 @@ export function App() {
     setState({ status: "anonymous" });
   }
 
-  const mailto = useMemo(() => {
-    if (state.status !== "ready") return "#";
+  function openSupportRequest(preset?: Partial<Omit<SupportPreset, "key">>) {
+    setSupportPreset((current) => ({
+      key: current.key + 1,
+      subject: preset?.subject ?? "",
+      message: preset?.message ?? ""
+    }));
+    setIsSupportOpen(true);
+  }
 
-    const { client } = state.data;
-    const subject = encodeURIComponent(`Espace client Fluxperf - ${client.companyName}`);
-
-    return `mailto:${client.fluxperfContact.email}?subject=${subject}`;
-  }, [state]);
+  function openActivationRequest() {
+    setIsSolutionsOpen(false);
+    openSupportRequest({
+      subject: "Activation d'une solution Fluxperf",
+      message:
+        "Bonjour,\n\nJe souhaite en savoir plus et activer une nouvelle solution Fluxperf pour mon espace client.\n\nMerci."
+    });
+  }
 
   if (isAuthCallback) {
     return <AuthCallbackPage />;
@@ -162,9 +171,6 @@ export function App() {
   }
 
   const { client, user } = state.data;
-  const supportUrl = client.links.support
-    ? buildSafeJotformUrl(client.links.support, client, user.email)
-    : null;
   const reportUrl = client.links.report;
 
   return (
@@ -176,24 +182,27 @@ export function App() {
         <section className="trust-strip" aria-label="Garanties Fluxperf">
           <span>
             <ShieldCheck aria-hidden="true" />
-            Connexion securisee
+            Connexion sécurisée
           </span>
-          <span>Production en France</span>
-          <span>Donnees client filtrees cote serveur</span>
+          <span>
+            <span className="flag-fr" aria-hidden="true"></span>
+            Production en France
+          </span>
+          <span>Données client filtrées côté serveur</span>
         </section>
 
         <section className="dashboard-section" id="demandes">
           <div className="section-heading section-heading-row">
             <div>
               <span className="section-kicker">Actions rapides</span>
-              <h2>Les acces essentiels de votre accompagnement.</h2>
+              <h2>Les accès essentiels de votre accompagnement.</h2>
             </div>
           </div>
 
           <div className="action-grid">
             <ActionCard
-              title="Faire une demande"
-              description="Transmettez une nouvelle demande d'intervention a l'equipe Fluxperf."
+              title="Demande d'intervention"
+              description="Transmettez une nouvelle demande d'intervention à l'équipe Fluxperf."
               icon={FilePenLine}
               tone="primary"
               actionLabel="Demander"
@@ -201,20 +210,16 @@ export function App() {
             />
             <ActionCard
               title="Support"
-              description="Besoin d'aide ? Contactez notre equipe support."
-              disabled={!supportUrl}
-              disabledText="Le formulaire support n'est pas encore relie a votre espace."
+              description="Écrivez à nos équipes Fluxperf."
               icon={LifeBuoy}
-              actionLabel="Contacter"
-              onAction={() =>
-                supportUrl ? setModal({ title: "Contacter le support", url: supportUrl }) : undefined
-              }
+              actionLabel="Écrire"
+              onAction={() => openSupportRequest()}
             />
             <ActionCard
               title="Voir mon rapport"
               description="Consultez vos derniers rapports et indicateurs."
               disabled={!reportUrl}
-              disabledText="Votre rapport n'est pas encore disponible. Il apparaitra ici des sa publication."
+              disabledText="Votre rapport n'est pas encore disponible. Il apparaîtra ici dès sa publication."
               icon={BarChart3}
               tone="yellow"
               actionLabel="Consulter"
@@ -223,14 +228,11 @@ export function App() {
               }}
             />
             <ActionCard
-              title="Contacter Fluxperf"
-              description={`Echangez directement avec ${client.fluxperfContact.name}.`}
-              icon={Mail}
-              actionLabel="Ecrire"
-              onAction={() => {
-                window.location.href = mailto;
-              }}
-              footer={<span>{client.fluxperfContact.email}</span>}
+              title="Solutions Fluxperf"
+              description="Échangez directement avec Fluxperf. Découvrez et activez une nouvelle solution Fluxperf."
+              icon={Sparkles}
+              actionLabel="En savoir plus"
+              onAction={() => setIsSolutionsOpen(true)}
             />
           </div>
         </section>
@@ -277,11 +279,7 @@ export function App() {
           </div>
           <button
             type="button"
-            onClick={() =>
-              supportUrl
-                ? setModal({ title: "Contacter le support", url: supportUrl })
-                : (window.location.href = mailto)
-            }
+            onClick={() => openSupportRequest()}
           >
             <MessageCircle aria-hidden="true" />
             Contacter l'equipe
@@ -289,18 +287,27 @@ export function App() {
         </section>
       </main>
 
-      <JotformModal
-        title={modal?.title ?? ""}
-        url={modal?.url ?? null}
-        isOpen={Boolean(modal)}
-        onClose={() => setModal(null)}
-      />
-
       <InterventionRequestModal
         client={client}
         email={user.email}
         isOpen={isRequestOpen}
         onClose={() => setIsRequestOpen(false)}
+      />
+
+      <SupportRequestModal
+        client={client}
+        email={user.email}
+        isOpen={isSupportOpen}
+        initialSubject={supportPreset.subject}
+        initialMessage={supportPreset.message}
+        resetKey={supportPreset.key}
+        onClose={() => setIsSupportOpen(false)}
+      />
+
+      <SolutionsModal
+        isOpen={isSolutionsOpen}
+        onClose={() => setIsSolutionsOpen(false)}
+        onActivationRequest={openActivationRequest}
       />
     </>
   );

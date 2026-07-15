@@ -137,6 +137,16 @@ export type InterventionRequestResponse = {
   requestId: string;
 };
 
+export type SupportRequestInput = {
+  subject: string;
+  message: string;
+};
+
+export type SupportRequestResponse = {
+  status: "received";
+  requestId: string;
+};
+
 function buildDemoRequestId(): string {
   const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
 
@@ -181,6 +191,57 @@ export async function submitInterventionRequest(
     }
 
     const data = (await response.json()) as InterventionRequestResponse & ApiErrorResponse;
+
+    if (!response.ok) {
+      throw new ApiError(
+        response.status,
+        data.error?.code || "API_ERROR",
+        data.error?.message || "Une erreur est survenue."
+      );
+    }
+
+    return data;
+  } catch (error) {
+    if (shouldUseViteDemoFallback()) {
+      return {
+        status: "received",
+        requestId: buildDemoRequestId()
+      };
+    }
+
+    throw error;
+  }
+}
+
+export async function submitSupportRequest(
+  input: SupportRequestInput
+): Promise<SupportRequestResponse> {
+  try {
+    const accessToken = await getSupabaseAccessToken();
+    const headers: HeadersInit = {
+      Accept: "application/json",
+      "Content-Type": "application/json"
+    };
+
+    if (accessToken) {
+      headers.Authorization = `Bearer ${accessToken}`;
+    }
+
+    const response = await fetch("/api/support-requests", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        subject: input.subject,
+        message: input.message
+      })
+    });
+    const contentType = response.headers.get("Content-Type") ?? "";
+
+    if (!contentType.includes("application/json")) {
+      throw new ApiError(response.status || 500, "INVALID_RESPONSE", "Reponse API invalide.");
+    }
+
+    const data = (await response.json()) as SupportRequestResponse & ApiErrorResponse;
 
     if (!response.ok) {
       throw new ApiError(

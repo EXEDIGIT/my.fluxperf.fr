@@ -23,9 +23,10 @@ GOOGLE_SERVICE_ACCOUNT_EMAIL=
 GOOGLE_PRIVATE_KEY=
 N8N_INTERVENTION_WEBHOOK_URL=
 N8N_INTERVENTION_WEBHOOK_SECRET=
+BREVO_API_KEY=
 ```
 
-Configurer `GOOGLE_PRIVATE_KEY` comme secret Cloudflare Pages. La cle doit rester cote serveur.
+Configurer `GOOGLE_PRIVATE_KEY` et `BREVO_API_KEY` comme secrets Cloudflare Pages. Ces cles doivent rester cote serveur.
 
 ## Checklist Supabase
 
@@ -53,6 +54,14 @@ Configurer `GOOGLE_PRIVATE_KEY` comme secret Cloudflare Pages. La cle doit reste
 5. Secret partage configure dans `N8N_INTERVENTION_WEBHOOK_SECRET`.
 6. Procedure detaillee : `docs/n8n/intervention-workflow-setup.md`.
 
+## Checklist Support MyFluxperf
+
+1. Verifier dans Brevo que `notifications@fluxperf.fr` est un expediteur autorise.
+2. Creer une cle API Brevo transactionnelle.
+3. Ajouter la cle dans Cloudflare Pages sous `BREVO_API_KEY`.
+4. Tester la carte Support avec un compte client actif.
+5. Verifier que l'email arrive a `support@fluxperf.fr` avec un reply-to client.
+
 ## Test final
 
 1. Deployer sur Cloudflare Pages.
@@ -63,4 +72,4 @@ Configurer `GOOGLE_PRIVATE_KEY` comme secret Cloudflare Pages. La cle doit reste
 6. Verifier qu'un email configure dans le Sheet affiche le dashboard.
 7. Verifier qu'un email authentifie mais absent du Sheet retourne l'erreur client non configure.
 8. Tester la demande d'intervention native avec et sans piece jointe.
-9. Tester la carte Support, le rapport, les ressources et le contact.
+9. Tester la carte Support, la popin Solutions, le rapport et les ressources.
