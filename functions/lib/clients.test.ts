@@ -192,6 +192,17 @@ const structuredWorkbook = {
       "2026-07-06",
       "Site trial"
     ]
+  ],
+  solutions: [
+    [
+      "solution_id",
+      "client_id",
+      "type_solution",
+      "statut_solution",
+      "nom_solution",
+      "date_activation",
+      "notes"
+    ]
   ]
 };
 
@@ -266,6 +277,164 @@ describe("client sheet parsing", () => {
           status: "Actif"
         }
       ]);
+      expect(result.client.impact).toMatchObject({
+        weeklyHours: 3,
+        monthlyHours: 13,
+        isEstimated: true
+      });
+      expect(result.client.impact.items).toEqual([
+        {
+          key: "visibility_acquisition",
+          label: "Visibilité & Acquisition",
+          quantity: 2,
+          weeklyHours: 3,
+          monthlyHours: 13
+        }
+      ]);
+    }
+  });
+
+  it("counts an active automation solution even when the client has no site", () => {
+    const workbook = {
+      ...structuredWorkbook,
+      clients: [
+        structuredWorkbook.clients[0],
+        [
+          "CLI-0003",
+          "Autom Client",
+          "AUTOM",
+          "Actif",
+          "Oui",
+          "CON-0003",
+          "autom@example.com",
+          "0",
+          "2026-07-06",
+          "2026-07-06",
+          ""
+        ]
+      ],
+      contacts: [
+        structuredWorkbook.contacts[0],
+        [
+          "CON-0003",
+          "CLI-0003",
+          "Alex",
+          "Martin",
+          "autom@example.com",
+          "Decisionnaire",
+          "Oui",
+          "Actif",
+          "2026-07-06",
+          ""
+        ]
+      ],
+      sites: [structuredWorkbook.sites[0]],
+      solutions: [
+        structuredWorkbook.solutions[0],
+        [
+          "SOL-0001",
+          "CLI-0003",
+          "automation_ai",
+          "Actif",
+          "Automatisation facturation",
+          "2026-07-06",
+          ""
+        ]
+      ]
+    };
+    const result = findClientForEmailInWorkbook(workbook, "autom@example.com");
+
+    expect(result.status).toBe("ok");
+    if (result.status === "ok") {
+      expect(result.client.sites).toEqual([]);
+      expect(result.client.services).toEqual([
+        "Flux Automatisation & IA : Automatisation facturation"
+      ]);
+      expect(result.client.impact.weeklyHours).toBe(1);
+      expect(result.client.impact.items).toEqual([
+        {
+          key: "automation_ai",
+          label: "Automatisation & IA",
+          quantity: 1,
+          weeklyHours: 1,
+          monthlyHours: 4.5
+        }
+      ]);
+    }
+  });
+
+  it("combines one site, one automation and one assistant", () => {
+    const workbook = {
+      ...structuredWorkbook,
+      sites: [structuredWorkbook.sites[0], structuredWorkbook.sites[1]],
+      solutions: [
+        structuredWorkbook.solutions[0],
+        [
+          "SOL-0001",
+          "CLI-0001",
+          "Flux Automatisation IA",
+          "Actif",
+          "Automatisation reporting",
+          "2026-07-06",
+          ""
+        ],
+        [
+          "SOL-0002",
+          "CLI-0001",
+          "Assistant IA",
+          "Actif",
+          "Assistant support",
+          "2026-07-06",
+          ""
+        ]
+      ]
+    };
+    const result = findClientForEmailInWorkbook(workbook, "tdacunha@exedigit.fr");
+
+    expect(result.status).toBe("ok");
+    if (result.status === "ok") {
+      expect(result.client.services).toEqual([
+        "Site suivi : hbint.com",
+        "Flux Automatisation & IA : Automatisation reporting",
+        "Flux Assistant IA : Assistant support"
+      ]);
+      expect(result.client.impact.weeklyHours).toBe(4.5);
+      expect(result.client.impact.monthlyHours).toBe(19.5);
+      expect(result.client.impact.items.map((item) => [item.key, item.quantity, item.weeklyHours])).toEqual([
+        ["visibility_acquisition", 1, 1.5],
+        ["automation_ai", 1, 1],
+        ["assistant_ai", 1, 2]
+      ]);
+    }
+  });
+
+  it("ignores inactive solutions", () => {
+    const workbook = {
+      ...structuredWorkbook,
+      solutions: [
+        structuredWorkbook.solutions[0],
+        [
+          "SOL-0001",
+          "CLI-0001",
+          "automation_ai",
+          "Inactif",
+          "Automatisation en pause",
+          "2026-07-06",
+          ""
+        ]
+      ]
+    };
+    const result = findClientForEmailInWorkbook(workbook, "tdacunha@exedigit.fr");
+
+    expect(result.status).toBe("ok");
+    if (result.status === "ok") {
+      expect(result.client.services).toEqual([
+        "Site suivi : hbint.com",
+        "Site suivi : trial.hbint.com"
+      ]);
+      expect(result.client.impact.weeklyHours).toBe(3);
+      expect(result.client.impact.items).toHaveLength(1);
+      expect(result.client.impact.items[0].key).toBe("visibility_acquisition");
     }
   });
 

@@ -64,3 +64,46 @@ last_action_3_date: Il y a 2j
 - Si `report_url` est vide, l'interface affiche un état vide élégant.
 - `jotform_request_url` est conserve pour compatibilite, mais la demande d'intervention utilise maintenant le formulaire natif.
 - Si `jotform_support_url` est vide, la carte Support est desactivee.
+
+## Onglet `Solutions`
+
+Creer un onglet nomme `Solutions` pour declarer les solutions IA actives.
+
+```text
+solution_id
+client_id
+type_solution
+statut_solution
+nom_solution
+date_activation
+notes
+```
+
+## Exemple de lignes `Solutions`
+
+```text
+solution_id: SOL-0001
+client_id: CLI-0001
+type_solution: automation_ai
+statut_solution: Actif
+nom_solution: Automatisation facturation
+date_activation: 2026-07-17
+notes:
+
+solution_id: SOL-0002
+client_id: CLI-0001
+type_solution: assistant_ai
+statut_solution: Actif
+nom_solution: Assistant support
+date_activation: 2026-07-17
+notes:
+```
+
+## Regles du module Impacts
+
+- Les lignes `Solutions` actives apparaissent aussi dans la section `Services actifs`.
+- `type_solution` peut contenir les codes `automation_ai` / `assistant_ai` ou les libelles `Flux Automatisation IA` / `Assistant IA`.
+- Les sites actifs de l'onglet `Sites` comptent pour Flux Visibilite & Acquisition.
+- Une ligne `Solutions` compte uniquement si `statut_solution` vaut `Actif`.
+- `automation_ai` ajoute 1 h / semaine.
+- `assistant_ai` ajoute 2 h / semaine.

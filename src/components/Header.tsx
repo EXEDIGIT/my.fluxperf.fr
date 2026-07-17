@@ -13,7 +13,7 @@ export function Header({ client, email }: HeaderProps) {
         <p className="eyebrow">Votre espace client Fluxperf</p>
         <h1>Bonjour {client.firstName || client.companyName}, bienvenue dans votre espace client.</h1>
         <p className="header-copy">
-          Retrouvez ici vos demandes, vos rapports, vos ressources et les accès utiles pour piloter
+          Retrouvez ici vos demandes, vos impacts, vos ressources et les accès utiles pour piloter
           votre solution Fluxperf® avec notre équipe.
         </p>
       </div>

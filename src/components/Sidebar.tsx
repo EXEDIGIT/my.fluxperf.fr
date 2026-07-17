@@ -1,11 +1,11 @@
 import {
-  BarChart3,
   FilePenLine,
   FolderOpen,
   LayoutDashboard,
   LifeBuoy,
   LogOut,
   Menu,
+  TimerReset,
   X
 } from "lucide-react";
 import { useState } from "react";
@@ -26,9 +26,9 @@ const navigation = [
     icon: FilePenLine
   },
   {
-    label: "Mes rapports",
-    href: "#rapports",
-    icon: BarChart3
+    label: "Mes impacts",
+    href: "#impacts",
+    icon: TimerReset
   },
   {
     label: "Ressources",

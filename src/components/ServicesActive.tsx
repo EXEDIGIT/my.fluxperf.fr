@@ -6,7 +6,7 @@ type ServicesActiveProps = {
 };
 
 function iconForService(service: string) {
-  const normalized = service.toLowerCase();
+  const normalized = normalizeService(service);
 
   if (normalized.includes("site")) return MonitorSmartphone;
   if (normalized.includes("visibil")) return Globe2;
@@ -14,6 +14,35 @@ function iconForService(service: string) {
   if (normalized.includes("automatisation")) return Zap;
   if (normalized.includes("ia")) return Bot;
   return Wrench;
+}
+
+function normalizeService(service: string) {
+  return service
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function descriptionForService(service: string) {
+  const normalized = normalizeService(service);
+
+  if (normalized.includes("assistant")) {
+    return "Assistant IA actif, suivi avec son contexte metier et ses evolutions utiles.";
+  }
+
+  if (normalized.includes("automatisation")) {
+    return "Automatisations, integrations et workflows IA rattaches a votre compte.";
+  }
+
+  if (normalized.includes("site")) {
+    return "Site rattache a votre espace client avec les informations de suivi a jour.";
+  }
+
+  if (normalized.includes("visibil") || normalized.includes("ads") || normalized.includes("sea")) {
+    return "Pilotage de votre visibilite, acquisition et performance digitale.";
+  }
+
+  return "Suivi dans votre espace client avec les informations et acces utiles a jour.";
 }
 
 export function ServicesActive({ services }: ServicesActiveProps) {
@@ -26,18 +55,16 @@ export function ServicesActive({ services }: ServicesActiveProps) {
         <h2>Ce que notre équipe pilote avec vous.</h2>
       </div>
       <div className="service-grid">
-        {visibleServices.map((service) => {
+        {visibleServices.map((service, index) => {
           const Icon = iconForService(service);
 
           return (
-            <article className="service-card" key={service}>
+            <article className="service-card" key={`${service}-${index}`}>
               <span>
                 <Icon aria-hidden="true" />
               </span>
               <strong>{service}</strong>
-              <p>
-                Suivi dans votre espace client avec les informations et accès utiles à jour.
-              </p>
+              <p>{descriptionForService(service)}</p>
             </article>
           );
         })}

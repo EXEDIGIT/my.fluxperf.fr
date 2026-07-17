@@ -424,6 +424,13 @@ svg {
   letter-spacing: 0;
 }
 
+.section-subtitle {
+  max-width: 560px;
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
 .section-heading-row {
   display: flex;
   align-items: flex-start;
@@ -586,6 +593,89 @@ svg {
   color: var(--ink);
 }
 
+.impact-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.impact-total {
+  min-height: 140px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 22px;
+  border: 1px solid rgba(0, 111, 120, 0.2);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(135deg, rgba(231, 244, 243, 0.96), rgba(255, 243, 202, 0.55)),
+    var(--green-soft);
+}
+
+.impact-total > svg {
+  flex: 0 0 auto;
+  color: var(--green);
+  font-size: 2rem;
+}
+
+.impact-total strong {
+  color: var(--ink);
+  font-size: clamp(1.42rem, 2.1vw, 2rem);
+  line-height: 1.1;
+}
+
+.impact-total p,
+.impact-item p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.impact-list {
+  display: grid;
+  gap: 10px;
+}
+
+.impact-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.impact-item-icon {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--yellow-soft);
+  color: var(--green);
+}
+
+.impact-item strong {
+  color: var(--ink);
+}
+
+.impact-item > span:last-child {
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.impact-item small {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
 .empty-state {
   min-height: 132px;
   display: grid;
@@ -596,6 +686,10 @@ svg {
   border-radius: var(--radius);
   background: rgba(231, 244, 243, 0.36);
   text-align: center;
+}
+
+.impact-empty {
+  min-height: 214px;
 }
 
 .small-empty {
@@ -1997,6 +2091,21 @@ svg {
   .service-card,
   .resource-card {
     min-height: 0;
+  }
+
+  .impact-total {
+    align-items: flex-start;
+    padding: 18px;
+  }
+
+  .impact-item {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .impact-item > span:last-child {
+    grid-column: 2;
+    text-align: left;
+    white-space: normal;
   }
 
   .support-band button {

@@ -10,6 +10,7 @@ export type AppEnv = {
   SUPABASE_ANON_KEY?: string;
   GOOGLE_CONTACTS_RANGE?: string;
   GOOGLE_SITES_RANGE?: string;
+  GOOGLE_SOLUTIONS_RANGE?: string;
   N8N_INTERVENTION_WEBHOOK_URL?: string;
   N8N_INTERVENTION_WEBHOOK_SECRET?: string;
   BREVO_API_KEY?: string;
@@ -28,6 +29,23 @@ export type ClientSiteDto = {
   status: string;
 };
 
+export type ClientImpactKey = "visibility_acquisition" | "automation_ai" | "assistant_ai";
+
+export type ClientImpactItemDto = {
+  key: ClientImpactKey;
+  label: string;
+  quantity: number;
+  weeklyHours: number;
+  monthlyHours: number;
+};
+
+export type ClientImpactDto = {
+  weeklyHours: number;
+  monthlyHours: number;
+  items: ClientImpactItemDto[];
+  isEstimated: true;
+};
+
 export type ClientDto = {
   id: string;
   status: string;
@@ -37,6 +55,7 @@ export type ClientDto = {
   planLabel: string;
   services: string[];
   sites: ClientSiteDto[];
+  impact: ClientImpactDto;
   links: {
     request: string | null;
     support: string | null;

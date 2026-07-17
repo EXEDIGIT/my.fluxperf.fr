@@ -1,10 +1,11 @@
-import { BarChart3, FilePenLine, LifeBuoy, MessageCircle, ShieldCheck, Sparkles } from "lucide-react";
+import { FilePenLine, LifeBuoy, MessageCircle, ShieldCheck, Sparkles, TimerReset } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ActionCard } from "./components/ActionCard";
 import { AuthCallbackPage } from "./components/AuthCallbackPage";
 import { AuthConfirmPage } from "./components/AuthConfirmPage";
 import { ErrorState } from "./components/ErrorState";
 import { Header } from "./components/Header";
+import { ImpactPanel } from "./components/ImpactPanel";
 import { InterventionRequestModal } from "./components/InterventionRequestModal";
 import { LatestActions } from "./components/LatestActions";
 import { LoadingState } from "./components/LoadingState";
@@ -16,7 +17,6 @@ import { SolutionsModal } from "./components/SolutionsModal";
 import { SupportRequestModal } from "./components/SupportRequestModal";
 import { ApiError, getMe } from "./lib/api";
 import { getSupabaseClient, hasSupabaseConfig } from "./lib/supabase";
-import { isExternalUrl } from "./lib/url";
 import type { MeResponse } from "./types/client";
 
 type LoadState =
@@ -150,6 +150,10 @@ export function App() {
     });
   }
 
+  function scrollToImpacts() {
+    document.getElementById("impacts")?.scrollIntoView({ behavior: "smooth" });
+  }
+
   if (isAuthCallback) {
     return <AuthCallbackPage />;
   }
@@ -171,7 +175,6 @@ export function App() {
   }
 
   const { client, user } = state.data;
-  const reportUrl = client.links.report;
 
   return (
     <>
@@ -216,16 +219,12 @@ export function App() {
               onAction={() => openSupportRequest()}
             />
             <ActionCard
-              title="Voir mon rapport"
-              description="Consultez vos derniers rapports et indicateurs."
-              disabled={!reportUrl}
-              disabledText="Votre rapport n'est pas encore disponible. Il apparaîtra ici dès sa publication."
-              icon={BarChart3}
+              title="Mes impacts"
+              description="Visualisez le temps libéré par votre accompagnement Fluxperf."
+              icon={TimerReset}
               tone="yellow"
-              actionLabel="Consulter"
-              onAction={() => {
-                if (reportUrl) window.open(reportUrl, "_blank", "noopener,noreferrer");
-              }}
+              actionLabel="Voir"
+              onAction={scrollToImpacts}
             />
             <ActionCard
               title="Solutions Fluxperf"
@@ -238,30 +237,13 @@ export function App() {
         </section>
 
         <div className="dashboard-two-columns">
-          <section className="dashboard-section compact-section" id="rapports">
+          <section className="dashboard-section compact-section" id="impacts">
             <div className="section-heading">
-              <span className="section-kicker">Rapports</span>
-              <h2>Votre suivi de performance.</h2>
+              <span className="section-kicker">Impacts</span>
+              <h2>Votre temps libéré</h2>
+              <p className="section-subtitle">Pris en charge par votre solution Fluxperf®</p>
             </div>
-            {reportUrl ? (
-              <a
-                className="report-panel"
-                href={reportUrl}
-                target={isExternalUrl(reportUrl) ? "_blank" : undefined}
-                rel={isExternalUrl(reportUrl) ? "noreferrer" : undefined}
-              >
-                <BarChart3 aria-hidden="true" />
-                <div>
-                  <strong>Rapport disponible</strong>
-                  <p>Ouvrir vos derniers indicateurs Fluxperf.</p>
-                </div>
-              </a>
-            ) : (
-              <div className="empty-state">
-                <BarChart3 aria-hidden="true" />
-                <p>Votre rapport n'est pas encore disponible. Il apparaitra ici des sa publication.</p>
-              </div>
-            )}
+            <ImpactPanel impact={client.impact} />
           </section>
 
           <LatestActions actions={client.latestActions} />

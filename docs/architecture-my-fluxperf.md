@@ -20,14 +20,14 @@ Imagine le portail comme une agence FluxPerf avec plusieurs personnes a l'accuei
 | React/Vite | La salle d'accueil client | Affiche le dashboard, les cartes, les services et les ressources |
 | `/api/me` | Le guichet prive | Recupere l'email connecte et retourne une seule fiche client |
 | Pages Functions | Le bureau cote serveur | Execute le code API sur Cloudflare, sans exposer les secrets au navigateur |
-| Google Sheet | Le classeur clients | Contient les donnees clients, contacts et sites |
+| Google Sheet | Le classeur clients | Contient les donnees clients, contacts, sites et solutions |
 | Google Service Account | Le badge lecteur | Autorise l'API a lire le Google Sheet sans compte humain |
 | Google Sheets API | Le bibliothecaire | Donne les lignes demandees au serveur apres verification du badge |
 | GitHub | L'atelier source | Stocke le code et declenche les builds Cloudflare |
 | Formulaire natif | Le comptoir demandes | Collecte les demandes d'intervention depuis MyFluxperf |
 | n8n | Le repartiteur | Recoit les demandes, cree les taches, declenche Brevo et journalise |
 | Jotform | Le comptoir support historique | Peut encore ouvrir un formulaire support quand l'URL est renseignee |
-| Looker Studio | La salle des rapports | Peut etre ouvert via une URL de rapport quand disponible |
+| Looker Studio | Salle historique d'indicateurs | Peut rester reference via `report_url`, mais le dashboard V1 affiche le module Impacts |
 
 ## Chemin d'une connexion
 
@@ -55,7 +55,7 @@ flowchart LR
   P --> API["/api/me<br/>Pages Function"]
   API --> SA["Service Account<br/>JWT signe"]
   SA --> GS["Google Sheets API"]
-  GS --> DB["Google Sheet<br/>Clients / Contacts / Sites"]
+  GS --> DB["Google Sheet<br/>Clients / Contacts / Sites / Solutions"]
   DB --> API
   API --> P
   P --> REQ["/api/intervention-requests"]
@@ -71,6 +71,7 @@ Le portail supporte la structure actuelle de la BDD :
 | `Clients` | Identite du compte, statut client, activation de l'espace client, email principal |
 | `Contacts` | Prenom, nom, email, statut contact |
 | `Sites` | Sites rattaches au client, domaine, URL, statut, suivi actif |
+| `Solutions` | Solutions IA rattachees au client pour calculer le temps libere |
 | `Parametres` | Valeurs de reference pour la BDD, non lues par le portail MVP |
 
 Conditions pour qu'un client soit affiche :
@@ -89,6 +90,7 @@ GOOGLE_SHEET_ID=1UQg2AbJYg2GEfzHshUVaAVfDvIdHHQHAw7LADcAUvKA
 GOOGLE_SHEET_RANGE=Clients!A1:Z1000
 GOOGLE_CONTACTS_RANGE=Contacts!A1:Z1000
 GOOGLE_SITES_RANGE=Sites!A1:Z1000
+GOOGLE_SOLUTIONS_RANGE=Solutions!A1:Z1000
 GOOGLE_SERVICE_ACCOUNT_EMAIL=my-fluxperf-reader@fluxperf.iam.gserviceaccount.com
 GOOGLE_PRIVATE_KEY=...
 CF_ACCESS_HOSTNAME=my.fluxperf.fr
@@ -145,5 +147,5 @@ pnpm run build
 4. Un email absent ou client inactif affiche un refus propre.
 5. La demande d'intervention s'envoie avec et sans piece jointe.
 6. Les sites proposes correspondent uniquement au client connecte.
-7. Les actions rapport/support affichent un etat vide si leurs URLs ne sont pas renseignees.
+7. Le module Impacts affiche le temps libere ou un etat vide si aucune donnee n'est active.
 8. Desktop et mobile restent lisibles.

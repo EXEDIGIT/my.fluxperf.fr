@@ -19,6 +19,7 @@ GOOGLE_SHEET_ID=
 GOOGLE_SHEET_RANGE=Clients!A1:Z1000
 GOOGLE_CONTACTS_RANGE=Contacts!A1:Z1000
 GOOGLE_SITES_RANGE=Sites!A1:Z1000
+GOOGLE_SOLUTIONS_RANGE=Solutions!A1:Z1000
 GOOGLE_SERVICE_ACCOUNT_EMAIL=
 GOOGLE_PRIVATE_KEY=
 N8N_INTERVENTION_WEBHOOK_URL=
@@ -43,7 +44,7 @@ Configurer `GOOGLE_PRIVATE_KEY` et `BREVO_API_KEY` comme secrets Cloudflare Page
 2. Service Account cree.
 3. Google Sheet partage en lecture avec le Service Account.
 4. `GOOGLE_SHEET_ID` recupere depuis l'URL du Sheet.
-5. Onglets `Clients`, `Contacts` et `Sites` presents si le schema structure est utilise.
+5. Onglets `Clients`, `Contacts`, `Sites` et `Solutions` presents si le schema structure est utilise.
 
 ## Checklist n8n / Brevo
 
@@ -72,4 +73,4 @@ Configurer `GOOGLE_PRIVATE_KEY` et `BREVO_API_KEY` comme secrets Cloudflare Page
 6. Verifier qu'un email configure dans le Sheet affiche le dashboard.
 7. Verifier qu'un email authentifie mais absent du Sheet retourne l'erreur client non configure.
 8. Tester la demande d'intervention native avec et sans piece jointe.
-9. Tester la carte Support, la popin Solutions, le rapport et les ressources.
+9. Tester la carte Support, la popin Solutions, le module Impacts et les ressources.

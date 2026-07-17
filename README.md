@@ -61,6 +61,7 @@ GOOGLE_SHEET_ID=
 GOOGLE_SHEET_RANGE=Clients!A1:Z1000
 GOOGLE_CONTACTS_RANGE=Contacts!A1:Z1000
 GOOGLE_SITES_RANGE=Sites!A1:Z1000
+GOOGLE_SOLUTIONS_RANGE=Solutions!A1:Z1000
 GOOGLE_SERVICE_ACCOUNT_EMAIL=
 GOOGLE_PRIVATE_KEY=
 N8N_INTERVENTION_WEBHOOK_URL=
@@ -100,9 +101,34 @@ Dans l'onglet `Clients`, ajoutez une ligne avec :
 - `status=active`
 - `primary_email` renseigne
 - `allowed_emails` optionnel, separe par des virgules
-- les URLs support, rapport et ressources si disponibles
+- les URLs support et ressources si disponibles
 
 Voir [docs/google-sheet-template.md](docs/google-sheet-template.md).
+
+## Module Impacts
+
+Le module "Impacts" affiche le temps libere estime pour le client connecte.
+Le calcul est fait cote Pages Function dans `/api/me`, a chaque chargement du
+dashboard :
+
+- 1 site actif dans l'onglet `Sites` = 1,5 h / semaine
+- 1 ligne `automation_ai` active dans l'onglet `Solutions` = 1 h / semaine
+- 1 ligne `assistant_ai` active dans l'onglet `Solutions` = 2 h / semaine
+
+L'onglet `Solutions` est optionnel pour garder la compatibilite avec les bases
+existantes. Colonnes attendues :
+
+```text
+solution_id
+client_id
+type_solution
+statut_solution
+nom_solution
+date_activation
+notes
+```
+
+Valeurs V1 attendues pour `type_solution` : `automation_ai`, `assistant_ai`.
 
 ## Demande d'intervention
 

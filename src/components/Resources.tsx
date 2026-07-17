@@ -14,7 +14,7 @@ const resources = [
   },
   {
     title: "FAQ",
-    description: "Retrouver les réponses utiles sur votre espace client, les rapports et le support.",
+    description: "Retrouver les réponses utiles sur votre espace client, les impacts et le support.",
     icon: HelpCircle
   },
   {

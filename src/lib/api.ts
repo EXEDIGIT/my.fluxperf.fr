@@ -23,7 +23,13 @@ const demoResponse: MeResponse = {
     firstName: "Anthony",
     lastName: "Dupont",
     planLabel: "Abonnement actif",
-    services: ["Site internet", "Visibilité Web", "Google Ads", "Automatisation & IA"],
+    services: [
+      "Site internet",
+      "Visibilité Web",
+      "Google Ads",
+      "Flux Automatisation & IA : Reporting automatique",
+      "Flux Assistant IA : Assistant support"
+    ],
     sites: [
       {
         id: "SITE-0001",
@@ -40,6 +46,34 @@ const demoResponse: MeResponse = {
         status: "Actif"
       }
     ],
+    impact: {
+      weeklyHours: 6,
+      monthlyHours: 26,
+      items: [
+        {
+          key: "visibility_acquisition",
+          label: "Visibilité & Acquisition",
+          quantity: 2,
+          weeklyHours: 3,
+          monthlyHours: 13
+        },
+        {
+          key: "automation_ai",
+          label: "Automatisation & IA",
+          quantity: 1,
+          weeklyHours: 1,
+          monthlyHours: 4.5
+        },
+        {
+          key: "assistant_ai",
+          label: "Assistant IA",
+          quantity: 1,
+          weeklyHours: 2,
+          monthlyHours: 8.5
+        }
+      ],
+      isEstimated: true
+    },
     links: {
       request: "https://form.jotform.com/240000000000000",
       support: "https://form.jotform.com/240000000000001",

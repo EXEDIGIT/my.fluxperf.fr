@@ -1,4 +1,4 @@
-import type { ClientDto, ClientSiteDto, RawClientRow } from "./types";
+import type { ClientDto, ClientImpactDto, ClientImpactKey, ClientSiteDto, RawClientRow } from "./types";
 
 const expectedColumns: Array<keyof RawClientRow> = [
   "client_id",
@@ -35,7 +35,7 @@ export const demoSheetValues: string[][] = [
     "contact@a2-cm.fr",
     "contact@a2-cm.fr, direction@a2-cm.fr",
     "Abonnement actif",
-    "Site internet, Visibilite Web, Google Ads, Automatisation & IA",
+    "Site internet, Visibilite Web, Google Ads, Automatisation & IA, Assistant IA",
     "https://form.jotform.com/240000000000000",
     "https://form.jotform.com/240000000000001",
     "",
@@ -60,9 +60,45 @@ export type ClientWorkbookValues = {
   clients: string[][];
   contacts?: string[][];
   sites?: string[][];
+  solutions?: string[][];
 };
 
 type SheetRecord = Record<string, string>;
+
+const impactRules: Record<ClientImpactKey, { label: string; weeklyHoursPerUnit: number }> = {
+  visibility_acquisition: {
+    label: "Visibilité & Acquisition",
+    weeklyHoursPerUnit: 1.5
+  },
+  automation_ai: {
+    label: "Automatisation & IA",
+    weeklyHoursPerUnit: 1
+  },
+  assistant_ai: {
+    label: "Assistant IA",
+    weeklyHoursPerUnit: 2
+  }
+};
+
+const solutionImpactKeys: ClientImpactKey[] = ["automation_ai", "assistant_ai"];
+
+const solutionTypeAliases: Record<ClientImpactKey, string[]> = {
+  visibility_acquisition: [],
+  automation_ai: [
+    "automation_ai",
+    "automatisation_ai",
+    "automatisation_ia",
+    "flux_automation_ai",
+    "flux_automatisation_ai",
+    "flux_automatisation_ia"
+  ],
+  assistant_ai: [
+    "assistant_ai",
+    "assistant_ia",
+    "flux_assistant_ai",
+    "flux_assistant_ia"
+  ]
+};
 
 function normalizeColumn(value: string): string {
   return value.trim().toLowerCase();
@@ -78,6 +114,12 @@ function normalizeToken(value: string): string {
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
+}
+
+function normalizeAlias(value: string): string {
+  return normalizeToken(value)
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
 }
 
 function splitList(value: string): string[] {
@@ -144,6 +186,76 @@ function isAffirmative(value: string): boolean {
 
 function isActiveStatus(value: string): boolean {
   return ["active", "actif"].includes(normalizeToken(value));
+}
+
+function roundToHalfHour(value: number): number {
+  return Math.round(value * 2) / 2;
+}
+
+function monthlyHoursFromWeekly(weeklyHours: number): number {
+  return roundToHalfHour((weeklyHours * 52) / 12);
+}
+
+function solutionImpactKey(solution: SheetRecord): ClientImpactKey | null {
+  const type = normalizeAlias(getValue(solution, "type_solution", "type", "solution_type"));
+
+  return solutionImpactKeys.find((key) => solutionTypeAliases[key].includes(type)) ?? null;
+}
+
+function emptyImpact(): ClientImpactDto {
+  return {
+    weeklyHours: 0,
+    monthlyHours: 0,
+    items: [],
+    isEstimated: true
+  };
+}
+
+function buildImpact(activeSitesCount: number, activeSolutions: SheetRecord[] = []): ClientImpactDto {
+  const quantities: Record<ClientImpactKey, number> = {
+    visibility_acquisition: activeSitesCount,
+    automation_ai: 0,
+    assistant_ai: 0
+  };
+
+  activeSolutions.forEach((solution) => {
+    const type = solutionImpactKey(solution);
+
+    if (type) {
+      quantities[type] += 1;
+    }
+  });
+
+  const items = (Object.keys(impactRules) as ClientImpactKey[])
+    .map((key) => {
+      const quantity = quantities[key];
+      const rule = impactRules[key];
+      const weeklyHours = roundToHalfHour(quantity * rule.weeklyHoursPerUnit);
+
+      return {
+        key,
+        label: rule.label,
+        quantity,
+        weeklyHours,
+        monthlyHours: monthlyHoursFromWeekly(weeklyHours)
+      };
+    })
+    .filter((item) => item.quantity > 0);
+
+  if (items.length === 0) {
+    return emptyImpact();
+  }
+
+  const weeklyHours = roundToHalfHour(
+    items.reduce((total, item) => total + item.weeklyHours, 0)
+  );
+
+  return {
+    weeklyHours,
+    monthlyHours: monthlyHoursFromWeekly(weeklyHours),
+    items,
+    isEstimated: true
+  };
 }
 
 function hasStructuredClientHeaders(values: string[][]): boolean {
@@ -215,6 +327,7 @@ export function toClientDto(row: RawClientRow): ClientDto {
     planLabel: row.plan_label || "Espace client actif",
     services: splitList(row.services_active),
     sites: [],
+    impact: emptyImpact(),
     links: {
       request: row.jotform_request_url || null,
       support: row.jotform_support_url || null,
@@ -315,6 +428,18 @@ function activeSitesForClient(client: SheetRecord, sites: SheetRecord[]): SheetR
   });
 }
 
+function activeSolutionsForClient(client: SheetRecord, solutions: SheetRecord[]): SheetRecord[] {
+  const clientId = getValue(client, "client_id");
+
+  return solutions.filter((solution) => {
+    if (getValue(solution, "client_id") !== clientId) {
+      return false;
+    }
+
+    return isActiveStatus(getValue(solution, "statut_solution", "status", "statut"));
+  });
+}
+
 function siteRecordToDto(site: SheetRecord): ClientSiteDto {
   const url = getValue(site, "url");
   const domain = getValue(site, "domaine", "domain") || domainFromUrl(url) || getValue(site, "site_id");
@@ -329,15 +454,48 @@ function siteRecordToDto(site: SheetRecord): ClientSiteDto {
 }
 
 function servicesFromSites(sites: SheetRecord[]): string[] {
-  if (sites.length === 0) {
-    return ["Espace client Fluxperf"];
-  }
-
-  return sites.slice(0, 4).map((site) => {
+  return sites.map((site) => {
     const label = getValue(site, "domaine") || getValue(site, "url") || getValue(site, "site_id");
 
     return `Site suivi : ${label}`;
   });
+}
+
+function serviceFromSolution(solution: SheetRecord): string | null {
+  const type = solutionImpactKey(solution);
+
+  if (!type) {
+    return null;
+  }
+
+  const familyLabel = type === "automation_ai" ? "Flux Automatisation & IA" : "Flux Assistant IA";
+  const solutionName = getValue(solution, "nom_solution", "name", "nom", "solution");
+
+  return solutionName ? `${familyLabel} : ${solutionName}` : familyLabel;
+}
+
+function dedupeServiceLabels(labels: string[]): string[] {
+  const counts = labels.reduce((result, label) => {
+    result.set(label, (result.get(label) ?? 0) + 1);
+    return result;
+  }, new Map<string, number>());
+
+  return Array.from(counts).map(([label, count]) => (
+    count > 1 ? `${label} (${count} actifs)` : label
+  ));
+}
+
+function servicesFromActivePortfolio(sites: SheetRecord[], solutions: SheetRecord[]): string[] {
+  const serviceLabels = [
+    ...servicesFromSites(sites),
+    ...solutions.map(serviceFromSolution).filter((label): label is string => Boolean(label))
+  ];
+
+  if (serviceLabels.length === 0) {
+    return ["Espace client Fluxperf"];
+  }
+
+  return dedupeServiceLabels(serviceLabels);
 }
 
 function latestActionsFromStructuredClient(client: SheetRecord, sites: SheetRecord[]) {
@@ -375,10 +533,12 @@ function structuredClientToDto(
   client: SheetRecord,
   contacts: SheetRecord[],
   sites: SheetRecord[],
+  solutions: SheetRecord[],
   email: string
 ): ClientDto {
   const contact = preferredContact(client, contacts, email);
   const activeSites = activeSitesForClient(client, sites);
+  const activeSolutions = activeSolutionsForClient(client, solutions);
   const companyName = getValue(client, "organisation") || getValue(client, "nom_compte") || "Client Fluxperf";
 
   return {
@@ -388,8 +548,9 @@ function structuredClientToDto(
     firstName: contact ? getValue(contact, "prenom", "first_name") : "",
     lastName: contact ? getValue(contact, "nom", "last_name") : "",
     planLabel: "Espace client actif",
-    services: servicesFromSites(activeSites),
+    services: servicesFromActivePortfolio(activeSites, activeSolutions),
     sites: activeSites.map(siteRecordToDto),
+    impact: buildImpact(activeSites.length, activeSolutions),
     links: {
       request: null,
       support: null,
@@ -416,6 +577,7 @@ function findStructuredClientForEmail(
   const clients = parseRecords(workbook.clients);
   const contacts = parseRecords(workbook.contacts ?? []);
   const sites = parseRecords(workbook.sites ?? []);
+  const solutions = parseRecords(workbook.solutions ?? []);
   const matchedClient = clients.find((client) =>
     structuredClientEmails(client, contacts).includes(normalizedEmail)
   );
@@ -430,7 +592,7 @@ function findStructuredClientForEmail(
 
   return {
     status: "ok",
-    client: structuredClientToDto(matchedClient, contacts, sites, email)
+    client: structuredClientToDto(matchedClient, contacts, sites, solutions, email)
   };
 }
 

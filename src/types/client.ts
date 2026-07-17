@@ -6,6 +6,23 @@ export type ClientSite = {
   status: string;
 };
 
+export type ClientImpactKey = "visibility_acquisition" | "automation_ai" | "assistant_ai";
+
+export type ClientImpactItem = {
+  key: ClientImpactKey;
+  label: string;
+  quantity: number;
+  weeklyHours: number;
+  monthlyHours: number;
+};
+
+export type ClientImpact = {
+  weeklyHours: number;
+  monthlyHours: number;
+  items: ClientImpactItem[];
+  isEstimated: true;
+};
+
 export type Client = {
   id: string;
   status: string;
@@ -15,6 +32,7 @@ export type Client = {
   planLabel: string;
   services: string[];
   sites: ClientSite[];
+  impact: ClientImpact;
   links: {
     request: string | null;
     support: string | null;
