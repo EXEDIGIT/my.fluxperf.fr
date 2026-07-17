@@ -7,8 +7,8 @@ type ImpactPanelProps = {
 
 const unitLabels: Record<ClientImpactKey, { singular: string; plural: string }> = {
   visibility_acquisition: {
-    singular: "site actif",
-    plural: "sites actifs"
+    singular: "solution active",
+    plural: "solutions actives"
   },
   automation_ai: {
     singular: "solution active",

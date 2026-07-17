@@ -28,6 +28,10 @@ last_action_3_label
 last_action_3_date
 ```
 
+Pour le schema structure de production, la colonne `Clients!H` est
+`nb_services_actifs` et compte les lignes `Solutions` actives rattachees au
+client.
+
 ## Exemple de ligne
 
 ```text
@@ -67,7 +71,9 @@ last_action_3_date: Il y a 2j
 
 ## Onglet `Solutions`
 
-Creer un onglet nomme `Solutions` pour declarer les solutions IA actives.
+Creer un onglet nomme `Solutions` pour declarer toutes les solutions Fluxperf
+rattachees aux clients. C'est la source des services actifs, des impacts et du
+contexte des demandes d'intervention.
 
 ```text
 solution_id
@@ -75,6 +81,8 @@ client_id
 type_solution
 statut_solution
 nom_solution
+domaine
+url
 date_activation
 notes
 ```
@@ -86,23 +94,29 @@ solution_id: SOL-0001
 client_id: CLI-0001
 type_solution: Flux Visibilité & Acquisition
 statut_solution: Actif
-nom_solution: Acquisition digitale
+nom_solution: Flux Visibilité & Acquisition • Site web
+domaine: hbint.com
+url: https://www.hbint.com
 date_activation: 2026-07-17
 notes:
 
 solution_id: SOL-0002
 client_id: CLI-0001
-type_solution: Flux Automatisation & IA
+type_solution: Flux Visibilité & Acquisition
 statut_solution: Actif
-nom_solution: Automatisation facturation
+nom_solution: Flux Visibilité & Acquisition • Site e-shop
+domaine: trial.hbint.com
+url: https://trial.hbint.com
 date_activation: 2026-07-17
 notes:
 
 solution_id: SOL-0003
 client_id: CLI-0001
-type_solution: Flux Assistant IA
+type_solution: Flux Automatisation & IA
 statut_solution: Actif
-nom_solution: Assistant support
+nom_solution: Flux Automatisation & IA • Tableau de bord
+domaine:
+url:
 date_activation: 2026-07-17
 notes:
 ```
@@ -121,7 +135,8 @@ notes:
 
 Ajouter les listes suivantes pour alimenter les listes deroulantes de `Solutions`.
 Dans le Google Sheet de production, `Solutions!C2:C1000` pointe vers
-`Parametres!B20:B22` et `Solutions!D2:D1000` pointe vers `Parametres!B23:B27`.
+`Parametres!B20:B22`, `Solutions!D2:D1000` pointe vers `Parametres!B23:B27` et
+`Solutions!E2:E1000` pointe vers `Parametres!B28:B32`.
 
 ```text
 categorie: type_solution
@@ -147,6 +162,21 @@ valeur: Inactif
 
 categorie: statut_solution
 valeur: Résilié
+
+categorie: nom_solution
+valeur: Flux Visibilité & Acquisition • Site web
+
+categorie: nom_solution
+valeur: Flux Visibilité & Acquisition • Site e-shop
+
+categorie: nom_solution
+valeur: Flux Automatisation & IA • Tableau de bord
+
+categorie: nom_solution
+valeur: Flux Automatisation & IA • Synchronisation de données
+
+categorie: nom_solution
+valeur: Flux Assistant IA • Copilote entreprise
 ```
 
 ## Onglet `Actions`

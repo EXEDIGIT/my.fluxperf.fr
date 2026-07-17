@@ -78,7 +78,7 @@
   <g filter="url(#shadow)">
     <rect x="1005" y="545" width="300" height="155" rx="8" fill="#ffffff" stroke="#cfe8e6"/>
     <text x="1035" y="590" font-family="Comfortaa, Arial, sans-serif" font-size="23" font-weight="700" fill="#082d42">7. Google Sheet</text>
-    <text x="1035" y="626" font-family="Comfortaa, Arial, sans-serif" font-size="16" fill="#24495a">Clients, Contacts, Sites.</text>
+    <text x="1035" y="626" font-family="Comfortaa, Arial, sans-serif" font-size="16" fill="#24495a">Clients, Contacts, Solutions.</text>
     <text x="1035" y="656" font-family="Comfortaa, Arial, sans-serif" font-size="16" fill="#24495a">Jamais expose en entier.</text>
     <rect x="1228" y="568" width="46" height="46" rx="23" fill="#fff4c7"/>
     <text x="1238" y="600" font-family="Arial, sans-serif" font-size="26">📊</text>

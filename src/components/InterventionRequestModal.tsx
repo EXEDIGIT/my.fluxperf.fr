@@ -28,12 +28,13 @@ import {
   type InterventionPriority,
   type InterventionService
 } from "../lib/api";
-import type { Client, ClientSite } from "../types/client";
+import type { Client, ClientSolution } from "../types/client";
 
 type InterventionRequestModalProps = {
   client: Client;
   email: string;
   isOpen: boolean;
+  onSupportRequest: (preset: { subject: string; message: string }) => void;
   onClose: () => void;
 };
 
@@ -75,7 +76,7 @@ const steps: Step[] = [
 const serviceOptions: ServiceOption[] = [
   {
     id: "visibility_acquisition",
-    label: "Flux Visibilite & Acquisition",
+    label: "Flux Visibilité & Acquisition",
     description: "Sites web, SEO, SEA, contenus et performance.",
     icon: Globe2
   },
@@ -141,20 +142,21 @@ function labelFor<T extends { id: string; label: string }>(items: T[], id: strin
   return items.find((item) => item.id === id)?.label ?? id;
 }
 
-function siteLabel(site: ClientSite): string {
-  return site.domain || site.url || site.id;
+function solutionLabel(solution: ClientSolution): string {
+  return solution.domain || solution.url || solution.name || solution.id;
 }
 
 export function InterventionRequestModal({
   client,
   email,
   isOpen,
+  onSupportRequest,
   onClose
 }: InterventionRequestModalProps) {
-  const sites = useMemo(() => client.sites ?? [], [client.sites]);
+  const solutions = useMemo(() => client.solutions ?? [], [client.solutions]);
   const [step, setStep] = useState(0);
   const [service, setService] = useState<InterventionService>("visibility_acquisition");
-  const [siteIds, setSiteIds] = useState<string[]>([]);
+  const [solutionIds, setSolutionIds] = useState<string[]>([]);
   const [needs, setNeeds] = useState<InterventionNeed[]>([]);
   const [priority, setPriority] = useState<InterventionPriority>("normal");
   const [message, setMessage] = useState("");
@@ -166,7 +168,14 @@ export function InterventionRequestModal({
 
   const selectedService = serviceOptions.find((option) => option.id === service) ?? serviceOptions[0];
   const SelectedServiceIcon = selectedService.icon;
-  const selectedSites = sites.filter((site) => siteIds.includes(site.id));
+  const serviceSolutions = useMemo(
+    () => solutions.filter((solution) => solution.type === service),
+    [solutions, service]
+  );
+  const selectedSolutions = useMemo(
+    () => serviceSolutions.filter((solution) => solutionIds.includes(solution.id)),
+    [serviceSolutions, solutionIds]
+  );
 
   useEffect(() => {
     if (!isOpen) {
@@ -180,7 +189,7 @@ export function InterventionRequestModal({
 
     setStep(0);
     setService("visibility_acquisition");
-    setSiteIds(sites.length === 1 ? [sites[0].id] : []);
+    setSolutionIds([]);
     setNeeds([]);
     setPriority("normal");
     setMessage("");
@@ -209,15 +218,8 @@ export function InterventionRequestModal({
   }, [isOpen, isSubmitting, onClose]);
 
   useEffect(() => {
-    if (service !== "visibility_acquisition") {
-      setSiteIds([]);
-      return;
-    }
-
-    if (sites.length === 1) {
-      setSiteIds([sites[0].id]);
-    }
-  }, [service, sites]);
+    setSolutionIds(serviceSolutions.length === 1 ? [serviceSolutions[0].id] : []);
+  }, [service, serviceSolutions]);
 
   if (!isOpen) {
     return null;
@@ -229,8 +231,12 @@ export function InterventionRequestModal({
     }
 
     if (index === 1) {
-      if (service === "visibility_acquisition" && sites.length > 0 && siteIds.length === 0) {
-        return "Selectionnez au moins un site suivi.";
+      if (serviceSolutions.length === 0) {
+        return "Aucune solution active ne correspond a ce flux.";
+      }
+
+      if (solutionIds.length === 0) {
+        return "Selectionnez au moins une solution active.";
       }
 
       if (needs.length === 0) {
@@ -276,9 +282,9 @@ export function InterventionRequestModal({
     setStep((current) => Math.max(current - 1, 0));
   }
 
-  function toggleSite(siteId: string) {
-    setSiteIds((current) =>
-      current.includes(siteId) ? current.filter((id) => id !== siteId) : [...current, siteId]
+  function toggleSolution(solutionId: string) {
+    setSolutionIds((current) =>
+      current.includes(solutionId) ? current.filter((id) => id !== solutionId) : [...current, solutionId]
     );
   }
 
@@ -323,6 +329,13 @@ export function InterventionRequestModal({
     setFiles((current) => current.filter((_, fileIndex) => fileIndex !== index));
   }
 
+  function requestSolutionInfo() {
+    onSupportRequest({
+      subject: `Information ou activation - ${selectedService.label}`,
+      message: `Bonjour,\n\nJe souhaite en savoir plus ou activer une solution ${selectedService.label} pour mon espace client.\n\nMerci.`
+    });
+  }
+
   async function handleSubmit() {
     const firstError = [0, 1, 2].map(validateStep).find(Boolean);
 
@@ -338,7 +351,7 @@ export function InterventionRequestModal({
     try {
       const result = await submitInterventionRequest({
         service,
-        siteIds: service === "visibility_acquisition" ? siteIds : [],
+        solutionIds,
         needs,
         priority,
         message: message.trim(),
@@ -401,43 +414,40 @@ export function InterventionRequestModal({
           <h3>{steps[1].title}</h3>
         </div>
 
-        {service === "visibility_acquisition" ? (
-          <div className="intervention-block">
-            <div className="intervention-hint">
-              <Sparkles aria-hidden="true" />
-              <span>Sites detectes pour {client.companyName}</span>
-            </div>
-            {sites.length > 0 ? (
-              <div className="site-picker">
-                {sites.map((site) => {
-                  const isSelected = siteIds.includes(site.id);
-
-                  return (
-                    <button
-                      type="button"
-                      className={`site-pill ${isSelected ? "is-selected" : ""}`}
-                      key={site.id}
-                      onClick={() => toggleSite(site.id)}
-                    >
-                      <span>{isSelected ? <Check aria-hidden="true" /> : null}</span>
-                      <strong>{siteLabel(site)}</strong>
-                      <small>{site.type}</small>
-                    </button>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="intervention-empty">
-                Aucun site actif n'est encore rattache a votre espace.
-              </div>
-            )}
-          </div>
-        ) : (
+        <div className="intervention-block">
           <div className="intervention-hint">
             <SelectedServiceIcon aria-hidden="true" />
-            <span>{selectedService.label}</span>
+            <span>Solutions actives pour {selectedService.label}</span>
           </div>
-        )}
+          {serviceSolutions.length > 0 ? (
+            <div className="site-picker">
+              {serviceSolutions.map((solution) => {
+                const isSelected = solutionIds.includes(solution.id);
+
+                return (
+                  <button
+                    type="button"
+                    className={`site-pill ${isSelected ? "is-selected" : ""}`}
+                    key={solution.id}
+                    onClick={() => toggleSolution(solution.id)}
+                  >
+                    <span>{isSelected ? <Check aria-hidden="true" /> : null}</span>
+                    <strong>{solution.name || solution.typeLabel}</strong>
+                    <small>{solutionLabel(solution)}</small>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="intervention-empty">
+              <span>Aucune solution active n'est rattachee a ce flux.</span>
+              <button type="button" className="secondary-action" onClick={requestSolutionInfo}>
+                <Sparkles aria-hidden="true" />
+                Contacter l'equipe
+              </button>
+            </div>
+          )}
+        </div>
 
         <div className="intervention-block">
           <h4>Besoin principal</h4>
@@ -586,10 +596,10 @@ export function InterventionRequestModal({
             <strong>{needs.map((need) => labelFor(needOptions, need)).join(", ")}</strong>
           </div>
           <div>
-            <small>Site</small>
+            <small>Solution</small>
             <strong>
-              {selectedSites.length > 0
-                ? selectedSites.map(siteLabel).join(", ")
+              {selectedSolutions.length > 0
+                ? selectedSolutions.map((solution) => solution.name || solutionLabel(solution)).join(", ")
                 : "Non applicable"}
             </strong>
           </div>
@@ -676,10 +686,10 @@ export function InterventionRequestModal({
               <SelectedServiceIcon aria-hidden="true" />
               <span>{selectedService.label}</span>
             </div>
-            {selectedSites.length > 0 ? (
+            {selectedSolutions.length > 0 ? (
               <div>
                 <Globe2 aria-hidden="true" />
-                <span>{selectedSites.map(siteLabel).join(", ")}</span>
+                <span>{selectedSolutions.map((solution) => solution.name || solutionLabel(solution)).join(", ")}</span>
               </div>
             ) : null}
           </aside>

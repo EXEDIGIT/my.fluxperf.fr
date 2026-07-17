@@ -2,7 +2,7 @@ import { getAuthenticatedEmail, isProduction } from "../lib/auth";
 import { findClientForEmailInWorkbook } from "../lib/clients";
 import { readGoogleWorkbookValues } from "../lib/googleSheets";
 import { json, jsonError } from "../lib/response";
-import type { ClientDto, ClientSiteDto, PagesContext } from "../lib/types";
+import type { ClientDto, ClientSolutionDto, PagesContext } from "../lib/types";
 
 const MAX_FILES = 5;
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
@@ -23,6 +23,7 @@ const allowedNeeds = new Set([
 
 type IncomingPayload = {
   service?: unknown;
+  solutionIds?: unknown;
   siteIds?: unknown;
   needs?: unknown;
   priority?: unknown;
@@ -103,8 +104,8 @@ function validateRequest(
 ):
   | {
       service: string;
-      siteIds: string[];
-      selectedSites: ClientSiteDto[];
+      solutionIds: string[];
+      selectedSolutions: ClientSolutionDto[];
       needs: string[];
       priority: string;
       message: string;
@@ -118,7 +119,7 @@ function validateRequest(
   const priority = isString(payload.priority) ? payload.priority.trim() : "";
   const message = isString(payload.message) ? payload.message.trim() : "";
   const needs = asStringArray(payload.needs);
-  const siteIds = asStringArray(payload.siteIds);
+  const solutionIds = asStringArray(payload.solutionIds);
 
   if (!allowedServices.has(service)) {
     return jsonError(400, "INVALID_SERVICE", "Le service selectionne est invalide.");
@@ -136,22 +137,28 @@ function validateRequest(
     return jsonError(400, "MESSAGE_REQUIRED", "Precisez votre demande en quelques mots.");
   }
 
-  const availableSites = client.sites ?? [];
-  const selectedSites = availableSites.filter((site) => siteIds.includes(site.id));
-  const invalidSiteIds = siteIds.filter((siteId) => !availableSites.some((site) => site.id === siteId));
+  const availableSolutions = (client.solutions ?? []).filter((solution) => solution.type === service);
+  const selectedSolutions = availableSolutions.filter((solution) => solutionIds.includes(solution.id));
+  const invalidSolutionIds = solutionIds.filter(
+    (solutionId) => !availableSolutions.some((solution) => solution.id === solutionId)
+  );
 
-  if (invalidSiteIds.length > 0) {
-    return jsonError(400, "SITE_NOT_ALLOWED", "Un site selectionne ne correspond pas a votre compte.");
+  if (invalidSolutionIds.length > 0) {
+    return jsonError(400, "SOLUTION_NOT_ALLOWED", "Une solution selectionnee ne correspond pas a votre compte.");
   }
 
-  if (service === "visibility_acquisition" && availableSites.length > 0 && selectedSites.length === 0) {
-    return jsonError(400, "SITE_REQUIRED", "Selectionnez le site concerne par votre demande.");
+  if (availableSolutions.length === 0) {
+    return jsonError(400, "SOLUTION_NOT_ACTIVE", "Aucune solution active ne correspond a ce flux.");
+  }
+
+  if (selectedSolutions.length === 0) {
+    return jsonError(400, "SOLUTION_REQUIRED", "Selectionnez la solution concernee par votre demande.");
   }
 
   return {
     service,
-    siteIds: service === "visibility_acquisition" ? siteIds : [],
-    selectedSites: service === "visibility_acquisition" ? selectedSites : [],
+    solutionIds,
+    selectedSolutions,
     needs,
     priority,
     message

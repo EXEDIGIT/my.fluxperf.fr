@@ -18,8 +18,8 @@ SUPABASE_PUBLISHABLE_KEY=
 GOOGLE_SHEET_ID=
 GOOGLE_SHEET_RANGE=Clients!A1:Z1000
 GOOGLE_CONTACTS_RANGE=Contacts!A1:Z1000
-GOOGLE_SITES_RANGE=Sites!A1:Z1000
 GOOGLE_SOLUTIONS_RANGE=Solutions!A1:Z1000
+GOOGLE_ACTIONS_RANGE=Actions!A1:J1000
 GOOGLE_SERVICE_ACCOUNT_EMAIL=
 GOOGLE_PRIVATE_KEY=
 N8N_INTERVENTION_WEBHOOK_URL=
@@ -44,7 +44,8 @@ Configurer `GOOGLE_PRIVATE_KEY` et `BREVO_API_KEY` comme secrets Cloudflare Page
 2. Service Account cree.
 3. Google Sheet partage en lecture avec le Service Account.
 4. `GOOGLE_SHEET_ID` recupere depuis l'URL du Sheet.
-5. Onglets `Clients`, `Contacts`, `Sites` et `Solutions` presents si le schema structure est utilise.
+5. Onglets `Clients`, `Contacts`, `Solutions` et `Actions` presents si le schema structure est utilise.
+6. Ancien onglet `Sites` archive/masque sous `Archive_Sites` si une migration a ete faite.
 
 ## Checklist n8n / Brevo
 

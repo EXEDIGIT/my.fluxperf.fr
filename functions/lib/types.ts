@@ -5,13 +5,19 @@ export type AppEnv = {
   GOOGLE_SERVICE_ACCOUNT_EMAIL?: string;
   GOOGLE_PRIVATE_KEY?: string;
   DEV_AUTH_EMAIL?: string;
+  DEV_ADMIN_EMAIL?: string;
+  ADMIN_EMAILS?: string;
+  APP_PUBLIC_URL?: string;
   SUPABASE_URL?: string;
   SUPABASE_PUBLISHABLE_KEY?: string;
   SUPABASE_ANON_KEY?: string;
+  SUPABASE_SERVICE_ROLE_KEY?: string;
   GOOGLE_CONTACTS_RANGE?: string;
-  GOOGLE_SITES_RANGE?: string;
   GOOGLE_SOLUTIONS_RANGE?: string;
   GOOGLE_ACTIONS_RANGE?: string;
+  GOOGLE_CLIENTS_WRITE_RANGE?: string;
+  GOOGLE_CONTACTS_WRITE_RANGE?: string;
+  GOOGLE_SOLUTIONS_WRITE_RANGE?: string;
   N8N_INTERVENTION_WEBHOOK_URL?: string;
   N8N_INTERVENTION_WEBHOOK_SECRET?: string;
   BREVO_API_KEY?: string;
@@ -22,12 +28,15 @@ export type PagesContext = {
   env: AppEnv;
 };
 
-export type ClientSiteDto = {
+export type ClientSolutionDto = {
   id: string;
+  type: string;
+  typeLabel: string;
+  status: string;
+  name: string;
   domain: string;
   url: string;
-  type: string;
-  status: string;
+  activatedAt: string;
 };
 
 export type ClientImpactKey = "visibility_acquisition" | "automation_ai" | "assistant_ai";
@@ -55,7 +64,7 @@ export type ClientDto = {
   lastName: string;
   planLabel: string;
   services: string[];
-  sites: ClientSiteDto[];
+  solutions: ClientSolutionDto[];
   impact: ClientImpactDto;
   links: {
     request: string | null;

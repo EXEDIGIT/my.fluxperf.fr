@@ -3,6 +3,7 @@ import type { Client } from "../types/client";
 
 type ServicesActiveProps = {
   services: Client["services"];
+  solutions: Client["solutions"];
 };
 
 function iconForService(service: string) {
@@ -45,7 +46,16 @@ function descriptionForService(service: string) {
   return "Suivi dans votre espace client avec les informations et acces utiles a jour.";
 }
 
-export function ServicesActive({ services }: ServicesActiveProps) {
+function solutionDetail(solution: Client["solutions"][number]): string {
+  return solution.domain || solution.url || solution.typeLabel;
+}
+
+function descriptionForSolution(solution: Client["solutions"][number]) {
+  return descriptionForService(`${solution.typeLabel} ${solution.name}`);
+}
+
+export function ServicesActive({ services, solutions }: ServicesActiveProps) {
+  const activeSolutions = solutions.length > 0 ? solutions : null;
   const visibleServices = services.length > 0 ? services : ["Espace client Fluxperf"];
 
   return (
@@ -55,7 +65,21 @@ export function ServicesActive({ services }: ServicesActiveProps) {
         <h2>Ce que notre équipe pilote avec vous.</h2>
       </div>
       <div className="service-grid">
-        {visibleServices.map((service, index) => {
+        {activeSolutions ? activeSolutions.map((solution) => {
+          const Icon = iconForService(`${solution.typeLabel} ${solution.name}`);
+          const detail = solutionDetail(solution);
+
+          return (
+            <article className="service-card" key={solution.id}>
+              <span>
+                <Icon aria-hidden="true" />
+              </span>
+              <strong>{solution.name || solution.typeLabel}</strong>
+              <p>{detail}</p>
+              <p>{descriptionForSolution(solution)}</p>
+            </article>
+          );
+        }) : visibleServices.map((service, index) => {
           const Icon = iconForService(service);
 
           return (
@@ -71,7 +95,7 @@ export function ServicesActive({ services }: ServicesActiveProps) {
       </div>
       <div className="section-note">
         <Sparkles aria-hidden="true" />
-        Les services affichés proviennent de votre fiche client Fluxperf.
+        Les services affichés proviennent de l'onglet Solutions de votre fiche client Fluxperf.
       </div>
     </section>
   );

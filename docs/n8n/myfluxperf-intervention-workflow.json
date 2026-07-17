@@ -12,17 +12,23 @@
       "name": "Webhook - MyFluxperf",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [-1180, 0]
+      "position": [
+        -1180,
+        0
+      ]
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first();\nconst headers = item.json.headers || {};\nconst receivedSecret = headers['x-fluxperf-webhook-secret'] || headers['X-Fluxperf-Webhook-Secret'];\nconst expectedSecret = $vars.MYFLUXPERF_WEBHOOK_SECRET;\n\nif (!expectedSecret) {\n  throw new Error('MYFLUXPERF_WEBHOOK_SECRET is not configured in n8n variables.');\n}\n\nif (receivedSecret !== expectedSecret) {\n  throw new Error('Unauthorized MyFluxperf webhook request.');\n}\n\nconst rawPayload = item.json.body?.payload ?? item.json.payload;\nconst payload = typeof rawPayload === 'string' ? JSON.parse(rawPayload) : rawPayload;\n\nif (!payload?.requestId || !payload?.requester?.email || !payload?.request?.message) {\n  throw new Error('Invalid MyFluxperf intervention payload.');\n}\n\nconst serviceLabels = {\n  visibility_acquisition: 'Flux Visibilite & Acquisition',\n  automation_ai: 'Flux Automatisation & IA',\n  assistant_ai: 'Flux Assistant IA'\n};\nconst needLabels = {\n  content_update: 'Mise a jour de contenus',\n  technical_issue: 'Anomalie technique',\n  new_creation: 'Nouvelle creation',\n  seo: 'Referencement SEO',\n  advertising_campaign: 'Campagne publicitaire',\n  automation: 'Automatisation',\n  ai_assistant: 'Assistant IA',\n  other: 'Autre demande'\n};\nconst priorityLabels = {\n  normal: 'Priorite normale',\n  urgent: 'Priorite urgente',\n  critical: 'Priorite critique'\n};\n\nconst request = payload.request;\nconst binary = item.binary || {};\nconst files = Object.entries(binary).map(([binaryProperty, file]) => ({\n  binaryProperty,\n  fileName: file.fileName || binaryProperty,\n  mimeType: file.mimeType || 'application/octet-stream',\n  fileSize: file.fileSize || null\n}));\n\nconst serviceLabel = serviceLabels[request.service] || request.service;\nconst priorityLabel = priorityLabels[request.priority] || request.priority;\nconst needText = (request.needs || []).map((need) => needLabels[need] || need).join(', ');\nconst siteText = (request.selectedSites || [])\n  .map((site) => `${site.domain || site.url || site.id}${site.type ? ` (${site.type})` : ''}`)\n  .join(', ') || 'Non applicable';\nconst requesterName = [payload.requester.firstName, payload.requester.lastName].filter(Boolean).join(' ');\nconst clientName = payload.client.companyName || 'Client Fluxperf';\n\nconst cardName = `[${payload.requestId}] ${clientName} - ${serviceLabel}`;\nconst cardDescription = [\n  `Reference : ${payload.requestId}`,\n  `Date : ${payload.submittedAt}`,\n  `Client : ${clientName} (${payload.client.id || 'sans id'})`,\n  `Demandeur : ${requesterName || payload.requester.email} <${payload.requester.email}>`,\n  `Service : ${serviceLabel}`,\n  `Site : ${siteText}`,\n  `Besoin : ${needText}`,\n  `Priorite : ${priorityLabel}`,\n  `Pieces jointes : ${files.length}`,\n  '',\n  'Message client :',\n  request.message\n].join('\\n');\n\nreturn [{\n  json: {\n    requestId: payload.requestId,\n    submittedAt: payload.submittedAt,\n    payload,\n    normalized: {\n      serviceLabel,\n      priorityLabel,\n      needText,\n      siteText,\n      requesterName,\n      clientName,\n      fileCount: files.length,\n      files\n    },\n    trello: {\n      cardName,\n      cardDescription\n    }\n  },\n  binary\n}];"
+        "jsCode": "const item = $input.first();\nconst headers = item.json.headers || {};\nconst receivedSecret = headers['x-fluxperf-webhook-secret'] || headers['X-Fluxperf-Webhook-Secret'];\nconst expectedSecret = $vars.MYFLUXPERF_WEBHOOK_SECRET;\n\nif (!expectedSecret) {\n  throw new Error('MYFLUXPERF_WEBHOOK_SECRET is not configured in n8n variables.');\n}\n\nif (receivedSecret !== expectedSecret) {\n  throw new Error('Unauthorized MyFluxperf webhook request.');\n}\n\nconst rawPayload = item.json.body?.payload ?? item.json.payload;\nconst payload = typeof rawPayload === 'string' ? JSON.parse(rawPayload) : rawPayload;\n\nif (!payload?.requestId || !payload?.requester?.email || !payload?.request?.message) {\n  throw new Error('Invalid MyFluxperf intervention payload.');\n}\n\nconst serviceLabels = {\n  visibility_acquisition: 'Flux Visibilité & Acquisition',\n  automation_ai: 'Flux Automatisation & IA',\n  assistant_ai: 'Flux Assistant IA'\n};\nconst needLabels = {\n  content_update: 'Mise a jour de contenus',\n  technical_issue: 'Anomalie technique',\n  new_creation: 'Nouvelle creation',\n  seo: 'Referencement SEO',\n  advertising_campaign: 'Campagne publicitaire',\n  automation: 'Automatisation',\n  ai_assistant: 'Assistant IA',\n  other: 'Autre demande'\n};\nconst priorityLabels = {\n  normal: 'Priorite normale',\n  urgent: 'Priorite urgente',\n  critical: 'Priorite critique'\n};\n\nconst request = payload.request;\nconst binary = item.binary || {};\nconst files = Object.entries(binary).map(([binaryProperty, file]) => ({\n  binaryProperty,\n  fileName: file.fileName || binaryProperty,\n  mimeType: file.mimeType || 'application/octet-stream',\n  fileSize: file.fileSize || null\n}));\n\nconst serviceLabel = serviceLabels[request.service] || request.service;\nconst priorityLabel = priorityLabels[request.priority] || request.priority;\nconst needText = (request.needs || []).map((need) => needLabels[need] || need).join(', ');\nconst selectedSolutions = Array.isArray(request.selectedSolutions) ? request.selectedSolutions : [];\nconst legacySelectedSites = Array.isArray(request.selectedSites) ? request.selectedSites : [];\nconst legacySiteText = legacySelectedSites\n  .map((site) => `${site.domain || site.url || site.id}${site.type ? ` (${site.type})` : ``}`)\n  .join(', ');\nconst solutionText = selectedSolutions\n  .map((solution) => {\n    const name = solution.name || solution.typeLabel || solution.type || solution.id || 'Solution Fluxperf';\n    const target = solution.domain || solution.url || '';\n    const type = solution.typeLabel || serviceLabels[solution.type] || solution.type || '';\n    const details = [target, type].filter(Boolean).join(' - ');\n\n    return details ? `${name} (${details})` : name;\n  })\n  .join(', ') || legacySiteText || 'Non applicable';\nconst requesterName = [payload.requester.firstName, payload.requester.lastName].filter(Boolean).join(' ');\nconst clientName = payload.client.companyName || 'Client Fluxperf';\n\nconst cardName = `[${payload.requestId}] ${clientName} - ${serviceLabel}`;\nconst cardDescription = [\n  `Reference : ${payload.requestId}`,\n  `Date : ${payload.submittedAt}`,\n  `Client : ${clientName} (${payload.client.id || 'sans id'})`,\n  `Demandeur : ${requesterName || payload.requester.email} <${payload.requester.email}>`,\n  `Service : ${serviceLabel}`,\n  `Solution : ${solutionText}`,\n  `Besoin : ${needText}`,\n  `Priorite : ${priorityLabel}`,\n  `Pieces jointes : ${files.length}`,\n  '',\n  'Message client :',\n  request.message\n].join('\\\\n');\n\nreturn [{\n  json: {\n    requestId: payload.requestId,\n    submittedAt: payload.submittedAt,\n    payload,\n    normalized: {\n      serviceLabel,\n      priorityLabel,\n      needText,\n      solutionText,\n      legacySiteText,\n      requesterName,\n      clientName,\n      fileCount: files.length,\n      files\n    },\n    trello: {\n      cardName,\n      cardDescription\n    }\n  },\n  binary\n}];"
       },
       "id": "validate-normalize",
       "name": "Validate + Normalize",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-940, 0]
+      "position": [
+        -940,
+        0
+      ]
     },
     {
       "parameters": {
@@ -36,7 +42,10 @@
       "name": "Respond to MyFluxperf",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1,
-      "position": [-700, -160]
+      "position": [
+        -700,
+        -160
+      ]
     },
     {
       "parameters": {
@@ -53,7 +62,10 @@
       "name": "Trello - Create Card",
       "type": "n8n-nodes-base.trello",
       "typeVersion": 1,
-      "position": [-700, 80],
+      "position": [
+        -700,
+        80
+      ],
       "credentials": {
         "trelloApi": {
           "id": "__REPLACE_WITH_TRELLO_CREDENTIAL_ID__",
@@ -69,7 +81,10 @@
       "name": "Prepare Trello Attachments",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-460, 80]
+      "position": [
+        -460,
+        80
+      ]
     },
     {
       "parameters": {
@@ -86,7 +101,10 @@
       "name": "Has Attachment?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 1,
-      "position": [-220, 80]
+      "position": [
+        -220,
+        80
+      ]
     },
     {
       "parameters": {
@@ -99,7 +117,10 @@
       "name": "Trello - Add Attachment",
       "type": "n8n-nodes-base.trello",
       "typeVersion": 1,
-      "position": [20, -20],
+      "position": [
+        20,
+        -20
+      ],
       "credentials": {
         "trelloApi": {
           "id": "__REPLACE_WITH_TRELLO_CREDENTIAL_ID__",
@@ -115,7 +136,10 @@
       "name": "Build OpenAI Body",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [260, 160]
+      "position": [
+        260,
+        160
+      ]
     },
     {
       "parameters": {
@@ -143,7 +167,10 @@
       "name": "OpenAI - Generate Reply",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [500, 160]
+      "position": [
+        500,
+        160
+      ]
     },
     {
       "parameters": {
@@ -153,7 +180,10 @@
       "name": "Build Brevo Body",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [740, 160]
+      "position": [
+        740,
+        160
+      ]
     },
     {
       "parameters": {
@@ -181,7 +211,10 @@
       "name": "Brevo - Send Email",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4,
-      "position": [980, 160]
+      "position": [
+        980,
+        160
+      ]
     },
     {
       "parameters": {
@@ -194,7 +227,10 @@
       "name": "Trello - Add Comment",
       "type": "n8n-nodes-base.trello",
       "typeVersion": 1,
-      "position": [1220, 160],
+      "position": [
+        1220,
+        160
+      ],
       "credentials": {
         "trelloApi": {
           "id": "__REPLACE_WITH_TRELLO_CREDENTIAL_ID__",

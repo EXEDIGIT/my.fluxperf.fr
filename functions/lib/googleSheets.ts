@@ -1,14 +1,16 @@
-import { demoSheetValues, type ClientWorkbookValues } from "./clients";
+import { demoSheetValues, demoSolutionsValues, type ClientWorkbookValues } from "./clients";
 import { isProduction } from "./auth";
 import type { AppEnv } from "./types";
 
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
-const GOOGLE_SCOPE = "https://www.googleapis.com/auth/spreadsheets.readonly";
+const GOOGLE_SCOPE = "https://www.googleapis.com/auth/spreadsheets";
 const DEFAULT_RANGE = "Clients!A1:Z1000";
 const DEFAULT_CONTACTS_RANGE = "Contacts!A1:Z1000";
-const DEFAULT_SITES_RANGE = "Sites!A1:Z1000";
 const DEFAULT_SOLUTIONS_RANGE = "Solutions!A1:Z1000";
 const DEFAULT_ACTIONS_RANGE = "Actions!A1:J1000";
+const DEFAULT_CLIENTS_WRITE_RANGE = "Clients!A:K";
+const DEFAULT_CONTACTS_WRITE_RANGE = "Contacts!A:J";
+const DEFAULT_SOLUTIONS_WRITE_RANGE = "Solutions!A:I";
 
 type Fetcher = typeof fetch;
 
@@ -22,6 +24,16 @@ type GoogleTokenResponse = {
 
 type GoogleSheetResponse = {
   values?: string[][];
+  error?: {
+    message?: string;
+  };
+};
+
+type GoogleAppendResponse = {
+  updates?: {
+    updatedRange?: string;
+    updatedRows?: number;
+  };
   error?: {
     message?: string;
   };
@@ -194,8 +206,7 @@ export async function readGoogleWorkbookValues(
       return {
         clients: demoSheetValues,
         contacts: [],
-        sites: [],
-        solutions: [],
+        solutions: demoSolutionsValues,
         actions: []
       };
     }
@@ -204,7 +215,7 @@ export async function readGoogleWorkbookValues(
   }
 
   const accessToken = await getGoogleAccessToken(env, fetcher);
-  const [clients, contacts, sites, solutions, actions] = await Promise.all([
+  const [clients, contacts, solutions, actions] = await Promise.all([
     readGoogleSheetRange(env, accessToken, env.GOOGLE_SHEET_RANGE || DEFAULT_RANGE, fetcher),
     readOptionalGoogleSheetRange(
       env,
@@ -212,7 +223,6 @@ export async function readGoogleWorkbookValues(
       env.GOOGLE_CONTACTS_RANGE || DEFAULT_CONTACTS_RANGE,
       fetcher
     ),
-    readOptionalGoogleSheetRange(env, accessToken, env.GOOGLE_SITES_RANGE || DEFAULT_SITES_RANGE, fetcher),
     readOptionalGoogleSheetRange(
       env,
       accessToken,
@@ -230,8 +240,56 @@ export async function readGoogleWorkbookValues(
   return {
     clients,
     contacts,
-    sites,
     solutions,
     actions
+  };
+}
+
+export async function appendGoogleSheetValues(
+  env: AppEnv,
+  rangeName: string,
+  rows: string[][],
+  fetcher: Fetcher = fetch
+): Promise<GoogleAppendResponse["updates"]> {
+  if (!isSheetsConfigured(env)) {
+    throw new Error("Google Sheets configuration is missing.");
+  }
+
+  if (rows.length === 0) {
+    return {
+      updatedRows: 0
+    };
+  }
+
+  const accessToken = await getGoogleAccessToken(env, fetcher);
+  const sheetId = encodeURIComponent(env.GOOGLE_SHEET_ID as string);
+  const range = encodeURIComponent(rangeName);
+  const response = await fetcher(
+    `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        values: rows
+      })
+    }
+  );
+  const data = (await response.json()) as GoogleAppendResponse;
+
+  if (!response.ok) {
+    throw new Error(data.error?.message || `Unable to append Google Sheet range ${rangeName}.`);
+  }
+
+  return data.updates;
+}
+
+export function getGoogleWriteRanges(env: AppEnv) {
+  return {
+    clients: env.GOOGLE_CLIENTS_WRITE_RANGE || DEFAULT_CLIENTS_WRITE_RANGE,
+    contacts: env.GOOGLE_CONTACTS_WRITE_RANGE || DEFAULT_CONTACTS_WRITE_RANGE,
+    solutions: env.GOOGLE_SOLUTIONS_WRITE_RANGE || DEFAULT_SOLUTIONS_WRITE_RANGE
   };
 }

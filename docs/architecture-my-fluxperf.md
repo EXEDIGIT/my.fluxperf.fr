@@ -20,7 +20,7 @@ Imagine le portail comme une agence FluxPerf avec plusieurs personnes a l'accuei
 | React/Vite | La salle d'accueil client | Affiche le dashboard, les cartes, les services et les ressources |
 | `/api/me` | Le guichet prive | Recupere l'email connecte et retourne une seule fiche client |
 | Pages Functions | Le bureau cote serveur | Execute le code API sur Cloudflare, sans exposer les secrets au navigateur |
-| Google Sheet | Le classeur clients | Contient les donnees clients, contacts, sites et solutions |
+| Google Sheet | Le classeur clients | Contient les donnees clients, contacts, solutions et actions |
 | Google Service Account | Le badge lecteur | Autorise l'API a lire le Google Sheet sans compte humain |
 | Google Sheets API | Le bibliothecaire | Donne les lignes demandees au serveur apres verification du badge |
 | GitHub | L'atelier source | Stocke le code et declenche les builds Cloudflare |
@@ -55,7 +55,7 @@ flowchart LR
   P --> API["/api/me<br/>Pages Function"]
   API --> SA["Service Account<br/>JWT signe"]
   SA --> GS["Google Sheets API"]
-  GS --> DB["Google Sheet<br/>Clients / Contacts / Sites / Solutions / Actions"]
+  GS --> DB["Google Sheet<br/>Clients / Contacts / Solutions / Actions"]
   DB --> API
   API --> P
   P --> REQ["/api/intervention-requests"]
@@ -70,10 +70,12 @@ Le portail supporte la structure actuelle de la BDD :
 | --- | --- |
 | `Clients` | Identite du compte, statut client, activation de l'espace client, email principal |
 | `Contacts` | Prenom, nom, email, statut contact |
-| `Sites` | Sites rattaches au client, domaine, URL, statut, suivi actif |
-| `Solutions` | Services Fluxperf actifs rattaches au client pour les services affiches et le temps libere |
+| `Solutions` | Services Fluxperf rattaches au client, avec type, statut, nom, domaine, URL et date d'activation |
 | `Actions` | Journal des demandes client affiche dans le module Dernieres actions |
 | `Parametres` | Valeurs de reference pour la BDD, non lues par le portail MVP |
+
+L'ancien onglet `Sites` peut rester archive sous `Archive_Sites`, masque, le temps
+de conserver l'historique de migration. Il n'est plus lu par le portail.
 
 Conditions pour qu'un client soit affiche :
 
@@ -90,7 +92,6 @@ APP_ENV=production
 GOOGLE_SHEET_ID=1UQg2AbJYg2GEfzHshUVaAVfDvIdHHQHAw7LADcAUvKA
 GOOGLE_SHEET_RANGE=Clients!A1:Z1000
 GOOGLE_CONTACTS_RANGE=Contacts!A1:Z1000
-GOOGLE_SITES_RANGE=Sites!A1:Z1000
 GOOGLE_SOLUTIONS_RANGE=Solutions!A1:Z1000
 GOOGLE_ACTIONS_RANGE=Actions!A1:J1000
 GOOGLE_SERVICE_ACCOUNT_EMAIL=my-fluxperf-reader@fluxperf.iam.gserviceaccount.com
@@ -109,7 +110,7 @@ Ce qui protege les donnees :
 - Cloudflare Access bloque les visiteurs non autorises avant le portail.
 - `/api/me` ignore les emails simules en production.
 - L'API ne renvoie qu'un seul client : celui associe a l'email connecte.
-- `/api/intervention-requests` reverifie l'identite et refuse les sites non rattaches au client.
+- `/api/intervention-requests` reverifie l'identite et refuse les solutions non rattachees au client.
 - La cle Google reste cote Cloudflare Pages Functions.
 - Le navigateur ne voit jamais la feuille complete ni la cle privee.
 - L'URL `pages.dev` ne doit pas servir de portail client principal.
@@ -148,6 +149,6 @@ pnpm run build
 3. Un email autorise arrive sur le dashboard.
 4. Un email absent ou client inactif affiche un refus propre.
 5. La demande d'intervention s'envoie avec et sans piece jointe.
-6. Les sites proposes correspondent uniquement au client connecte.
+6. Les solutions proposees correspondent uniquement au client connecte.
 7. Le module Impacts affiche le temps libere ou un etat vide si aucune donnee n'est active.
 8. Desktop et mobile restent lisibles.

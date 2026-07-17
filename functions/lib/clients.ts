@@ -1,4 +1,4 @@
-import type { ClientDto, ClientImpactDto, ClientImpactKey, ClientSiteDto, RawClientRow } from "./types";
+import type { ClientDto, ClientImpactDto, ClientImpactKey, ClientSolutionDto, RawClientRow } from "./types";
 
 const expectedColumns: Array<keyof RawClientRow> = [
   "client_id",
@@ -51,6 +51,53 @@ export const demoSheetValues: string[][] = [
   ]
 ];
 
+export const demoSolutionsValues: string[][] = [
+  [
+    "solution_id",
+    "client_id",
+    "type_solution",
+    "statut_solution",
+    "nom_solution",
+    "domaine",
+    "url",
+    "date_activation",
+    "notes"
+  ],
+  [
+    "SOL-DEMO-1",
+    "a2cm",
+    "Flux Visibilité & Acquisition",
+    "Actif",
+    "Flux Visibilité & Acquisition • Site web",
+    "a2-cm.fr",
+    "https://www.a2-cm.fr",
+    "2026-07-06",
+    ""
+  ],
+  [
+    "SOL-DEMO-2",
+    "a2cm",
+    "Flux Automatisation & IA",
+    "Actif",
+    "Flux Automatisation & IA • Tableau de bord",
+    "",
+    "",
+    "2026-07-06",
+    ""
+  ],
+  [
+    "SOL-DEMO-3",
+    "a2cm",
+    "Flux Assistant IA",
+    "Actif",
+    "Flux Assistant IA • Copilote entreprise",
+    "",
+    "",
+    "2026-07-06",
+    ""
+  ]
+];
+
 type ClientLookupResult =
   | { status: "ok"; client: ClientDto }
   | { status: "not_found" }
@@ -59,7 +106,6 @@ type ClientLookupResult =
 export type ClientWorkbookValues = {
   clients: string[][];
   contacts?: string[][];
-  sites?: string[][];
   solutions?: string[][];
   actions?: string[][];
 };
@@ -430,7 +476,7 @@ export function toClientDto(row: RawClientRow): ClientDto {
     lastName: row.contact_last_name,
     planLabel: row.plan_label || "Espace client actif",
     services: splitList(row.services_active),
-    sites: [],
+    solutions: [],
     impact: emptyImpact(),
     links: {
       request: row.jotform_request_url || null,
@@ -517,21 +563,6 @@ function preferredContact(
   );
 }
 
-function activeSitesForClient(client: SheetRecord, sites: SheetRecord[]): SheetRecord[] {
-  const clientId = getValue(client, "client_id");
-
-  return sites.filter((site) => {
-    if (getValue(site, "client_id") !== clientId) {
-      return false;
-    }
-
-    const siteStatus = getValue(site, "statut_site", "status");
-    const trackingEnabled = getValue(site, "suivi_actif");
-
-    return (!siteStatus || isActiveStatus(siteStatus)) && (!trackingEnabled || isAffirmative(trackingEnabled));
-  });
-}
-
 function activeSolutionsForClient(client: SheetRecord, solutions: SheetRecord[]): SheetRecord[] {
   const clientId = getValue(client, "client_id");
 
@@ -544,16 +575,34 @@ function activeSolutionsForClient(client: SheetRecord, solutions: SheetRecord[])
   });
 }
 
-function siteRecordToDto(site: SheetRecord): ClientSiteDto {
-  const url = getValue(site, "url");
-  const domain = getValue(site, "domaine", "domain") || domainFromUrl(url) || getValue(site, "site_id");
+function solutionTypeLabel(type: ClientImpactKey | null, solution: SheetRecord): string {
+  const officialLabels: Record<ClientImpactKey, string> = {
+    visibility_acquisition: "Flux Visibilité & Acquisition",
+    automation_ai: "Flux Automatisation & IA",
+    assistant_ai: "Flux Assistant IA"
+  };
+
+  return type ? officialLabels[type] : getValue(solution, "type_solution", "type", "solution_type");
+}
+
+function solutionRecordToDto(solution: SheetRecord): ClientSolutionDto {
+  const url = getValue(solution, "url");
+  const domain = getValue(solution, "domaine", "domain") || domainFromUrl(url);
+  const type = solutionImpactKey(solution);
+  const name =
+    getValue(solution, "nom_solution", "name", "nom", "solution") ||
+    solutionTypeLabel(type, solution) ||
+    "Solution Fluxperf";
 
   return {
-    id: getValue(site, "site_id") || domain || url,
+    id: getValue(solution, "solution_id", "id") || name || domain || url,
+    type: type ?? getValue(solution, "type_solution", "type", "solution_type"),
+    typeLabel: solutionTypeLabel(type, solution),
+    status: getValue(solution, "statut_solution", "status", "statut") || "Actif",
+    name,
     domain,
     url,
-    type: getValue(site, "type_site", "type") || "Site suivi",
-    status: getValue(site, "statut_site", "status") || "Actif"
+    activatedAt: getValue(solution, "date_activation", "activated_at", "date")
   };
 }
 
@@ -564,15 +613,20 @@ function serviceFromSolution(solution: SheetRecord): string | null {
     return null;
   }
 
-  const familyLabels: Record<ClientImpactKey, string> = {
-    visibility_acquisition: "Flux Visibilité & Acquisition",
-    automation_ai: "Flux Automatisation & IA",
-    assistant_ai: "Flux Assistant IA"
-  };
   const solutionName = getValue(solution, "nom_solution", "name", "nom", "solution");
-  const familyLabel = familyLabels[type];
+  const familyLabel = solutionTypeLabel(type, solution);
+  const url = getValue(solution, "url");
+  const domain = getValue(solution, "domaine", "domain") || domainFromUrl(url);
+  const detail = domain || url;
+  const solutionNameAlreadyIncludesFamily =
+    solutionName && normalizeAlias(solutionName).includes(normalizeAlias(familyLabel));
+  const baseLabel = solutionName
+    ? solutionNameAlreadyIncludesFamily
+      ? solutionName
+      : `${familyLabel} : ${solutionName}`
+    : familyLabel;
 
-  return solutionName ? `${familyLabel} : ${solutionName}` : familyLabel;
+  return detail ? `${baseLabel} - ${detail}` : baseLabel;
 }
 
 function dedupeServiceLabels(labels: string[]): string[] {
@@ -596,7 +650,7 @@ function servicesFromActivePortfolio(solutions: SheetRecord[]): string[] {
   return dedupeServiceLabels(serviceLabels);
 }
 
-function latestActionsFromStructuredClient(client: SheetRecord, sites: SheetRecord[]) {
+function latestActionsFromStructuredClient(client: SheetRecord, solutions: SheetRecord[]) {
   const actions: ClientDto["latestActions"] = [];
   const updateDate = getValue(client, "date_mise_a_jour");
   const creationDate = getValue(client, "date_creation");
@@ -608,10 +662,10 @@ function latestActionsFromStructuredClient(client: SheetRecord, sites: SheetReco
     });
   }
 
-  if (sites.length > 0) {
+  if (solutions.length > 0) {
     actions.push({
-      label: `${sites.length} site${sites.length > 1 ? "s" : ""} actif${sites.length > 1 ? "s" : ""} suivi${
-        sites.length > 1 ? "s" : ""
+      label: `${solutions.length} solution${solutions.length > 1 ? "s" : ""} active${
+        solutions.length > 1 ? "s" : ""
       }`,
       date: updateDate || creationDate || ""
     });
@@ -630,14 +684,12 @@ function latestActionsFromStructuredClient(client: SheetRecord, sites: SheetReco
 function structuredClientToDto(
   client: SheetRecord,
   contacts: SheetRecord[],
-  sites: SheetRecord[],
   solutions: SheetRecord[],
   actions: string[][] | undefined,
   email: string
 ): ClientDto {
   const contact = preferredContact(client, contacts, email);
   const clientId = getValue(client, "client_id");
-  const activeSites = activeSitesForClient(client, sites);
   const activeSolutions = activeSolutionsForClient(client, solutions);
   const companyName = getValue(client, "organisation") || getValue(client, "nom_compte") || "Client Fluxperf";
   const actionHistory = latestActionsFromActionRows(clientId, actions);
@@ -650,7 +702,7 @@ function structuredClientToDto(
     lastName: contact ? getValue(contact, "nom", "last_name") : "",
     planLabel: "Espace client actif",
     services: servicesFromActivePortfolio(activeSolutions),
-    sites: activeSites.map(siteRecordToDto),
+    solutions: activeSolutions.map(solutionRecordToDto),
     impact: buildImpact(activeSolutions),
     links: {
       request: null,
@@ -662,7 +714,7 @@ function structuredClientToDto(
       name: "Fluxperf",
       email: "hello@fluxperf.fr"
     },
-    latestActions: actionHistory.length > 0 ? actionHistory : latestActionsFromStructuredClient(client, activeSites)
+    latestActions: actionHistory.length > 0 ? actionHistory : latestActionsFromStructuredClient(client, activeSolutions)
   };
 }
 
@@ -677,7 +729,6 @@ function findStructuredClientForEmail(
   const normalizedEmail = normalizeEmail(email);
   const clients = parseRecords(workbook.clients);
   const contacts = parseRecords(workbook.contacts ?? []);
-  const sites = parseRecords(workbook.sites ?? []);
   const solutions = parseRecords(workbook.solutions ?? []);
   const matchedClient = clients.find((client) =>
     structuredClientEmails(client, contacts).includes(normalizedEmail)
@@ -693,7 +744,7 @@ function findStructuredClientForEmail(
 
   return {
     status: "ok",
-    client: structuredClientToDto(matchedClient, contacts, sites, solutions, workbook.actions, email)
+    client: structuredClientToDto(matchedClient, contacts, solutions, workbook.actions, email)
   };
 }
 
@@ -706,16 +757,34 @@ export function findClientForEmailInWorkbook(
   if (legacyResult.status !== "not_found") {
     if (legacyResult.status === "ok") {
       const actionHistory = latestActionsFromActionRows(legacyResult.client.id, workbook.actions);
+      const activeSolutions = activeSolutionsForClient(
+        { client_id: legacyResult.client.id },
+        parseRecords(workbook.solutions ?? [])
+      );
+      const client =
+        activeSolutions.length > 0
+          ? {
+              ...legacyResult.client,
+              services: servicesFromActivePortfolio(activeSolutions),
+              solutions: activeSolutions.map(solutionRecordToDto),
+              impact: buildImpact(activeSolutions)
+            }
+          : legacyResult.client;
 
       if (actionHistory.length > 0) {
         return {
           status: "ok",
           client: {
-            ...legacyResult.client,
+            ...client,
             latestActions: actionHistory
           }
         };
       }
+
+      return {
+        status: "ok",
+        client
+      };
     }
 
     return legacyResult;

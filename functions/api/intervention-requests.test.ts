@@ -30,7 +30,7 @@ async function responseBody(response: Response) {
 
 const validPayload = {
   service: "automation_ai",
-  siteIds: [],
+  solutionIds: ["SOL-DEMO-2"],
   needs: ["automation"],
   priority: "normal",
   message: "Merci de verifier cette automatisation client."
@@ -64,13 +64,13 @@ describe("POST /api/intervention-requests", () => {
     expect(String(body.requestId)).toMatch(/^FP-\d{8}-[A-F0-9]{4}$/);
   });
 
-  it("rejects a site id that is not attached to the authenticated client", async () => {
+  it("rejects a solution id that is not attached to the authenticated client", async () => {
     const response = await onRequestPost(
       context(
         buildFormData({
           ...validPayload,
           service: "visibility_acquisition",
-          siteIds: ["unknown-site"],
+          solutionIds: ["unknown-solution"],
           needs: ["seo"]
         })
       )
@@ -78,7 +78,7 @@ describe("POST /api/intervention-requests", () => {
     const body = await responseBody(response);
 
     expect(response.status).toBe(400);
-    expect(body.error).toMatchObject({ code: "SITE_NOT_ALLOWED" });
+    expect(body.error).toMatchObject({ code: "SOLUTION_NOT_ALLOWED" });
   });
 
   it("rejects files larger than 10 MB", async () => {

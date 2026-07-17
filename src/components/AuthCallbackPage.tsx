@@ -27,6 +27,14 @@ function getHashSession() {
   };
 }
 
+function safeRedirectPath(value: string | null): string {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+    return "/";
+  }
+
+  return value;
+}
+
 export function AuthCallbackPage() {
   const [state, setState] = useState<CallbackState>({ status: "loading" });
 
@@ -37,6 +45,7 @@ export function AuthCallbackPage() {
       const supabase = getSupabaseClient();
       const searchParams = new URLSearchParams(window.location.search);
       const code = searchParams.get("code");
+      const nextPath = safeRedirectPath(searchParams.get("next"));
       const callbackError = searchParams.get("error_description") || searchParams.get("error");
 
       if (!supabase || callbackError) {
@@ -63,8 +72,8 @@ export function AuthCallbackPage() {
         }
       }
 
-      window.history.replaceState({}, "", "/");
-      window.location.assign("/");
+      window.history.replaceState({}, "", nextPath);
+      window.location.assign(nextPath);
     }
 
     finishLogin().catch(() => {

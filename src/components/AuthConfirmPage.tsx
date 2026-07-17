@@ -10,12 +10,21 @@ type ConfirmState =
 
 const allowedTypes = new Set<EmailOtpType>(["magiclink", "email"]);
 
+function safeRedirectPath(value: string | null): string {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) {
+    return "/";
+  }
+
+  return value;
+}
+
 export function AuthConfirmPage() {
   const [state, setState] = useState<ConfirmState>({ status: "idle" });
 
   const params = useMemo(() => new URLSearchParams(window.location.search), []);
   const tokenHash = params.get("token_hash");
   const type = params.get("type") as EmailOtpType | null;
+  const nextPath = safeRedirectPath(params.get("next"));
   const canConfirm = Boolean(tokenHash && type && allowedTypes.has(type));
   const isLoading = state.status === "loading";
 
@@ -45,8 +54,8 @@ export function AuthConfirmPage() {
       return;
     }
 
-    window.history.replaceState({}, "", "/");
-    window.location.assign("/");
+    window.history.replaceState({}, "", nextPath);
+    window.location.assign(nextPath);
   }
 
   return (

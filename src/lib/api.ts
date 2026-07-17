@@ -24,24 +24,30 @@ const demoResponse: MeResponse = {
     lastName: "Dupont",
     planLabel: "Abonnement actif",
     services: [
-      "Flux Visibilité & Acquisition : Acquisition digitale",
+      "Flux Visibilité & Acquisition • Site web - a2-cm.fr",
       "Flux Automatisation & IA : Reporting automatique",
       "Flux Assistant IA : Assistant support"
     ],
-    sites: [
+    solutions: [
       {
-        id: "SITE-0001",
+        id: "SOL-0001",
+        type: "visibility_acquisition",
+        typeLabel: "Flux Visibilité & Acquisition",
+        status: "Actif",
+        name: "Flux Visibilité & Acquisition • Site web",
         domain: "a2-cm.fr",
         url: "https://www.a2-cm.fr",
-        type: "Site principal",
-        status: "Actif"
+        activatedAt: "2026-07-06"
       },
       {
-        id: "SITE-0002",
+        id: "SOL-0002",
+        type: "visibility_acquisition",
+        typeLabel: "Flux Visibilité & Acquisition",
+        status: "Actif",
+        name: "Flux Visibilité & Acquisition • Site e-shop",
         domain: "blog.a2-cm.fr",
         url: "https://blog.a2-cm.fr",
-        type: "Blog",
-        status: "Actif"
+        activatedAt: "2026-07-06"
       }
     ],
     impact: {
@@ -157,7 +163,7 @@ export type InterventionNeed =
 
 export type InterventionRequestInput = {
   service: InterventionService;
-  siteIds: string[];
+  solutionIds: string[];
   needs: InterventionNeed[];
   priority: InterventionPriority;
   message: string;
@@ -203,7 +209,7 @@ export async function submitInterventionRequest(
       "payload",
       JSON.stringify({
         service: input.service,
-        siteIds: input.siteIds,
+        solutionIds: input.solutionIds,
         needs: input.needs,
         priority: input.priority,
         message: input.message

@@ -57,12 +57,17 @@ VITE_SUPABASE_URL=https://ymtqssbfruuziypiwpie.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=
 SUPABASE_URL=https://ymtqssbfruuziypiwpie.supabase.co
 SUPABASE_PUBLISHABLE_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
+ADMIN_EMAILS=
+APP_PUBLIC_URL=https://my.fluxperf.fr
 GOOGLE_SHEET_ID=
 GOOGLE_SHEET_RANGE=Clients!A1:Z1000
 GOOGLE_CONTACTS_RANGE=Contacts!A1:Z1000
-GOOGLE_SITES_RANGE=Sites!A1:Z1000
 GOOGLE_SOLUTIONS_RANGE=Solutions!A1:Z1000
 GOOGLE_ACTIONS_RANGE=Actions!A1:J1000
+GOOGLE_CLIENTS_WRITE_RANGE=Clients!A:K
+GOOGLE_CONTACTS_WRITE_RANGE=Contacts!A:J
+GOOGLE_SOLUTIONS_WRITE_RANGE=Solutions!A:I
 GOOGLE_SERVICE_ACCOUNT_EMAIL=
 GOOGLE_PRIVATE_KEY=
 N8N_INTERVENTION_WEBHOOK_URL=
@@ -91,11 +96,33 @@ Le code utilise `shouldCreateUser: false` pour eviter qu'une adresse inconnue cr
 3. Creer une cle privee JSON pour le Service Account.
 4. Copier `client_email` dans `GOOGLE_SERVICE_ACCOUNT_EMAIL`.
 5. Copier `private_key` dans `GOOGLE_PRIVATE_KEY` en conservant les `\n`.
-6. Partager le Google Sheet avec l'email du Service Account en lecture seule.
+6. Partager le Google Sheet avec l'email du Service Account en lecture seule pour le portail client.
+7. Pour la console interne, partager le Google Sheet avec l'email du Service Account en edition.
 
 Le Google Sheet n'est jamais expose cote navigateur. `/api/me` lit la feuille cote serveur et retourne uniquement la fiche du client connecte.
 
-## Ajouter un client
+## Console interne
+
+La zone interne MVP est disponible sur `/fp-console`.
+
+Elle permet de creer rapidement :
+
+- une ligne `Clients` active ;
+- une ligne `Contacts` pour le contact principal ;
+- une ou plusieurs lignes `Solutions` actives ;
+- l'utilisateur correspondant dans Supabase Auth ;
+- l'email d'ouverture d'acces via Brevo.
+
+Securite attendue :
+
+- `ADMIN_EMAILS` contient les emails internes autorises, separes par virgule ;
+- `SUPABASE_SERVICE_ROLE_KEY` est configure uniquement cote Cloudflare Pages Functions ;
+- le Service Account Google a les droits d'edition sur le Google Sheet ;
+- option recommande : proteger aussi `/fp-console` et `/api/admin/*` avec Cloudflare Access.
+
+En local, `DEV_ADMIN_EMAIL` peut etre utilise pour tester la zone interne sans ouvrir l'acces a tous les comptes de demo.
+
+## Ajouter un client manuellement
 
 Dans l'onglet `Clients`, ajoutez une ligne avec :
 
@@ -116,8 +143,8 @@ dashboard :
 - 1 ligne `Flux Automatisation & IA` active dans l'onglet `Solutions` = 1 h / semaine
 - 1 ligne `Flux Assistant IA` active dans l'onglet `Solutions` = 2 h / semaine
 
-L'onglet `Solutions` est optionnel pour garder la compatibilite avec les bases
-existantes. Colonnes attendues :
+L'onglet `Solutions` est la source principale des services actifs, des impacts
+et du contexte des demandes d'intervention. Colonnes attendues :
 
 ```text
 solution_id
@@ -125,6 +152,8 @@ client_id
 type_solution
 statut_solution
 nom_solution
+domaine
+url
 date_activation
 notes
 ```
@@ -137,11 +166,11 @@ compatibilite.
 ## Demande d'intervention
 
 La carte "Faire une demande" ouvre un formulaire natif MyFluxperf. Pour le flux
-"Visibilite & Acquisition", l'application propose automatiquement les sites actifs
-de l'onglet `Sites` rattaches au client connecte.
+selectionne, l'application propose automatiquement les solutions actives de
+l'onglet `Solutions` rattachees au client connecte.
 
 La Pages Function `POST /api/intervention-requests` verifie l'identite, controle les
-sites selectionnes, limite les pieces jointes a 5 fichiers, 10 Mo par fichier et
+solutions selectionnees, limite les pieces jointes a 5 fichiers, 10 Mo par fichier et
 15 Mo au total, puis transmet a n8n un `multipart/form-data` avec :
 
 - `payload` : demande structuree, client, contact et reference Fluxperf

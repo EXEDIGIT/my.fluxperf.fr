@@ -1,6 +1,7 @@
 import { FilePenLine, LifeBuoy, MessageCircle, ShieldCheck, Sparkles, TimerReset } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ActionCard } from "./components/ActionCard";
+import { AdminConsolePage } from "./components/AdminConsolePage";
 import { AuthCallbackPage } from "./components/AuthCallbackPage";
 import { AuthConfirmPage } from "./components/AuthConfirmPage";
 import { ErrorState } from "./components/ErrorState";
@@ -43,9 +44,10 @@ export function App() {
   });
   const isAuthCallback = window.location.pathname === "/auth/callback";
   const isAuthConfirm = window.location.pathname === "/auth/confirm";
+  const isAdminConsole = window.location.pathname === "/fp-console";
 
   useEffect(() => {
-    if (isAuthCallback || isAuthConfirm) {
+    if (isAuthCallback || isAuthConfirm || isAdminConsole) {
       return;
     }
 
@@ -114,7 +116,7 @@ export function App() {
       isMounted = false;
       listener?.data.subscription.unsubscribe();
     };
-  }, [isAuthCallback, isAuthConfirm]);
+  }, [isAuthCallback, isAuthConfirm, isAdminConsole]);
 
   useEffect(() => {
     if (state.status === "ready" && window.location.pathname === "/login") {
@@ -160,6 +162,10 @@ export function App() {
 
   if (isAuthConfirm) {
     return <AuthConfirmPage />;
+  }
+
+  if (isAdminConsole) {
+    return <AdminConsolePage />;
   }
 
   if (state.status === "anonymous") {
@@ -249,7 +255,7 @@ export function App() {
           <LatestActions actions={client.latestActions} />
         </div>
 
-        <ServicesActive services={client.services} />
+        <ServicesActive services={client.services} solutions={client.solutions} />
 
         <Resources resourcesUrl={client.links.resources} />
 
@@ -273,6 +279,10 @@ export function App() {
         client={client}
         email={user.email}
         isOpen={isRequestOpen}
+        onSupportRequest={(preset) => {
+          setIsRequestOpen(false);
+          openSupportRequest(preset);
+        }}
         onClose={() => setIsRequestOpen(false)}
       />
 

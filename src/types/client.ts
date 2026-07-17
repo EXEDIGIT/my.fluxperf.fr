@@ -1,9 +1,12 @@
-export type ClientSite = {
+export type ClientSolution = {
   id: string;
+  type: string;
+  typeLabel: string;
+  status: string;
+  name: string;
   domain: string;
   url: string;
-  type: string;
-  status: string;
+  activatedAt: string;
 };
 
 export type ClientImpactKey = "visibility_acquisition" | "automation_ai" | "assistant_ai";
@@ -31,7 +34,7 @@ export type Client = {
   lastName: string;
   planLabel: string;
   services: string[];
-  sites: ClientSite[];
+  solutions: ClientSolution[];
   impact: ClientImpact;
   links: {
     request: string | null;
