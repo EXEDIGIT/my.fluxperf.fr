@@ -55,7 +55,7 @@ flowchart LR
   P --> API["/api/me<br/>Pages Function"]
   API --> SA["Service Account<br/>JWT signe"]
   SA --> GS["Google Sheets API"]
-  GS --> DB["Google Sheet<br/>Clients / Contacts / Sites / Solutions"]
+  GS --> DB["Google Sheet<br/>Clients / Contacts / Sites / Solutions / Actions"]
   DB --> API
   API --> P
   P --> REQ["/api/intervention-requests"]
@@ -72,6 +72,7 @@ Le portail supporte la structure actuelle de la BDD :
 | `Contacts` | Prenom, nom, email, statut contact |
 | `Sites` | Sites rattaches au client, domaine, URL, statut, suivi actif |
 | `Solutions` | Solutions IA rattachees au client pour calculer le temps libere |
+| `Actions` | Journal des demandes client affiche dans le module Dernieres actions |
 | `Parametres` | Valeurs de reference pour la BDD, non lues par le portail MVP |
 
 Conditions pour qu'un client soit affiche :
@@ -91,6 +92,7 @@ GOOGLE_SHEET_RANGE=Clients!A1:Z1000
 GOOGLE_CONTACTS_RANGE=Contacts!A1:Z1000
 GOOGLE_SITES_RANGE=Sites!A1:Z1000
 GOOGLE_SOLUTIONS_RANGE=Solutions!A1:Z1000
+GOOGLE_ACTIONS_RANGE=Actions!A1:J1000
 GOOGLE_SERVICE_ACCOUNT_EMAIL=my-fluxperf-reader@fluxperf.iam.gserviceaccount.com
 GOOGLE_PRIVATE_KEY=...
 CF_ACCESS_HOSTNAME=my.fluxperf.fr

@@ -8,6 +8,7 @@ const DEFAULT_RANGE = "Clients!A1:Z1000";
 const DEFAULT_CONTACTS_RANGE = "Contacts!A1:Z1000";
 const DEFAULT_SITES_RANGE = "Sites!A1:Z1000";
 const DEFAULT_SOLUTIONS_RANGE = "Solutions!A1:Z1000";
+const DEFAULT_ACTIONS_RANGE = "Actions!A1:J1000";
 
 type Fetcher = typeof fetch;
 
@@ -194,7 +195,8 @@ export async function readGoogleWorkbookValues(
         clients: demoSheetValues,
         contacts: [],
         sites: [],
-        solutions: []
+        solutions: [],
+        actions: []
       };
     }
 
@@ -202,7 +204,7 @@ export async function readGoogleWorkbookValues(
   }
 
   const accessToken = await getGoogleAccessToken(env, fetcher);
-  const [clients, contacts, sites, solutions] = await Promise.all([
+  const [clients, contacts, sites, solutions, actions] = await Promise.all([
     readGoogleSheetRange(env, accessToken, env.GOOGLE_SHEET_RANGE || DEFAULT_RANGE, fetcher),
     readOptionalGoogleSheetRange(
       env,
@@ -216,6 +218,12 @@ export async function readGoogleWorkbookValues(
       accessToken,
       env.GOOGLE_SOLUTIONS_RANGE || DEFAULT_SOLUTIONS_RANGE,
       fetcher
+    ),
+    readOptionalGoogleSheetRange(
+      env,
+      accessToken,
+      env.GOOGLE_ACTIONS_RANGE || DEFAULT_ACTIONS_RANGE,
+      fetcher
     )
   ]);
 
@@ -223,6 +231,7 @@ export async function readGoogleWorkbookValues(
     clients,
     contacts,
     sites,
-    solutions
+    solutions,
+    actions
   };
 }

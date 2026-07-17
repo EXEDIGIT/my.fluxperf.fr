@@ -294,6 +294,79 @@ describe("client sheet parsing", () => {
     }
   });
 
+  it("uses the latest matching rows from the Actions tab", () => {
+    const result = findClientForEmailInWorkbook(
+      {
+        ...structuredWorkbook,
+        actions: [
+          [
+            "action_id",
+            "client_id",
+            "date_action",
+            "type_action",
+            "libelle_action",
+            "reference",
+            "email_demandeur",
+            "source",
+            "statut",
+            "details"
+          ],
+          [
+            "ACT-OLD",
+            "CLI-0001",
+            "2026-07-16T08:00:00.000Z",
+            "support_request",
+            "Message support envoye",
+            "SUP-20260716-0001",
+            "tdacunha@exedigit.fr",
+            "myfluxperf",
+            "envoyee",
+            ""
+          ],
+          [
+            "ACT-OTHER",
+            "CLI-9999",
+            "2026-07-18T08:00:00.000Z",
+            "intervention_request",
+            "Action autre client",
+            "FP-20260718-0001",
+            "other@example.com",
+            "myfluxperf",
+            "envoyee",
+            ""
+          ],
+          [
+            "ACT-NEW",
+            "CLI-0001",
+            "2026-07-17T10:00:00.000Z",
+            "intervention_request",
+            "Demande d'intervention envoyee - Flux Automatisation & IA",
+            "FP-20260717-0001",
+            "tdacunha@exedigit.fr",
+            "myfluxperf",
+            "envoyee",
+            ""
+          ]
+        ]
+      },
+      "tdacunha@exedigit.fr"
+    );
+
+    expect(result.status).toBe("ok");
+    if (result.status === "ok") {
+      expect(result.client.latestActions).toEqual([
+        {
+          label: "Demande d'intervention envoyee - Flux Automatisation & IA",
+          date: "17/07/2026 12:00"
+        },
+        {
+          label: "Message support envoye",
+          date: "16/07/2026 10:00"
+        }
+      ]);
+    }
+  });
+
   it("counts an active automation solution even when the client has no site", () => {
     const workbook = {
       ...structuredWorkbook,

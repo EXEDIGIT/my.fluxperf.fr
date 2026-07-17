@@ -61,6 +61,7 @@ export type ClientWorkbookValues = {
   contacts?: string[][];
   sites?: string[][];
   solutions?: string[][];
+  actions?: string[][];
 };
 
 type SheetRecord = Record<string, string>;
@@ -105,6 +106,10 @@ function normalizeColumn(value: string): string {
 }
 
 function normalizeEmail(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+function normalizeId(value: string): string {
   return value.trim().toLowerCase();
 }
 
@@ -160,6 +165,100 @@ function getValue(record: SheetRecord, ...keys: string[]): string {
   }
 
   return "";
+}
+
+function parseActionTimestamp(value: string): number {
+  if (!value) {
+    return 0;
+  }
+
+  const timestamp = Date.parse(value);
+
+  return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+function formatActionDate(value: string): string {
+  if (!value) {
+    return "";
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [year, month, day] = value.split("-");
+
+    return `${day}/${month}/${year}`;
+  }
+
+  const timestamp = Date.parse(value);
+
+  if (!Number.isFinite(timestamp)) {
+    return value;
+  }
+
+  const parts = new Intl.DateTimeFormat("fr-FR", {
+    timeZone: "Europe/Paris",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23"
+  }).formatToParts(new Date(timestamp));
+  const part = (type: string) => parts.find((item) => item.type === type)?.value ?? "";
+
+  return `${part("day")}/${part("month")}/${part("year")} ${part("hour")}:${part("minute")}`;
+}
+
+function labelFromActionRecord(action: SheetRecord): string {
+  const label = getValue(action, "libelle_action", "label");
+
+  if (label) {
+    return label;
+  }
+
+  const type = getValue(action, "type_action");
+
+  if (type === "intervention_request") {
+    return "Demande d'intervention envoyee";
+  }
+
+  if (type === "support_request") {
+    return "Message support envoye";
+  }
+
+  return type || "Action Fluxperf";
+}
+
+function latestActionsFromActionRows(
+  clientId: string,
+  actions: string[][] | undefined
+): ClientDto["latestActions"] {
+  const normalizedClientId = normalizeId(clientId);
+
+  if (!normalizedClientId || !actions || actions.length < 2) {
+    return [];
+  }
+
+  return parseRecords(actions)
+    .map((action, index) => {
+      const date = getValue(action, "date_action", "date", "submitted_at");
+
+      return {
+        action,
+        index,
+        timestamp: parseActionTimestamp(date)
+      };
+    })
+    .filter(({ action }) => normalizeId(getValue(action, "client_id")) === normalizedClientId)
+    .sort((left, right) => right.timestamp - left.timestamp || right.index - left.index)
+    .slice(0, 3)
+    .map(({ action }) => {
+      const date = getValue(action, "date_action", "date", "submitted_at");
+
+      return {
+        label: labelFromActionRecord(action),
+        date: formatActionDate(date)
+      };
+    });
 }
 
 function domainFromUrl(value: string): string {
@@ -534,15 +633,18 @@ function structuredClientToDto(
   contacts: SheetRecord[],
   sites: SheetRecord[],
   solutions: SheetRecord[],
+  actions: string[][] | undefined,
   email: string
 ): ClientDto {
   const contact = preferredContact(client, contacts, email);
+  const clientId = getValue(client, "client_id");
   const activeSites = activeSitesForClient(client, sites);
   const activeSolutions = activeSolutionsForClient(client, solutions);
   const companyName = getValue(client, "organisation") || getValue(client, "nom_compte") || "Client Fluxperf";
+  const actionHistory = latestActionsFromActionRows(clientId, actions);
 
   return {
-    id: getValue(client, "client_id"),
+    id: clientId,
     status: "active",
     companyName,
     firstName: contact ? getValue(contact, "prenom", "first_name") : "",
@@ -561,7 +663,7 @@ function structuredClientToDto(
       name: "Fluxperf",
       email: "hello@fluxperf.fr"
     },
-    latestActions: latestActionsFromStructuredClient(client, activeSites)
+    latestActions: actionHistory.length > 0 ? actionHistory : latestActionsFromStructuredClient(client, activeSites)
   };
 }
 
@@ -592,7 +694,7 @@ function findStructuredClientForEmail(
 
   return {
     status: "ok",
-    client: structuredClientToDto(matchedClient, contacts, sites, solutions, email)
+    client: structuredClientToDto(matchedClient, contacts, sites, solutions, workbook.actions, email)
   };
 }
 
@@ -603,6 +705,20 @@ export function findClientForEmailInWorkbook(
   const legacyResult = findClientForEmail(workbook.clients, email);
 
   if (legacyResult.status !== "not_found") {
+    if (legacyResult.status === "ok") {
+      const actionHistory = latestActionsFromActionRows(legacyResult.client.id, workbook.actions);
+
+      if (actionHistory.length > 0) {
+        return {
+          status: "ok",
+          client: {
+            ...legacyResult.client,
+            latestActions: actionHistory
+          }
+        };
+      }
+    }
+
     return legacyResult;
   }
 

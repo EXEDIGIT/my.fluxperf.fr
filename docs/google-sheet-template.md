@@ -107,3 +107,25 @@ notes:
 - Une ligne `Solutions` compte uniquement si `statut_solution` vaut `Actif`.
 - `automation_ai` ajoute 1 h / semaine.
 - `assistant_ai` ajoute 2 h / semaine.
+
+## Onglet `Actions`
+
+Creer un onglet nomme `Actions` pour journaliser les demandes envoyees depuis
+MyFluxperf.
+
+```text
+action_id
+client_id
+date_action
+type_action
+libelle_action
+reference
+email_demandeur
+source
+statut
+details
+```
+
+L'espace client filtre les lignes par `client_id`, trie par `date_action`
+descendante, puis affiche les 3 dernieres actions dans le module `Dernieres
+actions`.

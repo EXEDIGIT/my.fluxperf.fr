@@ -62,6 +62,7 @@ GOOGLE_SHEET_RANGE=Clients!A1:Z1000
 GOOGLE_CONTACTS_RANGE=Contacts!A1:Z1000
 GOOGLE_SITES_RANGE=Sites!A1:Z1000
 GOOGLE_SOLUTIONS_RANGE=Solutions!A1:Z1000
+GOOGLE_ACTIONS_RANGE=Actions!A1:J1000
 GOOGLE_SERVICE_ACCOUNT_EMAIL=
 GOOGLE_PRIVATE_KEY=
 N8N_INTERVENTION_WEBHOOK_URL=
@@ -149,6 +150,10 @@ Brevo et la journalisation interne.
 
 Le workflow n8n importable et la procedure de configuration sont dans
 `docs/n8n/`.
+
+Les demandes journalisees par n8n dans l'onglet `Actions` sont relues par
+`/api/me` et alimentent le module "Dernieres actions" avec les 3 dernieres
+actions du client connecte.
 
 ## Support MyFluxperf
 
