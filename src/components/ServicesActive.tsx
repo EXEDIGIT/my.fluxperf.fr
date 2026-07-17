@@ -35,19 +35,19 @@ function descriptionForService(service: string) {
     return "Automatisations, integrations et workflows IA rattaches a votre compte.";
   }
 
-  if (normalized.includes("site")) {
-    return "Site rattache a votre espace client avec les informations de suivi a jour.";
+  if (normalized.includes("visibil") || normalized.includes("ads") || normalized.includes("sea")) {
+    return "Visibilité & Acquisition pilotées par nos équipes et rattachées à votre compte.";
   }
 
-  if (normalized.includes("visibil") || normalized.includes("ads") || normalized.includes("sea")) {
-    return "Pilotage de votre visibilite, acquisition et performance digitale.";
+  if (normalized.includes("site")) {
+    return "Site rattache a votre espace client avec les informations de suivi a jour.";
   }
 
   return "Suivi dans votre espace client avec les informations et acces utiles a jour.";
 }
 
 function solutionDetail(solution: Client["solutions"][number]): string {
-  return solution.domain || solution.url || solution.typeLabel;
+  return solution.url || solution.domain || solution.typeLabel;
 }
 
 function descriptionForSolution(solution: Client["solutions"][number]) {
