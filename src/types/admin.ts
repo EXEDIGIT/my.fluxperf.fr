@@ -35,7 +35,7 @@ export type AdminCreateClientResponse = {
     reason?: string;
   };
   notification: {
-    status: "sent" | "skipped";
+    status: "sent" | "skipped" | "failed";
     email: string;
     reason?: string;
   };

@@ -146,6 +146,14 @@ function solutionLabel(solution: ClientSolution): string {
   return solution.domain || solution.url || solution.name || solution.id;
 }
 
+function solutionSummaryLabel(solution: ClientSolution): string {
+  return solution.name || solutionLabel(solution);
+}
+
+function solutionSummaryUrl(solution: ClientSolution): string {
+  return solution.url || solution.domain;
+}
+
 export function InterventionRequestModal({
   client,
   email,
@@ -627,6 +635,23 @@ export function InterventionRequestModal({
     return renderConfirmationStep();
   }
 
+  function renderSelectedSolutionsSummary() {
+    if (service !== "visibility_acquisition") {
+      return selectedSolutions.map(solutionSummaryLabel).join(", ");
+    }
+
+    return (
+      <span className="intervention-side-solutions">
+        {selectedSolutions.map((solution) => (
+          <span className="intervention-side-solution" key={solution.id}>
+            <strong>{solutionSummaryLabel(solution)}</strong>
+            {solutionSummaryUrl(solution) ? <small>{solutionSummaryUrl(solution)}</small> : null}
+          </span>
+        ))}
+      </span>
+    );
+  }
+
   const canSubmit = step === steps.length - 1 && !requestId;
 
   return (
@@ -689,7 +714,7 @@ export function InterventionRequestModal({
             {selectedSolutions.length > 0 ? (
               <div>
                 <Globe2 aria-hidden="true" />
-                <span>{selectedSolutions.map((solution) => solution.name || solutionLabel(solution)).join(", ")}</span>
+                <span>{renderSelectedSolutionsSummary()}</span>
               </div>
             ) : null}
           </aside>

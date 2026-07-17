@@ -110,6 +110,18 @@ function loginErrorMessage(error: { message?: string; status?: number }) {
   return "Le lien de connexion admin n'a pas pu etre envoye.";
 }
 
+function notificationLabel(notification: AdminCreateClientResponse["notification"]): string {
+  if (notification.status === "sent") {
+    return "email envoye";
+  }
+
+  if (notification.status === "failed") {
+    return "email non envoye";
+  }
+
+  return "email desactive";
+}
+
 function AdminLoginPanel() {
   const [email, setEmail] = useState("");
   const [state, setState] = useState<LoginState>({ status: "idle" });
@@ -552,7 +564,8 @@ export function AdminConsolePage() {
             <div className="admin-message success" role="status">
               <CheckCircle2 aria-hidden="true" />
               Client {success.client.companyName} cree : {success.client.id}. Supabase :{" "}
-              {success.supabaseUser.status}. Email : {success.notification.status}.
+              {success.supabaseUser.status}. {notificationLabel(success.notification)}.
+              {success.notification.reason ? ` ${success.notification.reason}` : ""}
             </div>
           ) : null}
 

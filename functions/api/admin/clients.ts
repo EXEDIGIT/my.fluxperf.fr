@@ -46,7 +46,26 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
     await appendGoogleSheetValues(context.env, ranges.contacts, [rows.contactRow]);
     await appendGoogleSheetValues(context.env, ranges.solutions, rows.solutionRows);
 
-    const notification = await sendClientWelcomeEmail(context.env, context.request, input);
+    let notification: Awaited<ReturnType<typeof sendClientWelcomeEmail>> | {
+      status: "failed";
+      email: string;
+      reason: string;
+    };
+
+    try {
+      notification = await sendClientWelcomeEmail(context.env, context.request, input);
+    } catch (error) {
+      console.error(
+        "brevo_welcome_email_failed",
+        error instanceof Error ? error.message : "Unknown Brevo error"
+      );
+
+      notification = {
+        status: "failed",
+        email: input.email,
+        reason: "Email d'ouverture non envoye. Verifiez Brevo."
+      };
+    }
 
     return json(
       {

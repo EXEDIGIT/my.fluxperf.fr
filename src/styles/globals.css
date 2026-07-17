@@ -1938,6 +1938,34 @@ svg {
   font-weight: 700;
 }
 
+.intervention-side div > span {
+  min-width: 0;
+}
+
+.intervention-side-solutions {
+  display: grid;
+  gap: 8px;
+}
+
+.intervention-side-solution {
+  display: grid;
+  gap: 3px;
+}
+
+.intervention-side-solution strong {
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.intervention-side-solution small {
+  color: var(--green);
+  font-size: 0.76rem;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
 .intervention-side svg {
   flex: 0 0 auto;
   color: var(--green);
