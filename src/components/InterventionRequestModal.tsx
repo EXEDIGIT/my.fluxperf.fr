@@ -151,7 +151,7 @@ function solutionSummaryLabel(solution: ClientSolution): string {
 }
 
 function solutionSummaryUrl(solution: ClientSolution): string {
-  return solution.url || solution.domain;
+  return solution.domain || solution.url;
 }
 
 export function InterventionRequestModal({
