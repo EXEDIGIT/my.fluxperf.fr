@@ -438,6 +438,54 @@ svg {
   gap: 18px;
 }
 
+.impact-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.impact-heading > div {
+  min-width: 0;
+}
+
+.impact-live-badge {
+  min-height: 34px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 12px;
+  border: 1px solid rgba(0, 111, 120, 0.14);
+  border-radius: 999px;
+  background: rgba(231, 244, 243, 0.76);
+  color: var(--green);
+  font-size: 0.74rem;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 8px 18px rgba(0, 111, 120, 0.08);
+}
+
+.impact-live-dot {
+  position: relative;
+  width: 9px;
+  height: 9px;
+  display: inline-block;
+  border-radius: 999px;
+  background: #18a957;
+  box-shadow: 0 0 0 0 rgba(24, 169, 87, 0.42);
+  animation: impact-live-dot 1.8s ease-in-out infinite;
+}
+
+.impact-live-dot::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: inherit;
+  background: rgba(24, 169, 87, 0.2);
+  animation: impact-live-ring 1.8s ease-out infinite;
+}
+
 .action-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -2518,6 +2566,59 @@ svg {
   background: var(--green-soft);
 }
 
+.admin-solution-entry {
+  display: grid;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 111, 120, 0.14);
+}
+
+.admin-solution-entry-header {
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.admin-solution-entry-header span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.admin-solution-entry-header button,
+.admin-add-solution-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(0, 111, 120, 0.2);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--green);
+  cursor: pointer;
+}
+
+.admin-solution-entry-header button {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+}
+
+.admin-solution-entry-header button svg,
+.admin-add-solution-button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.admin-add-solution-button {
+  min-height: 38px;
+  gap: 8px;
+  padding: 0 12px;
+  border-style: dashed;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
 .admin-solution-card input:disabled,
 .admin-solution-card select:disabled {
   background: rgba(255, 255, 255, 0.56);
@@ -2602,6 +2703,39 @@ svg {
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes impact-live-dot {
+  0%,
+  100% {
+    transform: scale(0.88);
+    box-shadow: 0 0 0 0 rgba(24, 169, 87, 0.42);
+  }
+
+  50% {
+    transform: scale(1);
+    box-shadow: 0 0 0 6px rgba(24, 169, 87, 0);
+  }
+}
+
+@keyframes impact-live-ring {
+  0% {
+    opacity: 0.62;
+    transform: scale(0.4);
+  }
+
+  72%,
+  100% {
+    opacity: 0;
+    transform: scale(1.8);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .impact-live-dot,
+  .impact-live-dot::after {
+    animation: none;
   }
 }
 
@@ -2699,6 +2833,15 @@ svg {
   .support-band {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .impact-heading {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .impact-live-badge {
+    align-self: flex-start;
   }
 
   .action-grid,

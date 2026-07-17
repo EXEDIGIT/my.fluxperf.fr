@@ -244,10 +244,16 @@ export function App() {
 
         <div className="dashboard-two-columns">
           <section className="dashboard-section compact-section" id="impacts">
-            <div className="section-heading">
-              <span className="section-kicker">Impacts</span>
-              <h2>Votre temps libéré</h2>
-              <p className="section-subtitle">Pris en charge par votre solution Fluxperf®</p>
+            <div className="section-heading impact-heading">
+              <div>
+                <span className="section-kicker">Impacts</span>
+                <h2>Votre temps libéré</h2>
+                <p className="section-subtitle">Pris en charge par votre solution Fluxperf®</p>
+              </div>
+              <span className="impact-live-badge" aria-label="Suivi actif en ce moment">
+                <span className="impact-live-dot" aria-hidden="true"></span>
+                En ce moment
+              </span>
             </div>
             <ImpactPanel impact={client.impact} />
           </section>
