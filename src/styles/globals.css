@@ -2019,6 +2019,8 @@ svg {
     width: 100%;
     max-height: 100vh;
     min-height: 100vh;
+    max-height: 100dvh;
+    min-height: 100dvh;
     border-radius: 0;
   }
 
@@ -2029,6 +2031,10 @@ svg {
   .simple-modal-header,
   .simple-modal-footer {
     padding: 14px;
+  }
+
+  .simple-modal-footer {
+    padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
   }
 
   .simple-modal-header {
@@ -2056,12 +2062,18 @@ svg {
     width: 100%;
     max-height: 100vh;
     min-height: 100vh;
+    max-height: 100dvh;
+    min-height: 100dvh;
     border-radius: 0;
   }
 
   .intervention-header,
   .intervention-footer {
     padding: 14px;
+  }
+
+  .intervention-footer {
+    padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
   }
 
   .intervention-header {
