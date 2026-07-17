@@ -1,5 +1,5 @@
 import { ArrowRight, LifeBuoy, Mail, ShieldCheck } from "lucide-react";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { getSupabaseClient, hasSupabaseConfig } from "../lib/supabase";
 
 type LoginState =
@@ -8,15 +8,23 @@ type LoginState =
   | { status: "sent"; email: string }
   | { status: "error"; message: string };
 
+const RESEND_COOLDOWN_SECONDS = 20;
+const RATE_LIMIT_FALLBACK_SECONDS = 60;
+
 function normalizeEmail(value: string): string {
   return value.trim().toLowerCase();
+}
+
+function getRateLimitDelaySeconds(message: string | undefined): number {
+  const match = message?.match(/after\s+(\d+)\s+seconds?/i);
+  return match ? Number(match[1]) : RATE_LIMIT_FALLBACK_SECONDS;
 }
 
 function signInErrorMessage(error: { message?: string; status?: number }) {
   const message = error.message?.toLowerCase() ?? "";
 
   if (error.status === 429 || message.includes("rate limit") || message.includes("security purposes")) {
-    return "Trop de demandes de connexion ont ete envoyees. Patientez une minute, puis demandez un nouveau lien.";
+    return "Une demande de connexion vient deja d'etre envoyee. Patientez quelques instants, puis demandez un nouveau lien.";
   }
 
   if (message.includes("signup") || message.includes("user not found") || message.includes("not found")) {
@@ -29,9 +37,29 @@ function signInErrorMessage(error: { message?: string; status?: number }) {
 export function LoginPage() {
   const [email, setEmail] = useState("");
   const [state, setState] = useState<LoginState>({ status: "idle" });
+  const [cooldownRemaining, setCooldownRemaining] = useState(0);
 
   const redirectTo = useMemo(() => `${window.location.origin}/auth/callback`, []);
   const isSending = state.status === "sending";
+  const isCoolingDown = cooldownRemaining > 0;
+  const isSubmitDisabled = isSending || isCoolingDown;
+  const submitLabel = isSending
+    ? "Envoi en cours..."
+    : isCoolingDown
+      ? `Nouveau lien dans ${cooldownRemaining}s`
+      : "Recevoir mon lien";
+
+  useEffect(() => {
+    if (cooldownRemaining <= 0) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setCooldownRemaining((currentValue) => Math.max(0, currentValue - 1));
+    }, 1000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [cooldownRemaining]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -66,6 +94,10 @@ export function LoginPage() {
     });
 
     if (error) {
+      if (error.status === 429) {
+        setCooldownRemaining(getRateLimitDelaySeconds(error.message));
+      }
+
       setState({
         status: "error",
         message: signInErrorMessage(error)
@@ -73,6 +105,7 @@ export function LoginPage() {
       return;
     }
 
+    setCooldownRemaining(RESEND_COOLDOWN_SECONDS);
     setState({ status: "sent", email: normalizedEmail });
   }
 
@@ -109,8 +142,12 @@ export function LoginPage() {
             />
           </div>
 
-          <button type="submit" disabled={isSending}>
-            <span>{isSending ? "Envoi en cours..." : "Recevoir mon lien"}</span>
+          <button
+            className={isSending ? "is-loading" : isCoolingDown ? "is-cooling" : undefined}
+            type="submit"
+            disabled={isSubmitDisabled}
+          >
+            <span>{submitLabel}</span>
             <ArrowRight aria-hidden="true" />
           </button>
         </form>
@@ -119,6 +156,7 @@ export function LoginPage() {
           <div className="auth-message success" role="status">
             <strong>Lien envoye</strong>
             <p>Consultez la boite mail de {state.email}. Le lien expire automatiquement.</p>
+            {isCoolingDown ? <p>Vous pourrez demander un nouveau lien dans {cooldownRemaining}s.</p> : null}
           </div>
         ) : null}
 

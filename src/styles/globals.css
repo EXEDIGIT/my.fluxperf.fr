@@ -1943,8 +1943,15 @@ svg {
 }
 
 .auth-form button:disabled {
-  cursor: wait;
   opacity: 0.66;
+}
+
+.auth-form button.is-loading:disabled {
+  cursor: wait;
+}
+
+.auth-form button.is-cooling:disabled {
+  cursor: not-allowed;
 }
 
 .auth-message {
