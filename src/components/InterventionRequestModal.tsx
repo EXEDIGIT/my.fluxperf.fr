@@ -143,7 +143,7 @@ function labelFor<T extends { id: string; label: string }>(items: T[], id: strin
 }
 
 function solutionLabel(solution: ClientSolution): string {
-  return solution.domain || solution.url || solution.name || solution.id;
+  return solution.url || solution.domain || solution.name || solution.id;
 }
 
 function solutionSummaryLabel(solution: ClientSolution): string {
@@ -151,7 +151,7 @@ function solutionSummaryLabel(solution: ClientSolution): string {
 }
 
 function solutionSummaryUrl(solution: ClientSolution): string {
-  return solution.domain || solution.url;
+  return solution.url || solution.domain;
 }
 
 export function InterventionRequestModal({
@@ -636,10 +636,6 @@ export function InterventionRequestModal({
   }
 
   function renderSelectedSolutionsSummary() {
-    if (service !== "visibility_acquisition") {
-      return selectedSolutions.map(solutionSummaryLabel).join(", ");
-    }
-
     return (
       <span className="intervention-side-solutions">
         {selectedSolutions.map((solution) => (
