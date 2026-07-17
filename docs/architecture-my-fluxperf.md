@@ -70,7 +70,7 @@ Le portail supporte la structure actuelle de la BDD :
 | --- | --- |
 | `Clients` | Identite du compte, statut client, activation de l'espace client, email principal |
 | `Contacts` | Prenom, nom, email, statut contact |
-| `Solutions` | Services Fluxperf rattaches au client, avec type, statut, nom, domaine, URL et date d'activation |
+| `Solutions` | Services Fluxperf rattaches au client, avec type, statut, nom, domaine, URL ou indication et date d'activation |
 | `Actions` | Journal des demandes client affiche dans le module Dernieres actions |
 | `Parametres` | Valeurs de reference lues par la console admin pour alimenter les options de solutions |
 

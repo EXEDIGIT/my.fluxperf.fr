@@ -350,6 +350,52 @@ describe("client sheet parsing", () => {
     }
   });
 
+  it("reads the new url_ou_indication column without turning indications into domains", () => {
+    const result = findClientForEmailInWorkbook(
+      {
+        ...structuredWorkbook,
+        solutions: [
+          [
+            "solution_id",
+            "client_id",
+            "type_solution",
+            "statut_solution",
+            "nom_solution",
+            "domaine",
+            "url_ou_indication",
+            "date_activation",
+            "notes"
+          ],
+          [
+            "SOL-INDICATION",
+            "CLI-0001",
+            "Flux Automatisation & IA",
+            "Actif",
+            "Flux Automatisation & IA - Tableau de bord",
+            "",
+            "Centralisation donnees",
+            "2026-07-06",
+            ""
+          ]
+        ]
+      },
+      "tdacunha@exedigit.fr"
+    );
+
+    expect(result.status).toBe("ok");
+    if (result.status === "ok") {
+      expect(result.client.solutions[0]).toMatchObject({
+        id: "SOL-INDICATION",
+        type: "automation_ai",
+        domain: "",
+        url: "Centralisation donnees"
+      });
+      expect(result.client.services).toEqual([
+        "Flux Automatisation & IA - Tableau de bord - Centralisation donnees"
+      ]);
+    }
+  });
+
   it("uses the latest matching rows from the Actions tab", () => {
     const result = findClientForEmailInWorkbook(
       {

@@ -14,7 +14,7 @@ describe("admin client helpers", () => {
         {
           type: "visibility_acquisition",
           name: "",
-          url: "a2-cm.fr"
+          urlOrIndication: "a2-cm.fr"
         }
       ]
     });
@@ -25,8 +25,54 @@ describe("admin client helpers", () => {
       expect(input.solutions[0]).toEqual({
         type: "visibility_acquisition",
         name: fallbackAdminSolutionOptions[0].defaultName,
-        url: "https://a2-cm.fr"
+        urlOrIndication: "https://a2-cm.fr"
       });
+    }
+  });
+
+  it("keeps a service indication as text instead of forcing an URL", () => {
+    const input = validateAdminClientInput({
+      companyName: "Data Client",
+      contactFirstName: "Camille",
+      contactLastName: "Martin",
+      email: "contact@data-client.fr",
+      solutions: [
+        {
+          type: "automation_ai",
+          name: fallbackAdminSolutionOptions[1].defaultName,
+          urlOrIndication: "Centralisation donnees"
+        }
+      ]
+    });
+
+    expect(typeof input).toBe("object");
+    if (typeof input !== "string") {
+      const rows = buildAdminClientRows(input, new Date("2026-07-17T10:00:00.000Z"));
+
+      expect(input.solutions[0].urlOrIndication).toBe("Centralisation donnees");
+      expect(rows.solutionRows[0][5]).toBe("");
+      expect(rows.solutionRows[0][6]).toBe("Centralisation donnees");
+    }
+  });
+
+  it("keeps legacy admin payloads using url compatible", () => {
+    const input = validateAdminClientInput({
+      companyName: "Legacy Client",
+      contactFirstName: "Camille",
+      contactLastName: "Martin",
+      email: "contact@legacy-client.fr",
+      solutions: [
+        {
+          type: "visibility_acquisition",
+          name: fallbackAdminSolutionOptions[0].defaultName,
+          url: "www.legacy-client.fr"
+        }
+      ]
+    });
+
+    expect(typeof input).toBe("object");
+    if (typeof input !== "string") {
+      expect(input.solutions[0].urlOrIndication).toBe("https://www.legacy-client.fr");
     }
   });
 
@@ -41,7 +87,12 @@ describe("admin client helpers", () => {
         {
           type: "automation_ai",
           name: fallbackAdminSolutionOptions[1].defaultName,
-          url: ""
+          urlOrIndication: ""
+        },
+        {
+          type: "automation_ai",
+          name: fallbackAdminSolutionOptions[1].defaultName,
+          urlOrIndication: "hbint.com"
         }
       ]
     });
@@ -59,7 +110,7 @@ describe("admin client helpers", () => {
         "Oui",
         rows.contactId,
         "contact@a2-cm.fr",
-        "1",
+        "2",
         "17/07/2026",
         "17/07/2026",
         "Premier client"
@@ -73,6 +124,7 @@ describe("admin client helpers", () => {
         "Actif"
       ]);
       expect(rows.contactRow[8]).toBe("17/07/2026");
+      expect(rows.solutionRows).toHaveLength(2);
       expect(rows.solutionRows[0].slice(1, 8)).toEqual([
         rows.clientId,
         "Flux Automatisation & IA",
@@ -80,6 +132,15 @@ describe("admin client helpers", () => {
         fallbackAdminSolutionOptions[1].defaultName,
         "",
         "",
+        "17/07/2026"
+      ]);
+      expect(rows.solutionRows[1].slice(1, 8)).toEqual([
+        rows.clientId,
+        "Flux Automatisation & IA",
+        "Actif",
+        fallbackAdminSolutionOptions[1].defaultName,
+        "hbint.com",
+        "https://hbint.com",
         "17/07/2026"
       ]);
     }

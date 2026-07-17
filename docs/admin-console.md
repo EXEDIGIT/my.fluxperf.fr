@@ -96,10 +96,11 @@ type_solution
 statut_solution
 nom_solution
 domaine
-url
+url_ou_indication
 date_activation
 notes
 ```
 
-La console ne demande plus le champ `domaine` : elle le deduit de l'URL quand
-une URL est renseignee.
+La console ne demande plus le champ `domaine` : elle le deduit uniquement quand
+`url_ou_indication` contient une URL. Une indication de service reste du texte
+et laisse `domaine` vide.

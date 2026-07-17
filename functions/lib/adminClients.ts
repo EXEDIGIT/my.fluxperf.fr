@@ -21,7 +21,7 @@ export type AdminClientInput = {
   solutions: Array<{
     type: AdminSolutionType;
     name: string;
-    url: string;
+    urlOrIndication: string;
   }>;
 };
 
@@ -51,33 +51,50 @@ function asText(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function normalizeUrl(value: string): string {
-  const url = value.trim();
+function isLikelyUrl(value: string): boolean {
+  const candidate = value.trim();
+
+  if (!candidate || /\s/.test(candidate)) {
+    return false;
+  }
+
+  const withoutProtocol = candidate.replace(/^https?:\/\//i, "");
+  const host = withoutProtocol.split(/[/?#]/)[0];
+
+  return /^www\./i.test(host) || /^[a-z0-9-]+(\.[a-z0-9-]+)+(:\d+)?$/i.test(host);
+}
+
+function normalizeUrlOrIndication(value: string): string {
+  const text = value.trim();
+
+  if (!text) {
+    return "";
+  }
+
+  if (/^https?:\/\//i.test(text)) {
+    return text;
+  }
+
+  return isLikelyUrl(text) ? `https://${text}` : text;
+}
+
+function domainFromUrlOrIndication(value: string): string {
+  const text = value.trim();
+
+  if (!text) {
+    return "";
+  }
+
+  const url = /^https?:\/\//i.test(text) ? text : isLikelyUrl(text) ? `https://${text}` : "";
 
   if (!url) {
     return "";
   }
 
-  if (/^https?:\/\//i.test(url)) {
-    return url;
-  }
-
-  return `https://${url}`;
-}
-
-function domainFromUrl(value: string): string {
-  if (!value) {
-    return "";
-  }
-
   try {
-    return new URL(value).hostname.replace(/^www\./i, "");
+    return new URL(url).hostname.replace(/^www\./i, "");
   } catch {
-    return value
-      .replace(/^https?:\/\//i, "")
-      .replace(/^www\./i, "")
-      .split("/")[0]
-      .trim();
+    return "";
   }
 }
 
@@ -146,7 +163,7 @@ export function validateAdminClientInput(
       return "Une solution selectionnee est invalide.";
     }
 
-    const url = normalizeUrl(asText(item.url));
+    const urlOrIndication = normalizeUrlOrIndication(asText(item.urlOrIndication) || asText(item.url));
     const name = asText(item.name) || defaultNameForType(solutionOptions, type);
 
     if (!optionAllowsSolution(solutionOptions, type, name)) {
@@ -156,7 +173,7 @@ export function validateAdminClientInput(
     return {
       type,
       name,
-      url
+      urlOrIndication
     };
   });
   const firstError = solutions.find((item): item is string => typeof item === "string");
@@ -216,8 +233,8 @@ export function buildAdminClientRows(input: AdminClientInput, now = new Date()):
     solutionLabelForType(solution.type),
     "Actif",
     solution.name,
-    domainFromUrl(solution.url),
-    solution.url,
+    domainFromUrlOrIndication(solution.urlOrIndication),
+    solution.urlOrIndication,
     date,
     ""
   ]);

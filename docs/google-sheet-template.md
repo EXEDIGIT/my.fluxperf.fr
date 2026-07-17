@@ -94,7 +94,7 @@ type_solution
 statut_solution
 nom_solution
 domaine
-url
+url_ou_indication
 date_activation
 notes
 ```
@@ -108,7 +108,7 @@ type_solution: Flux Visibilité & Acquisition
 statut_solution: Actif
 nom_solution: Flux Visibilité & Acquisition • Site web
 domaine: hbint.com
-url: https://www.hbint.com
+url_ou_indication: https://www.hbint.com
 date_activation: 17/07/2026
 notes:
 
@@ -118,7 +118,7 @@ type_solution: Flux Visibilité & Acquisition
 statut_solution: Actif
 nom_solution: Flux Visibilité & Acquisition • Site e-shop
 domaine: trial.hbint.com
-url: https://trial.hbint.com
+url_ou_indication: https://trial.hbint.com
 date_activation: 17/07/2026
 notes:
 
@@ -128,7 +128,7 @@ type_solution: Flux Automatisation & IA
 statut_solution: Actif
 nom_solution: Flux Automatisation & IA • Tableau de bord
 domaine:
-url:
+url_ou_indication: Centralisation donnees
 date_activation: 17/07/2026
 notes:
 ```

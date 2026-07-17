@@ -72,7 +72,7 @@ const validPayload = {
     {
       type: "visibility_acquisition",
       name: fallbackAdminSolutionOptions[0].defaultName,
-      url: "https://example.com"
+      urlOrIndication: "https://example.com"
     }
   ]
 };
@@ -110,6 +110,38 @@ describe("POST /api/admin/clients", () => {
 
     expect(solutionRows[0][5]).toBe("example.com");
     expect(solutionRows[0][6]).toBe("https://example.com");
+  });
+
+  it("writes multiple solutions of the same type and keeps text indications", async () => {
+    const response = await onRequestPost(
+      context({
+        ...validPayload,
+        solutions: [
+          {
+            type: "visibility_acquisition",
+            name: fallbackAdminSolutionOptions[0].defaultName,
+            urlOrIndication: "Centralisation donnees"
+          },
+          {
+            type: "visibility_acquisition",
+            name: fallbackAdminSolutionOptions[0].nameOptions[1],
+            urlOrIndication: "hbint.com"
+          }
+        ]
+      })
+    );
+    const body = await responseBody(response);
+    const clientRows = vi.mocked(appendGoogleSheetValues).mock.calls[0][2] as string[][];
+    const solutionRows = vi.mocked(appendGoogleSheetValues).mock.calls[2][2] as string[][];
+
+    expect(response.status).toBe(201);
+    expect(body.client).toMatchObject({ solutionsCreated: 2 });
+    expect(clientRows[0][7]).toBe("2");
+    expect(solutionRows).toHaveLength(2);
+    expect(solutionRows[0][5]).toBe("");
+    expect(solutionRows[0][6]).toBe("Centralisation donnees");
+    expect(solutionRows[1][5]).toBe("hbint.com");
+    expect(solutionRows[1][6]).toBe("https://hbint.com");
   });
 
   it("keeps the client creation successful when Brevo fails", async () => {
@@ -176,7 +208,7 @@ describe("POST /api/admin/clients", () => {
           {
             type: "visibility_acquisition",
             name: "Solution non autorisee",
-            url: ""
+            urlOrIndication: ""
           }
         ]
       })

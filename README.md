@@ -158,7 +158,7 @@ type_solution
 statut_solution
 nom_solution
 domaine
-url
+url_ou_indication
 date_activation
 notes
 ```
@@ -167,6 +167,9 @@ Valeurs V1 attendues pour `type_solution` : `Flux Visibilité & Acquisition`,
 `Flux Automatisation & IA`, `Flux Assistant IA`. Les anciens codes techniques
 `visibility_acquisition`, `automation_ai` et `assistant_ai` restent acceptes par
 compatibilite.
+
+La colonne `url_ou_indication` accepte soit une URL, soit une indication de
+service. Si la valeur n'est pas une URL, `domaine` reste vide.
 
 ## Demande d'intervention
 

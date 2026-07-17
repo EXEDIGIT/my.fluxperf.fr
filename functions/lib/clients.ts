@@ -59,7 +59,7 @@ export const demoSolutionsValues: string[][] = [
     "statut_solution",
     "nom_solution",
     "domaine",
-    "url",
+    "url_ou_indication",
     "date_activation",
     "notes"
   ],
@@ -312,19 +312,36 @@ function latestActionsFromActionRows(
     });
 }
 
+function isLikelyUrl(value: string): boolean {
+  const candidate = value.trim();
+
+  if (!candidate || /\s/.test(candidate)) {
+    return false;
+  }
+
+  const withoutProtocol = candidate.replace(/^https?:\/\//i, "");
+  const host = withoutProtocol.split(/[/?#]/)[0];
+
+  return /^www\./i.test(host) || /^[a-z0-9-]+(\.[a-z0-9-]+)+(:\d+)?$/i.test(host);
+}
+
 function domainFromUrl(value: string): string {
-  if (!value) {
+  const text = value.trim();
+
+  if (!text) {
+    return "";
+  }
+
+  const url = /^https?:\/\//i.test(text) ? text : isLikelyUrl(text) ? `https://${text}` : "";
+
+  if (!url) {
     return "";
   }
 
   try {
-    return new URL(value).hostname.replace(/^www\./, "");
+    return new URL(url).hostname.replace(/^www\./, "");
   } catch {
-    return value
-      .replace(/^https?:\/\//i, "")
-      .replace(/^www\./i, "")
-      .split("/")[0]
-      .trim();
+    return "";
   }
 }
 
@@ -586,7 +603,7 @@ function solutionTypeLabel(type: ClientImpactKey | null, solution: SheetRecord):
 }
 
 function solutionRecordToDto(solution: SheetRecord): ClientSolutionDto {
-  const url = getValue(solution, "url");
+  const url = getValue(solution, "url_ou_indication", "url");
   const domain = getValue(solution, "domaine", "domain") || domainFromUrl(url);
   const type = solutionImpactKey(solution);
   const name =
@@ -615,7 +632,7 @@ function serviceFromSolution(solution: SheetRecord): string | null {
 
   const solutionName = getValue(solution, "nom_solution", "name", "nom", "solution");
   const familyLabel = solutionTypeLabel(type, solution);
-  const url = getValue(solution, "url");
+  const url = getValue(solution, "url_ou_indication", "url");
   const domain = getValue(solution, "domaine", "domain") || domainFromUrl(url);
   const detail = domain || url;
   const solutionNameAlreadyIncludesFamily =

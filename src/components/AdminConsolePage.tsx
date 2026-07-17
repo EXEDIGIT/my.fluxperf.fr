@@ -8,6 +8,7 @@ import {
   Plus,
   ShieldCheck,
   Sparkles,
+  Trash2,
   UserPlus
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
@@ -29,10 +30,12 @@ type LoginState =
   | { status: "error"; message: string };
 
 type SolutionDraft = {
-  enabled: boolean;
+  id: string;
   name: string;
-  url: string;
+  urlOrIndication: string;
 };
+
+type SolutionDraftsByType = Record<AdminSolutionType, SolutionDraft[]>;
 
 const consolePath = "/fp-console";
 
@@ -63,18 +66,26 @@ const fallbackSolutionOptions: AdminSolutionOption[] = [
   }
 ];
 
-function emptySolutions(options: AdminSolutionOption[] = fallbackSolutionOptions): Record<AdminSolutionType, SolutionDraft> {
+function buildDraftId(type: AdminSolutionType): string {
+  return `${type}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function createSolutionDraft(option: AdminSolutionOption): SolutionDraft {
+  return {
+    id: buildDraftId(option.type),
+    name: option.defaultName,
+    urlOrIndication: ""
+  };
+}
+
+function emptySolutions(options: AdminSolutionOption[] = fallbackSolutionOptions): SolutionDraftsByType {
   return options.reduce(
     (drafts, option, index) => {
-      drafts[option.type] = {
-        enabled: index === 0,
-        name: option.defaultName,
-        url: ""
-      };
+      drafts[option.type] = index === 0 ? [createSolutionDraft(option)] : [];
 
       return drafts;
     },
-    {} as Record<AdminSolutionType, SolutionDraft>
+    {} as SolutionDraftsByType
   );
 }
 
@@ -295,13 +306,35 @@ export function AdminConsolePage() {
     };
   }, []);
 
-  function updateSolution(type: AdminSolutionType, values: Partial<SolutionDraft>) {
+  function setSolutionEnabled(option: AdminSolutionOption, enabled: boolean) {
+    setSolutions((current) => {
+      const currentDrafts = current[option.type] ?? [];
+
+      return {
+        ...current,
+        [option.type]: enabled ? currentDrafts.length > 0 ? currentDrafts : [createSolutionDraft(option)] : []
+      };
+    });
+  }
+
+  function addSolution(option: AdminSolutionOption) {
     setSolutions((current) => ({
       ...current,
-      [type]: {
-        ...current[type],
-        ...values
-      }
+      [option.type]: [...(current[option.type] ?? []), createSolutionDraft(option)]
+    }));
+  }
+
+  function updateSolution(type: AdminSolutionType, id: string, values: Partial<SolutionDraft>) {
+    setSolutions((current) => ({
+      ...current,
+      [type]: (current[type] ?? []).map((draft) => (draft.id === id ? { ...draft, ...values } : draft))
+    }));
+  }
+
+  function removeSolution(type: AdminSolutionType, id: string) {
+    setSolutions((current) => ({
+      ...current,
+      [type]: (current[type] ?? []).filter((draft) => draft.id !== id)
     }));
   }
 
@@ -327,17 +360,13 @@ export function AdminConsolePage() {
     setSubmitError(null);
     setSuccess(null);
 
-    const selectedSolutions = solutionOptions
-      .map((option) => ({
+    const selectedSolutions = solutionOptions.flatMap((option) =>
+      (solutions[option.type] ?? []).map(({ name, urlOrIndication }) => ({
         type: option.type,
-        ...solutions[option.type]
-      }))
-      .filter((solution) => solution.enabled)
-      .map(({ type, name, url }) => ({
-        type,
         name,
-        url
-      }));
+        urlOrIndication
+      }))
+    );
 
     if (selectedSolutions.length === 0) {
       setSubmitError("Selectionnez au moins une solution.");
@@ -476,44 +505,65 @@ export function AdminConsolePage() {
 
           <div className="admin-solutions-grid">
             {solutionOptions.map((option) => {
-              const draft = solutions[option.type];
+              const drafts = solutions[option.type] ?? [];
+              const isSelected = drafts.length > 0;
 
               return (
-                <div className={`admin-solution-card ${draft.enabled ? "is-selected" : ""}`} key={option.type}>
+                <div className={`admin-solution-card ${isSelected ? "is-selected" : ""}`} key={option.type}>
                   <label className="admin-checkbox-row">
                     <input
                       type="checkbox"
-                      checked={draft.enabled}
-                      onChange={(event) => updateSolution(option.type, { enabled: event.target.checked })}
+                      checked={isSelected}
+                      onChange={(event) => setSolutionEnabled(option, event.target.checked)}
                     />
                     <span>
                       <strong>{option.label}</strong>
-                      <small>{option.defaultName}</small>
+                      <small>
+                        {isSelected
+                          ? `${drafts.length} solution${drafts.length > 1 ? "s" : ""} active${drafts.length > 1 ? "s" : ""}`
+                          : option.defaultName}
+                      </small>
                     </span>
                   </label>
-                  <label>
-                    Nom affiche
-                    <select
-                      value={draft.name}
-                      disabled={!draft.enabled}
-                      onChange={(event) => updateSolution(option.type, { name: event.target.value })}
-                    >
-                      {option.nameOptions.map((name) => (
-                        <option value={name} key={name}>
-                          {name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    URL
-                    <input
-                      value={draft.url}
-                      disabled={!draft.enabled}
-                      placeholder="https://exemple.fr"
-                      onChange={(event) => updateSolution(option.type, { url: event.target.value })}
-                    />
-                  </label>
+
+                  {drafts.map((draft, index) => (
+                    <div className="admin-solution-entry" key={draft.id}>
+                      <div className="admin-solution-entry-header">
+                        <span>Solution {index + 1}</span>
+                        <button type="button" aria-label="Retirer la solution" onClick={() => removeSolution(option.type, draft.id)}>
+                          <Trash2 aria-hidden="true" />
+                        </button>
+                      </div>
+                      <label>
+                        Nom affiche
+                        <select
+                          value={draft.name}
+                          onChange={(event) => updateSolution(option.type, draft.id, { name: event.target.value })}
+                        >
+                          {option.nameOptions.map((name) => (
+                            <option value={name} key={name}>
+                              {name}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        URL ou indication
+                        <input
+                          value={draft.urlOrIndication}
+                          placeholder="https://exemple.fr ou Indication de service"
+                          onChange={(event) => updateSolution(option.type, draft.id, { urlOrIndication: event.target.value })}
+                        />
+                      </label>
+                    </div>
+                  ))}
+
+                  {isSelected ? (
+                    <button className="admin-add-solution-button" type="button" onClick={() => addSolution(option)}>
+                      <Plus aria-hidden="true" />
+                      Ajouter une solution
+                    </button>
+                  ) : null}
                 </div>
               );
             })}

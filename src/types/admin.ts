@@ -16,7 +16,7 @@ export type AdminCreateClientInput = {
   solutions: Array<{
     type: AdminSolutionType;
     name: string;
-    url: string;
+    urlOrIndication: string;
   }>;
 };
 
