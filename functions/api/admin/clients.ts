@@ -5,7 +5,13 @@ import {
   sendClientWelcomeEmail,
   validateAdminClientInput
 } from "../../lib/adminClients";
-import { appendGoogleSheetValues, getGoogleWriteRanges, readGoogleWorkbookValues } from "../../lib/googleSheets";
+import { buildAdminSolutionOptions } from "../../lib/adminOptions";
+import {
+  appendGoogleSheetValues,
+  getGoogleWriteRanges,
+  readGoogleParametersValues,
+  readGoogleWorkbookValues
+} from "../../lib/googleSheets";
 import { json, jsonError } from "../../lib/response";
 import { createSupabaseUserForClient } from "../../lib/supabaseAdmin";
 import type { PagesContext } from "../../lib/types";
@@ -25,13 +31,14 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
     return jsonError(400, "INVALID_JSON", "La demande est invalide.");
   }
 
-  const input = validateAdminClientInput(payload);
-
-  if (typeof input === "string") {
-    return jsonError(400, "INVALID_CLIENT", input);
-  }
-
   try {
+    const solutionOptions = buildAdminSolutionOptions(await readGoogleParametersValues(context.env));
+    const input = validateAdminClientInput(payload, solutionOptions);
+
+    if (typeof input === "string") {
+      return jsonError(400, "INVALID_CLIENT", input);
+    }
+
     const workbook = await readGoogleWorkbookValues(context.env);
 
     if (hasExistingClientEmail(workbook, input.email)) {

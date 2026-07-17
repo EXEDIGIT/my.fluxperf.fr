@@ -16,9 +16,19 @@ export type AdminCreateClientInput = {
   solutions: Array<{
     type: AdminSolutionType;
     name: string;
-    domain: string;
     url: string;
   }>;
+};
+
+export type AdminSolutionOption = {
+  type: AdminSolutionType;
+  label: string;
+  defaultName: string;
+  nameOptions: string[];
+};
+
+export type AdminOptionsResponse = {
+  solutionOptions: AdminSolutionOption[];
 };
 
 export type AdminCreateClientResponse = {

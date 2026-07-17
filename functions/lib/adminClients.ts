@@ -1,8 +1,14 @@
 import { isProduction, normalizeEmail } from "./auth";
+import {
+  defaultNameForType,
+  fallbackAdminSolutionOptions,
+  optionAllowsSolution,
+  solutionLabelForType,
+  type AdminSolutionOption,
+  type AdminSolutionType
+} from "./adminOptions";
 import { findClientForEmailInWorkbook, type ClientWorkbookValues } from "./clients";
 import type { AppEnv } from "./types";
-
-export type AdminSolutionType = "visibility_acquisition" | "automation_ai" | "assistant_ai";
 
 export type AdminClientInput = {
   companyName: string;
@@ -14,7 +20,6 @@ export type AdminClientInput = {
   solutions: Array<{
     type: AdminSolutionType;
     name: string;
-    domain: string;
     url: string;
   }>;
 };
@@ -36,30 +41,6 @@ type BrevoError = {
 type EmailResult =
   | { status: "sent"; email: string }
   | { status: "skipped"; email: string; reason: string };
-
-const allowedSolutionTypes = new Set<AdminSolutionType>([
-  "visibility_acquisition",
-  "automation_ai",
-  "assistant_ai"
-]);
-
-const solutionLabels: Record<AdminSolutionType, string> = {
-  visibility_acquisition: "Flux Visibilité & Acquisition",
-  automation_ai: "Flux Automatisation & IA",
-  assistant_ai: "Flux Assistant IA"
-};
-
-const solutionNamesByType: Record<AdminSolutionType, string[]> = {
-  visibility_acquisition: [
-    "Flux Visibilité & Acquisition • Site web",
-    "Flux Visibilité & Acquisition • Site e-shop"
-  ],
-  automation_ai: [
-    "Flux Automatisation & IA • Tableau de bord",
-    "Flux Automatisation & IA • Synchronisation de données"
-  ],
-  assistant_ai: ["Flux Assistant IA • Copilote entreprise"]
-};
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === "object" && !Array.isArray(value));
@@ -126,7 +107,10 @@ function buildId(prefix: string, now: Date): string {
   return `${prefix}-${formatDate(now).replace(/-/g, "")}-${randomSuffix()}`;
 }
 
-export function validateAdminClientInput(payload: unknown): AdminClientInput | string {
+export function validateAdminClientInput(
+  payload: unknown,
+  solutionOptions: AdminSolutionOption[] = fallbackAdminSolutionOptions
+): AdminClientInput | string {
   if (!isRecord(payload)) {
     return "La demande est invalide.";
   }
@@ -161,22 +145,20 @@ export function validateAdminClientInput(payload: unknown): AdminClientInput | s
 
     const type = asText(item.type) as AdminSolutionType;
 
-    if (!allowedSolutionTypes.has(type)) {
+    if (!solutionOptions.some((option) => option.type === type)) {
       return "Une solution selectionnee est invalide.";
     }
 
     const url = normalizeUrl(asText(item.url));
-    const domain = asText(item.domain) || domainFromUrl(url);
-    const name = asText(item.name) || solutionNamesByType[type][0];
+    const name = asText(item.name) || defaultNameForType(solutionOptions, type);
 
-    if (!solutionNamesByType[type].includes(name)) {
+    if (!optionAllowsSolution(solutionOptions, type, name)) {
       return "Le nom de solution selectionne est invalide.";
     }
 
     return {
       type,
       name,
-      domain,
       url
     };
   });
@@ -234,10 +216,10 @@ export function buildAdminClientRows(input: AdminClientInput, now = new Date()):
   const solutionRows = input.solutions.map((solution) => [
     buildId("SOL", now),
     clientId,
-    solutionLabels[solution.type],
+    solutionLabelForType(solution.type),
     "Actif",
     solution.name,
-    solution.domain,
+    domainFromUrl(solution.url),
     solution.url,
     date,
     ""

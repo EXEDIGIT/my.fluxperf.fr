@@ -1,5 +1,10 @@
 import type { ApiErrorResponse } from "../types/client";
-import type { AdminCreateClientInput, AdminCreateClientResponse, AdminSessionResponse } from "../types/admin";
+import type {
+  AdminCreateClientInput,
+  AdminCreateClientResponse,
+  AdminOptionsResponse,
+  AdminSessionResponse
+} from "../types/admin";
 import { ApiError } from "./api";
 import { getSupabaseAccessToken } from "./supabase";
 
@@ -42,6 +47,10 @@ async function adminFetch<T>(url: string, init: RequestInit = {}): Promise<T> {
 
 export function getAdminSession(): Promise<AdminSessionResponse> {
   return adminFetch<AdminSessionResponse>("/api/admin/session");
+}
+
+export function getAdminOptions(): Promise<AdminOptionsResponse> {
+  return adminFetch<AdminOptionsResponse>("/api/admin/options");
 }
 
 export function createAdminClient(input: AdminCreateClientInput): Promise<AdminCreateClientResponse> {

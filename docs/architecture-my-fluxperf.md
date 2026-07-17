@@ -72,7 +72,7 @@ Le portail supporte la structure actuelle de la BDD :
 | `Contacts` | Prenom, nom, email, statut contact |
 | `Solutions` | Services Fluxperf rattaches au client, avec type, statut, nom, domaine, URL et date d'activation |
 | `Actions` | Journal des demandes client affiche dans le module Dernieres actions |
-| `Parametres` | Valeurs de reference pour la BDD, non lues par le portail MVP |
+| `Parametres` | Valeurs de reference lues par la console admin pour alimenter les options de solutions |
 
 L'ancien onglet `Sites` peut rester archive sous `Archive_Sites`, masque, le temps
 de conserver l'historique de migration. Il n'est plus lu par le portail.

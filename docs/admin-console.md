@@ -35,9 +35,13 @@ APP_PUBLIC_URL=https://my.fluxperf.fr
 GOOGLE_CLIENTS_WRITE_RANGE=Clients!A:K
 GOOGLE_CONTACTS_WRITE_RANGE=Contacts!A:J
 GOOGLE_SOLUTIONS_WRITE_RANGE=Solutions!A:I
+GOOGLE_PARAMETERS_RANGE=Parametres!A1:B1000
 ```
 
 Le Service Account Google doit avoir le droit d'edition sur le Google Sheet pour que l'ajout client fonctionne.
+Les listes `type_solution` et `nom_solution` sont lues depuis l'onglet
+`Parametres`. Si cet onglet est vide ou indisponible, la console utilise une
+liste de secours.
 
 ## Colonnes ecrites
 
@@ -85,3 +89,6 @@ url
 date_activation
 notes
 ```
+
+La console ne demande plus le champ `domaine` : elle le deduit de l'URL quand
+une URL est renseignee.

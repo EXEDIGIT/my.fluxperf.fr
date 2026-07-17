@@ -65,6 +65,7 @@ GOOGLE_SHEET_RANGE=Clients!A1:Z1000
 GOOGLE_CONTACTS_RANGE=Contacts!A1:Z1000
 GOOGLE_SOLUTIONS_RANGE=Solutions!A1:Z1000
 GOOGLE_ACTIONS_RANGE=Actions!A1:J1000
+GOOGLE_PARAMETERS_RANGE=Parametres!A1:B1000
 GOOGLE_CLIENTS_WRITE_RANGE=Clients!A:K
 GOOGLE_CONTACTS_WRITE_RANGE=Contacts!A:J
 GOOGLE_SOLUTIONS_WRITE_RANGE=Solutions!A:I
@@ -112,6 +113,10 @@ Elle permet de creer rapidement :
 - une ou plusieurs lignes `Solutions` actives ;
 - l'utilisateur correspondant dans Supabase Auth ;
 - l'email d'ouverture d'acces via Brevo.
+
+Les listes de solutions de la console sont lues depuis l'onglet `Parametres`
+quand il est disponible. Si l'onglet est vide ou indisponible, la console garde
+une liste de secours pour rester utilisable.
 
 Securite attendue :
 

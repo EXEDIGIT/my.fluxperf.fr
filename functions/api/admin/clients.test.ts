@@ -1,19 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { onRequestPost } from "./clients";
 import { sendClientWelcomeEmail } from "../../lib/adminClients";
-import { appendGoogleSheetValues, readGoogleWorkbookValues } from "../../lib/googleSheets";
+import { fallbackAdminSolutionOptions } from "../../lib/adminOptions";
+import { appendGoogleSheetValues, readGoogleParametersValues, readGoogleWorkbookValues } from "../../lib/googleSheets";
 import { createSupabaseUserForClient } from "../../lib/supabaseAdmin";
 import type { PagesContext } from "../../lib/types";
 
 vi.mock("../../lib/googleSheets", () => ({
   readGoogleWorkbookValues: vi.fn(async () => ({
-    clients: [
-      ["client_id", "statut_client", "espace_client_actif", "email_principal"]
-    ],
+    clients: [["client_id", "statut_client", "espace_client_actif", "email_principal"]],
     contacts: [],
     solutions: [],
     actions: []
   })),
+  readGoogleParametersValues: vi.fn(async () => []),
   getGoogleWriteRanges: vi.fn(() => ({
     clients: "Clients!A:K",
     contacts: "Contacts!A:J",
@@ -71,8 +71,7 @@ const validPayload = {
   solutions: [
     {
       type: "visibility_acquisition",
-      name: "Flux Visibilité & Acquisition • Site web",
-      domain: "example.com",
+      name: fallbackAdminSolutionOptions[0].defaultName,
       url: "https://example.com"
     }
   ]
@@ -86,16 +85,15 @@ describe("POST /api/admin/clients", () => {
       email: "client@example.com"
     });
     vi.mocked(readGoogleWorkbookValues).mockResolvedValue({
-      clients: [
-        ["client_id", "statut_client", "espace_client_actif", "email_principal"]
-      ],
+      clients: [["client_id", "statut_client", "espace_client_actif", "email_principal"]],
       contacts: [],
       solutions: [],
       actions: []
     });
+    vi.mocked(readGoogleParametersValues).mockResolvedValue([]);
   });
 
-  it("creates the client and reports a sent notification", async () => {
+  it("creates the client, writes a derived domain and reports a sent notification", async () => {
     const response = await onRequestPost(context(validPayload));
     const body = await responseBody(response);
 
@@ -107,6 +105,11 @@ describe("POST /api/admin/clients", () => {
     });
     expect(vi.mocked(createSupabaseUserForClient)).toHaveBeenCalledOnce();
     expect(vi.mocked(appendGoogleSheetValues)).toHaveBeenCalledTimes(3);
+
+    const solutionRows = vi.mocked(appendGoogleSheetValues).mock.calls[2][2] as string[][];
+
+    expect(solutionRows[0][5]).toBe("example.com");
+    expect(solutionRows[0][6]).toBe("https://example.com");
   });
 
   it("keeps the client creation successful when Brevo fails", async () => {
@@ -163,5 +166,24 @@ describe("POST /api/admin/clients", () => {
     expect(body.error).toMatchObject({ code: "CLIENT_EMAIL_EXISTS" });
     expect(vi.mocked(createSupabaseUserForClient)).not.toHaveBeenCalled();
     expect(vi.mocked(appendGoogleSheetValues)).not.toHaveBeenCalled();
+  });
+
+  it("rejects a solution name that is not allowed by admin options", async () => {
+    const response = await onRequestPost(
+      context({
+        ...validPayload,
+        solutions: [
+          {
+            type: "visibility_acquisition",
+            name: "Solution non autorisee",
+            url: ""
+          }
+        ]
+      })
+    );
+    const body = await responseBody(response);
+
+    expect(response.status).toBe(400);
+    expect(body.error).toMatchObject({ code: "INVALID_CLIENT" });
   });
 });

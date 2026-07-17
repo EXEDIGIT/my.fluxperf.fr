@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildAdminClientRows, hasExistingClientEmail, validateAdminClientInput } from "./adminClients";
+import { fallbackAdminSolutionOptions } from "./adminOptions";
 
 describe("admin client helpers", () => {
   it("validates and normalizes a new client payload", () => {
@@ -13,7 +14,6 @@ describe("admin client helpers", () => {
         {
           type: "visibility_acquisition",
           name: "",
-          domain: "",
           url: "a2-cm.fr"
         }
       ]
@@ -24,8 +24,7 @@ describe("admin client helpers", () => {
       expect(input.email).toBe("contact@a2-cm.fr");
       expect(input.solutions[0]).toEqual({
         type: "visibility_acquisition",
-        name: "Flux Visibilité & Acquisition • Site web",
-        domain: "a2-cm.fr",
+        name: fallbackAdminSolutionOptions[0].defaultName,
         url: "https://a2-cm.fr"
       });
     }
@@ -41,8 +40,7 @@ describe("admin client helpers", () => {
       solutions: [
         {
           type: "automation_ai",
-          name: "Flux Automatisation & IA • Tableau de bord",
-          domain: "",
+          name: fallbackAdminSolutionOptions[1].defaultName,
           url: ""
         }
       ]
@@ -75,7 +73,7 @@ describe("admin client helpers", () => {
         rows.clientId,
         "Flux Automatisation & IA",
         "Actif",
-        "Flux Automatisation & IA • Tableau de bord",
+        fallbackAdminSolutionOptions[1].defaultName,
         "",
         "",
         "2026-07-17"

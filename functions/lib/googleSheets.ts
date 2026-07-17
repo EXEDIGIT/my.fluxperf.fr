@@ -8,6 +8,7 @@ const DEFAULT_RANGE = "Clients!A1:Z1000";
 const DEFAULT_CONTACTS_RANGE = "Contacts!A1:Z1000";
 const DEFAULT_SOLUTIONS_RANGE = "Solutions!A1:Z1000";
 const DEFAULT_ACTIONS_RANGE = "Actions!A1:J1000";
+const DEFAULT_PARAMETERS_RANGE = "Parametres!A1:B1000";
 const DEFAULT_CLIENTS_WRITE_RANGE = "Clients!A:K";
 const DEFAULT_CONTACTS_WRITE_RANGE = "Contacts!A:J";
 const DEFAULT_SOLUTIONS_WRITE_RANGE = "Solutions!A:I";
@@ -243,6 +244,28 @@ export async function readGoogleWorkbookValues(
     solutions,
     actions
   };
+}
+
+export async function readGoogleParametersValues(
+  env: AppEnv,
+  fetcher: Fetcher = fetch
+): Promise<string[][]> {
+  if (!isSheetsConfigured(env)) {
+    if (!isProduction(env)) {
+      return [];
+    }
+
+    throw new Error("Google Sheets configuration is missing.");
+  }
+
+  const accessToken = await getGoogleAccessToken(env, fetcher);
+
+  return readOptionalGoogleSheetRange(
+    env,
+    accessToken,
+    env.GOOGLE_PARAMETERS_RANGE || DEFAULT_PARAMETERS_RANGE,
+    fetcher
+  );
 }
 
 export async function appendGoogleSheetValues(

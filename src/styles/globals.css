@@ -2328,7 +2328,8 @@ svg {
 .admin-login-form > div,
 .admin-form-grid input,
 .admin-wide-field textarea,
-.admin-solution-card input {
+.admin-solution-card input,
+.admin-solution-card select {
   border: 1px solid var(--line-strong);
   border-radius: var(--radius);
   background: var(--white);
@@ -2473,7 +2474,8 @@ svg {
 }
 
 .admin-form-grid input,
-.admin-solution-card input {
+.admin-solution-card input,
+.admin-solution-card select {
   min-height: 44px;
   width: 100%;
   padding: 0 12px;
@@ -2483,7 +2485,8 @@ svg {
 
 .admin-form-grid input:focus,
 .admin-wide-field textarea:focus,
-.admin-solution-card input:focus {
+.admin-solution-card input:focus,
+.admin-solution-card select:focus {
   border-color: var(--green);
   box-shadow: 0 0 0 4px rgba(0, 111, 120, 0.1);
 }
@@ -2515,7 +2518,8 @@ svg {
   background: var(--green-soft);
 }
 
-.admin-solution-card input:disabled {
+.admin-solution-card input:disabled,
+.admin-solution-card select:disabled {
   background: rgba(255, 255, 255, 0.56);
   color: rgba(66, 89, 100, 0.62);
 }

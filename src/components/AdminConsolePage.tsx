@@ -12,9 +12,9 @@ import {
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ApiError } from "../lib/api";
-import { createAdminClient, getAdminSession } from "../lib/adminApi";
+import { createAdminClient, getAdminOptions, getAdminSession } from "../lib/adminApi";
 import { getSupabaseClient, hasSupabaseConfig } from "../lib/supabase";
-import type { AdminCreateClientResponse, AdminSolutionType } from "../types/admin";
+import type { AdminCreateClientResponse, AdminSolutionOption, AdminSolutionType } from "../types/admin";
 
 type LoadState =
   | { status: "loading" }
@@ -31,18 +31,12 @@ type LoginState =
 type SolutionDraft = {
   enabled: boolean;
   name: string;
-  domain: string;
   url: string;
 };
 
 const consolePath = "/fp-console";
 
-const solutionOptions: Array<{
-  type: AdminSolutionType;
-  label: string;
-  defaultName: string;
-  nameOptions: string[];
-}> = [
+const fallbackSolutionOptions: AdminSolutionOption[] = [
   {
     type: "visibility_acquisition",
     label: "Flux Visibilité & Acquisition",
@@ -69,27 +63,19 @@ const solutionOptions: Array<{
   }
 ];
 
-function emptySolutions(): Record<AdminSolutionType, SolutionDraft> {
-  return {
-    visibility_acquisition: {
-      enabled: true,
-      name: "Flux Visibilité & Acquisition • Site web",
-      domain: "",
-      url: ""
+function emptySolutions(options: AdminSolutionOption[] = fallbackSolutionOptions): Record<AdminSolutionType, SolutionDraft> {
+  return options.reduce(
+    (drafts, option, index) => {
+      drafts[option.type] = {
+        enabled: index === 0,
+        name: option.defaultName,
+        url: ""
+      };
+
+      return drafts;
     },
-    automation_ai: {
-      enabled: false,
-      name: "Flux Automatisation & IA • Tableau de bord",
-      domain: "",
-      url: ""
-    },
-    assistant_ai: {
-      enabled: false,
-      name: "Flux Assistant IA • Copilote entreprise",
-      domain: "",
-      url: ""
-    }
-  };
+    {} as Record<AdminSolutionType, SolutionDraft>
+  );
 }
 
 function normalizeEmail(value: string): string {
@@ -229,6 +215,7 @@ export function AdminConsolePage() {
   const [email, setEmail] = useState("");
   const [notes, setNotes] = useState("");
   const [notifyClient, setNotifyClient] = useState(true);
+  const [solutionOptions, setSolutionOptions] = useState<AdminSolutionOption[]>(fallbackSolutionOptions);
   const [solutions, setSolutions] = useState(emptySolutions);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [success, setSuccess] = useState<AdminCreateClientResponse | null>(null);
@@ -240,9 +227,11 @@ export function AdminConsolePage() {
 
     async function loadAdminSession() {
       try {
-        const session = await getAdminSession();
+        const [session, options] = await Promise.all([getAdminSession(), getAdminOptions()]);
 
         if (isMounted) {
+          setSolutionOptions(options.solutionOptions);
+          setSolutions(emptySolutions(options.solutionOptions));
           setLoadState({ status: "ready", email: session.admin.email });
         }
       } catch (error) {
@@ -323,7 +312,7 @@ export function AdminConsolePage() {
     setEmail("");
     setNotes("");
     setNotifyClient(true);
-    setSolutions(emptySolutions());
+    setSolutions(emptySolutions(solutionOptions));
   }
 
   async function handleLogout() {
@@ -344,10 +333,9 @@ export function AdminConsolePage() {
         ...solutions[option.type]
       }))
       .filter((solution) => solution.enabled)
-      .map(({ type, name, domain, url }) => ({
+      .map(({ type, name, url }) => ({
         type,
         name,
-        domain,
         url
       }));
 
@@ -516,15 +504,6 @@ export function AdminConsolePage() {
                         </option>
                       ))}
                     </select>
-                  </label>
-                  <label>
-                    Domaine
-                    <input
-                      value={draft.domain}
-                      disabled={!draft.enabled}
-                      placeholder="exemple.fr"
-                      onChange={(event) => updateSolution(option.type, { domain: event.target.value })}
-                    />
                   </label>
                   <label>
                     URL
