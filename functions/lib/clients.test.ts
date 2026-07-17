@@ -289,6 +289,67 @@ describe("client sheet parsing", () => {
     }
   });
 
+  it("keeps French business dates readable for structured client data", () => {
+    const workbook = {
+      ...structuredWorkbook,
+      clients: [
+        structuredWorkbook.clients[0],
+        [
+          "CLI-17072026-ABCD",
+          "Client Date",
+          "DATE COMPANY",
+          "Actif",
+          "Oui",
+          "CON-17072026-ABCD",
+          "date@example.com",
+          "1",
+          "17/07/2026",
+          "17/07/2026",
+          ""
+        ]
+      ],
+      contacts: [
+        structuredWorkbook.contacts[0],
+        [
+          "CON-17072026-ABCD",
+          "CLI-17072026-ABCD",
+          "Camille",
+          "Martin",
+          "date@example.com",
+          "Contact principal",
+          "Oui",
+          "Actif",
+          "17/07/2026",
+          ""
+        ]
+      ],
+      solutions: [
+        structuredWorkbook.solutions[0],
+        [
+          "SOL-17072026-ABCD",
+          "CLI-17072026-ABCD",
+          "Flux Automatisation & IA",
+          "Actif",
+          "Flux Automatisation & IA - Tableau de bord",
+          "",
+          "",
+          "17/07/2026",
+          ""
+        ]
+      ]
+    };
+    const result = findClientForEmailInWorkbook(workbook, "date@example.com");
+
+    expect(result.status).toBe("ok");
+    if (result.status === "ok") {
+      expect(result.client.solutions[0].activatedAt).toBe("17/07/2026");
+      expect(result.client.latestActions).toContainEqual({
+        label: "Fiche client mise a jour",
+        date: "17/07/2026"
+      });
+    }
+  });
+
   it("uses the latest matching rows from the Actions tab", () => {
     const result = findClientForEmailInWorkbook(
       {

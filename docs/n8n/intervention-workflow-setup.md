@@ -68,7 +68,8 @@ Configurer le credential Trello du compte actuel.
 Le node utilise :
 
 - `TRELLO_INTERVENTION_LIST_ID` pour la liste cible ;
-- le titre `[FP-YYYYMMDD-XXXX] Client - Service` ;
+- le titre `[FP-JJMMAAAA-XXXX] Client - Service`, par exemple
+  `[FP-17072026-ABCD] Client - Service` ;
 - une description structuree avec client, demandeur, site, besoin, priorite,
   message et nombre de pieces jointes.
 

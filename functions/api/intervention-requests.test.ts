@@ -39,6 +39,7 @@ const validPayload = {
 describe("POST /api/intervention-requests", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.useRealTimers();
   });
 
   it("returns 401 when the user is not authenticated", async () => {
@@ -56,12 +57,15 @@ describe("POST /api/intervention-requests", () => {
   });
 
   it("accepts a valid local development request without webhook configuration", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-17T10:00:00.000Z"));
+
     const response = await onRequestPost(context(buildFormData(validPayload)));
     const body = await responseBody(response);
 
     expect(response.status).toBe(202);
     expect(body.status).toBe("received");
-    expect(String(body.requestId)).toMatch(/^FP-\d{8}-[A-F0-9]{4}$/);
+    expect(String(body.requestId)).toMatch(/^FP-17072026-[A-F0-9]{4}$/);
   });
 
   it("rejects a solution id that is not attached to the authenticated client", async () => {
@@ -109,6 +113,9 @@ describe("POST /api/intervention-requests", () => {
   });
 
   it("forwards the structured payload and files to the n8n webhook", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-17T10:00:00.000Z"));
+
     const webhookFetch = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
       Response.json({ ok: true })
     );
@@ -135,5 +142,12 @@ describe("POST /api/intervention-requests", () => {
       }
     });
     expect(init.body).toBeInstanceOf(FormData);
+
+    const forwardedPayload = JSON.parse(
+      String((init.body as FormData).get("payload"))
+    ) as Record<string, unknown>;
+
+    expect(forwardedPayload.requestId).toMatch(/^FP-17072026-[A-F0-9]{4}$/);
+    expect(forwardedPayload.submittedAt).toBe("2026-07-17T10:00:00.000Z");
   });
 });

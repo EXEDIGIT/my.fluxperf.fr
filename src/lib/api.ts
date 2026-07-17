@@ -186,7 +186,14 @@ export type SupportRequestResponse = {
 };
 
 function buildDemoRequestId(): string {
-  const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+  const parts = new Intl.DateTimeFormat("fr-FR", {
+    timeZone: "Europe/Paris",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric"
+  }).formatToParts(new Date());
+  const part = (type: string) => parts.find((item) => item.type === type)?.value ?? "";
+  const date = `${part("day")}${part("month")}${part("year")}`;
 
   return `FP-${date}-DEMO`;
 }

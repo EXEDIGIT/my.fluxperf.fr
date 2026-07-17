@@ -8,6 +8,7 @@ import {
   type AdminSolutionType
 } from "./adminOptions";
 import { findClientForEmailInWorkbook, type ClientWorkbookValues } from "./clients";
+import { formatCompactFrenchDate, formatFrenchDate } from "./dateFormats";
 import type { AppEnv } from "./types";
 
 export type AdminClientInput = {
@@ -88,10 +89,6 @@ function compactName(firstName: string, lastName: string): string {
   return [firstName, lastName].filter(Boolean).join(" ").trim();
 }
 
-function formatDate(now: Date): string {
-  return now.toISOString().slice(0, 10);
-}
-
 function randomSuffix(length = 4): string {
   const bytes = new Uint8Array(length);
   crypto.getRandomValues(bytes);
@@ -104,7 +101,7 @@ function randomSuffix(length = 4): string {
 }
 
 function buildId(prefix: string, now: Date): string {
-  return `${prefix}-${formatDate(now).replace(/-/g, "")}-${randomSuffix()}`;
+  return `${prefix}-${formatCompactFrenchDate(now)}-${randomSuffix()}`;
 }
 
 export function validateAdminClientInput(
@@ -184,7 +181,7 @@ export function hasExistingClientEmail(workbook: ClientWorkbookValues, email: st
 }
 
 export function buildAdminClientRows(input: AdminClientInput, now = new Date()): BuiltAdminClientRows {
-  const date = formatDate(now);
+  const date = formatFrenchDate(now);
   const clientId = buildId("CLI", now);
   const contactId = buildId("CON", now);
   const contactName = compactName(input.contactFirstName, input.contactLastName);

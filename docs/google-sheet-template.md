@@ -32,6 +32,18 @@ Pour le schema structure de production, la colonne `Clients!H` est
 `nb_services_actifs` et compte les lignes `Solutions` actives rattachees au
 client.
 
+## Formats des nouvelles generations
+
+- Les identifiants generes embarquent une date compacte francaise `JJMMAAAA`,
+  par exemple `CLI-17072026-ABCD`, `CON-17072026-ABCD`,
+  `SOL-17072026-ABCD`, `FP-17072026-ABCD` ou `SUP-17072026-ABCD`.
+- Les dates metier lisibles (`date_creation`, `date_mise_a_jour`,
+  `date_activation`) sont au format `JJ/MM/AAAA`.
+- `date_action` reste un horodatage ISO, par exemple
+  `2026-07-17T15:38:42.368Z`, pour conserver un tri chronologique fiable.
+- Les lignes existantes dans d'anciens formats restent acceptees par
+  compatibilite.
+
 ## Exemple de ligne
 
 ```text
@@ -97,7 +109,7 @@ statut_solution: Actif
 nom_solution: Flux Visibilité & Acquisition • Site web
 domaine: hbint.com
 url: https://www.hbint.com
-date_activation: 2026-07-17
+date_activation: 17/07/2026
 notes:
 
 solution_id: SOL-0002
@@ -107,7 +119,7 @@ statut_solution: Actif
 nom_solution: Flux Visibilité & Acquisition • Site e-shop
 domaine: trial.hbint.com
 url: https://trial.hbint.com
-date_activation: 2026-07-17
+date_activation: 17/07/2026
 notes:
 
 solution_id: SOL-0003
@@ -117,7 +129,7 @@ statut_solution: Actif
 nom_solution: Flux Automatisation & IA • Tableau de bord
 domaine:
 url:
-date_activation: 2026-07-17
+date_activation: 17/07/2026
 notes:
 ```
 
@@ -200,3 +212,7 @@ details
 L'espace client filtre les lignes par `client_id`, trie par `date_action`
 descendante, puis affiche les 3 dernieres actions dans le module `Dernieres
 actions`.
+
+`date_action` doit rester une date technique triable, idealement en ISO. La
+reference visible (`reference`) utilise le format compact francais, par exemple
+`FP-17072026-ABCD`.

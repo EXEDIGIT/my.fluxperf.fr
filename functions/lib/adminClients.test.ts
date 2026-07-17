@@ -50,6 +50,9 @@ describe("admin client helpers", () => {
     if (typeof input !== "string") {
       const rows = buildAdminClientRows(input, new Date("2026-07-17T10:00:00.000Z"));
 
+      expect(rows.clientId).toMatch(/^CLI-17072026-[A-F0-9]{4}$/);
+      expect(rows.contactId).toMatch(/^CON-17072026-[A-F0-9]{4}$/);
+      expect(rows.solutionRows[0][0]).toMatch(/^SOL-17072026-[A-F0-9]{4}$/);
       expect(rows.clientRow.slice(2, 11)).toEqual([
         "A2-CM",
         "Actif",
@@ -57,8 +60,8 @@ describe("admin client helpers", () => {
         rows.contactId,
         "contact@a2-cm.fr",
         "1",
-        "2026-07-17",
-        "2026-07-17",
+        "17/07/2026",
+        "17/07/2026",
         "Premier client"
       ]);
       expect(rows.contactRow.slice(2, 8)).toEqual([
@@ -69,6 +72,7 @@ describe("admin client helpers", () => {
         "Oui",
         "Actif"
       ]);
+      expect(rows.contactRow[8]).toBe("17/07/2026");
       expect(rows.solutionRows[0].slice(1, 8)).toEqual([
         rows.clientId,
         "Flux Automatisation & IA",
@@ -76,7 +80,7 @@ describe("admin client helpers", () => {
         fallbackAdminSolutionOptions[1].defaultName,
         "",
         "",
-        "2026-07-17"
+        "17/07/2026"
       ]);
     }
   });

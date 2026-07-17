@@ -30,6 +30,7 @@ const validPayload = {
 describe("POST /api/support-requests", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    vi.useRealTimers();
   });
 
   it("returns 401 when the user is not authenticated", async () => {
@@ -108,12 +109,15 @@ describe("POST /api/support-requests", () => {
   });
 
   it("accepts a local development request without Brevo configuration", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-17T10:00:00.000Z"));
+
     const response = await onRequestPost(context(validPayload));
     const body = await responseBody(response);
 
     expect(response.status).toBe(202);
     expect(body.status).toBe("received");
-    expect(String(body.requestId)).toMatch(/^SUP-\d{8}-[A-F0-9]{4}$/);
+    expect(String(body.requestId)).toMatch(/^SUP-17072026-[A-F0-9]{4}$/);
   });
 
   it("sends the support request to Brevo", async () => {

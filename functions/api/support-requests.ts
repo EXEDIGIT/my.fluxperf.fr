@@ -1,5 +1,6 @@
 import { getAuthenticatedEmail, isProduction } from "../lib/auth";
 import { findClientForEmailInWorkbook } from "../lib/clients";
+import { formatCompactFrenchDate } from "../lib/dateFormats";
 import { readGoogleWorkbookValues } from "../lib/googleSheets";
 import { json, jsonError } from "../lib/response";
 import type { ClientDto, PagesContext } from "../lib/types";
@@ -19,7 +20,7 @@ function isString(value: unknown): value is string {
 }
 
 function buildRequestId(now = new Date()): string {
-  const date = now.toISOString().slice(0, 10).replace(/-/g, "");
+  const date = formatCompactFrenchDate(now);
   const bytes = new Uint8Array(2);
   crypto.getRandomValues(bytes);
   const suffix = Array.from(bytes)

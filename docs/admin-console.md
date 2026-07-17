@@ -43,6 +43,17 @@ Les listes `type_solution` et `nom_solution` sont lues depuis l'onglet
 `Parametres`. Si cet onglet est vide ou indisponible, la console utilise une
 liste de secours.
 
+## Formats generes
+
+Pour les nouvelles lignes creees par la console interne :
+
+- les identifiants utilisent une date compacte francaise `JJMMAAAA` :
+  `CLI-17072026-XXXX`, `CON-17072026-XXXX`, `SOL-17072026-XXXX` ;
+- les dates metier lisibles utilisent `JJ/MM/AAAA` :
+  `date_creation`, `date_mise_a_jour` et `date_activation` ;
+- les lignes existantes avec les anciens formats restent compatibles et ne sont
+  pas migrees automatiquement.
+
 ## Colonnes ecrites
 
 `Clients`
