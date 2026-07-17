@@ -185,6 +185,21 @@ export type SupportRequestResponse = {
   requestId: string;
 };
 
+export type AccessRequestInput = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  companyName: string;
+  referrer: string;
+  message: string;
+  website: string;
+};
+
+export type AccessRequestResponse = {
+  status: "received";
+  requestId: string;
+};
+
 function buildDemoRequestId(): string {
   const parts = new Intl.DateTimeFormat("fr-FR", {
     timeZone: "Europe/Paris",
@@ -196,6 +211,19 @@ function buildDemoRequestId(): string {
   const date = `${part("day")}${part("month")}${part("year")}`;
 
   return `FP-${date}-DEMO`;
+}
+
+function buildAccessDemoRequestId(): string {
+  const parts = new Intl.DateTimeFormat("fr-FR", {
+    timeZone: "Europe/Paris",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric"
+  }).formatToParts(new Date());
+  const part = (type: string) => parts.find((item) => item.type === type)?.value ?? "";
+  const date = `${part("day")}${part("month")}${part("year")}`;
+
+  return `ACC-${date}-DEMO`;
 }
 
 export async function submitInterventionRequest(
@@ -302,6 +330,55 @@ export async function submitSupportRequest(
       return {
         status: "received",
         requestId: buildDemoRequestId()
+      };
+    }
+
+    throw error;
+  }
+}
+
+export async function submitAccessRequest(
+  input: AccessRequestInput
+): Promise<AccessRequestResponse> {
+  try {
+    const response = await fetch("/api/access-requests", {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        firstName: input.firstName,
+        lastName: input.lastName,
+        email: input.email,
+        companyName: input.companyName,
+        referrer: input.referrer,
+        message: input.message,
+        website: input.website
+      })
+    });
+    const contentType = response.headers.get("Content-Type") ?? "";
+
+    if (!contentType.includes("application/json")) {
+      throw new ApiError(response.status || 500, "INVALID_RESPONSE", "Reponse API invalide.");
+    }
+
+    const data = (await response.json()) as AccessRequestResponse & ApiErrorResponse;
+
+    if (!response.ok) {
+      throw new ApiError(
+        response.status,
+        data.error?.code || "API_ERROR",
+        data.error?.message || "Une erreur est survenue."
+      );
+    }
+
+    return data;
+  } catch (error) {
+    if (shouldUseViteDemoFallback()) {
+      return {
+        status: "received",
+        requestId: buildAccessDemoRequestId()
       };
     }
 

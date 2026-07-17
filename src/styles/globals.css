@@ -1237,6 +1237,12 @@ svg {
   gap: 16px;
 }
 
+.access-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
 .simple-field {
   display: grid;
   gap: 8px;
@@ -1260,6 +1266,10 @@ svg {
 .simple-field textarea {
   min-height: 190px;
   resize: vertical;
+}
+
+.access-modal .simple-field textarea {
+  min-height: 160px;
 }
 
 .simple-field input:focus,
@@ -1299,6 +1309,14 @@ svg {
   color: #8a1c1c;
   font-size: 0.86rem;
   font-weight: 700;
+}
+
+.access-honeypot {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
 }
 
 .simple-success {
@@ -2287,7 +2305,10 @@ svg {
   align-items: center;
   justify-content: center;
   gap: 10px;
+  border: 0;
+  background: transparent;
   color: var(--green);
+  cursor: pointer;
   font-size: 0.86rem;
   font-weight: 700;
 }
@@ -3010,6 +3031,7 @@ svg {
   .priority-row,
   .upload-grid,
   .review-grid,
+  .access-field-grid,
   .intervention-side {
     grid-template-columns: 1fr;
   }

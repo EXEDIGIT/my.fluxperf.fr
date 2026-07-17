@@ -209,6 +209,20 @@ Transactional :
 Configurez `BREVO_API_KEY` dans Cloudflare Pages. En local, si la cle n'est pas
 renseignee, l'API retourne une reception simulee pour faciliter les tests.
 
+## Demande d'acces MyFluxperf
+
+La page de connexion propose une popin publique `Demander un acces a MyFluxperf`.
+La Pages Function `POST /api/access-requests` valide les coordonnees du
+demandeur, rejette le champ honeypot anti-spam, puis transmet la demande a
+`support@fluxperf.fr` via Brevo :
+
+- expediteur : `notifications@fluxperf.fr`
+- destinataire : `support@fluxperf.fr`
+- reply-to : email saisi par le demandeur
+
+En local, si `BREVO_API_KEY` n'est pas renseignee, l'API retourne aussi une
+reception simulee avec une reference `ACC-JJMMAAAA-XXXX`.
+
 ## Limitations MVP
 
 - Dashboard unique, sans sous-pages applicatives.

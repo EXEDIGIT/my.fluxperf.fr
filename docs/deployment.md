@@ -64,6 +64,8 @@ Configurer `GOOGLE_PRIVATE_KEY` et `BREVO_API_KEY` comme secrets Cloudflare Page
 3. Ajouter la cle dans Cloudflare Pages sous `BREVO_API_KEY`.
 4. Tester la carte Support avec un compte client actif.
 5. Verifier que l'email arrive a `support@fluxperf.fr` avec un reply-to client.
+6. Tester la popin publique de demande d'acces depuis `/login`.
+7. Verifier que l'email de demande d'acces arrive a `support@fluxperf.fr` avec un reply-to demandeur.
 
 ## Test final
 

@@ -1,6 +1,7 @@
 import { ArrowRight, LifeBuoy, Mail, ShieldCheck } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { getSupabaseClient, hasSupabaseConfig } from "../lib/supabase";
+import { AccessRequestModal } from "./AccessRequestModal";
 
 type LoginState =
   | { status: "idle" }
@@ -38,6 +39,7 @@ export function LoginPage() {
   const [email, setEmail] = useState("");
   const [state, setState] = useState<LoginState>({ status: "idle" });
   const [cooldownRemaining, setCooldownRemaining] = useState(0);
+  const [isAccessRequestOpen, setIsAccessRequestOpen] = useState(false);
 
   const redirectTo = useMemo(() => `${window.location.origin}/auth/callback`, []);
   const isSending = state.status === "sending";
@@ -167,11 +169,16 @@ export function LoginPage() {
           </div>
         ) : null}
 
-        <a className="auth-support" href="mailto:hello@fluxperf.fr">
+        <button className="auth-support" type="button" onClick={() => setIsAccessRequestOpen(true)}>
           <LifeBuoy aria-hidden="true" />
-          Contacter le support Fluxperf
-        </a>
+          Demander un acces a MyFluxperf
+        </button>
       </section>
+
+      <AccessRequestModal
+        isOpen={isAccessRequestOpen}
+        onClose={() => setIsAccessRequestOpen(false)}
+      />
     </main>
   );
 }
