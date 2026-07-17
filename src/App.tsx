@@ -53,7 +53,7 @@ export function App() {
     const supabase = getSupabaseClient();
 
     async function loadMe() {
-      setState({ status: "loading" });
+      setState((current) => (current.status === "ready" ? current : { status: "loading" }));
 
       try {
         const data = await getMe();
@@ -71,7 +71,7 @@ export function App() {
           return;
         }
 
-        setState({ status: "error", error });
+        setState((current) => (current.status === "ready" ? current : { status: "error", error }));
       }
     }
 
