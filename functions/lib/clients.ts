@@ -81,10 +81,15 @@ const impactRules: Record<ClientImpactKey, { label: string; weeklyHoursPerUnit: 
   }
 };
 
-const solutionImpactKeys: ClientImpactKey[] = ["automation_ai", "assistant_ai"];
+const solutionImpactKeys: ClientImpactKey[] = ["visibility_acquisition", "automation_ai", "assistant_ai"];
 
 const solutionTypeAliases: Record<ClientImpactKey, string[]> = {
-  visibility_acquisition: [],
+  visibility_acquisition: [
+    "visibility_acquisition",
+    "visibilite_acquisition",
+    "flux_visibility_acquisition",
+    "flux_visibilite_acquisition"
+  ],
   automation_ai: [
     "automation_ai",
     "automatisation_ai",
@@ -310,9 +315,9 @@ function emptyImpact(): ClientImpactDto {
   };
 }
 
-function buildImpact(activeSitesCount: number, activeSolutions: SheetRecord[] = []): ClientImpactDto {
+function buildImpact(activeSolutions: SheetRecord[] = []): ClientImpactDto {
   const quantities: Record<ClientImpactKey, number> = {
-    visibility_acquisition: activeSitesCount,
+    visibility_acquisition: 0,
     automation_ai: 0,
     assistant_ai: 0
   };
@@ -552,14 +557,6 @@ function siteRecordToDto(site: SheetRecord): ClientSiteDto {
   };
 }
 
-function servicesFromSites(sites: SheetRecord[]): string[] {
-  return sites.map((site) => {
-    const label = getValue(site, "domaine") || getValue(site, "url") || getValue(site, "site_id");
-
-    return `Site suivi : ${label}`;
-  });
-}
-
 function serviceFromSolution(solution: SheetRecord): string | null {
   const type = solutionImpactKey(solution);
 
@@ -567,8 +564,13 @@ function serviceFromSolution(solution: SheetRecord): string | null {
     return null;
   }
 
-  const familyLabel = type === "automation_ai" ? "Flux Automatisation & IA" : "Flux Assistant IA";
+  const familyLabels: Record<ClientImpactKey, string> = {
+    visibility_acquisition: "Flux Visibilité & Acquisition",
+    automation_ai: "Flux Automatisation & IA",
+    assistant_ai: "Flux Assistant IA"
+  };
   const solutionName = getValue(solution, "nom_solution", "name", "nom", "solution");
+  const familyLabel = familyLabels[type];
 
   return solutionName ? `${familyLabel} : ${solutionName}` : familyLabel;
 }
@@ -584,11 +586,8 @@ function dedupeServiceLabels(labels: string[]): string[] {
   ));
 }
 
-function servicesFromActivePortfolio(sites: SheetRecord[], solutions: SheetRecord[]): string[] {
-  const serviceLabels = [
-    ...servicesFromSites(sites),
-    ...solutions.map(serviceFromSolution).filter((label): label is string => Boolean(label))
-  ];
+function servicesFromActivePortfolio(solutions: SheetRecord[]): string[] {
+  const serviceLabels = solutions.map(serviceFromSolution).filter((label): label is string => Boolean(label));
 
   if (serviceLabels.length === 0) {
     return ["Espace client Fluxperf"];
@@ -650,9 +649,9 @@ function structuredClientToDto(
     firstName: contact ? getValue(contact, "prenom", "first_name") : "",
     lastName: contact ? getValue(contact, "nom", "last_name") : "",
     planLabel: "Espace client actif",
-    services: servicesFromActivePortfolio(activeSites, activeSolutions),
+    services: servicesFromActivePortfolio(activeSolutions),
     sites: activeSites.map(siteRecordToDto),
-    impact: buildImpact(activeSites.length, activeSolutions),
+    impact: buildImpact(activeSolutions),
     links: {
       request: null,
       support: null,

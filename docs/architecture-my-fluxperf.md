@@ -71,7 +71,7 @@ Le portail supporte la structure actuelle de la BDD :
 | `Clients` | Identite du compte, statut client, activation de l'espace client, email principal |
 | `Contacts` | Prenom, nom, email, statut contact |
 | `Sites` | Sites rattaches au client, domaine, URL, statut, suivi actif |
-| `Solutions` | Solutions IA rattachees au client pour calculer le temps libere |
+| `Solutions` | Services Fluxperf actifs rattaches au client pour les services affiches et le temps libere |
 | `Actions` | Journal des demandes client affiche dans le module Dernieres actions |
 | `Parametres` | Valeurs de reference pour la BDD, non lues par le portail MVP |
 

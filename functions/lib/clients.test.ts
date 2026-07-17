@@ -257,10 +257,7 @@ describe("client sheet parsing", () => {
       expect(result.client.companyName).toBe("HBINT");
       expect(result.client.firstName).toBe("Celine");
       expect(result.client.lastName).toBe("HEMING");
-      expect(result.client.services).toEqual([
-        "Site suivi : hbint.com",
-        "Site suivi : trial.hbint.com"
-      ]);
+      expect(result.client.services).toEqual(["Espace client Fluxperf"]);
       expect(result.client.sites).toEqual([
         {
           id: "SITE-0001",
@@ -277,20 +274,12 @@ describe("client sheet parsing", () => {
           status: "Actif"
         }
       ]);
-      expect(result.client.impact).toMatchObject({
-        weeklyHours: 3,
-        monthlyHours: 13,
+      expect(result.client.impact).toEqual({
+        weeklyHours: 0,
+        monthlyHours: 0,
+        items: [],
         isEstimated: true
       });
-      expect(result.client.impact.items).toEqual([
-        {
-          key: "visibility_acquisition",
-          label: "Visibilité & Acquisition",
-          quantity: 2,
-          weeklyHours: 3,
-          monthlyHours: 13
-        }
-      ]);
     }
   });
 
@@ -436,16 +425,77 @@ describe("client sheet parsing", () => {
     }
   });
 
-  it("combines one site, one automation and one assistant", () => {
+  it("keeps legacy technical solution codes compatible", () => {
+    const workbook = {
+      ...structuredWorkbook,
+      solutions: [
+        structuredWorkbook.solutions[0],
+        [
+          "SOL-0000",
+          "CLI-0001",
+          "visibility_acquisition",
+          "Actif",
+          "Visibilite historique",
+          "2026-07-06",
+          ""
+        ],
+        [
+          "SOL-0001",
+          "CLI-0001",
+          "automation_ai",
+          "Actif",
+          "Automatisation historique",
+          "2026-07-06",
+          ""
+        ],
+        [
+          "SOL-0002",
+          "CLI-0001",
+          "assistant_ai",
+          "Actif",
+          "Assistant historique",
+          "2026-07-06",
+          ""
+        ]
+      ]
+    };
+    const result = findClientForEmailInWorkbook(workbook, "tdacunha@exedigit.fr");
+
+    expect(result.status).toBe("ok");
+    if (result.status === "ok") {
+      expect(result.client.services).toEqual([
+        "Flux Visibilité & Acquisition : Visibilite historique",
+        "Flux Automatisation & IA : Automatisation historique",
+        "Flux Assistant IA : Assistant historique"
+      ]);
+      expect(result.client.impact.weeklyHours).toBe(4.5);
+      expect(result.client.impact.items.map((item) => item.key)).toEqual([
+        "visibility_acquisition",
+        "automation_ai",
+        "assistant_ai"
+      ]);
+    }
+  });
+
+  it("combines active visibility, automation and assistant solutions", () => {
     const workbook = {
       ...structuredWorkbook,
       sites: [structuredWorkbook.sites[0], structuredWorkbook.sites[1]],
       solutions: [
         structuredWorkbook.solutions[0],
         [
+          "SOL-0000",
+          "CLI-0001",
+          "Flux Visibilité & Acquisition",
+          "Actif",
+          "Acquisition digitale",
+          "2026-07-06",
+          ""
+        ],
+        [
           "SOL-0001",
           "CLI-0001",
-          "Flux Automatisation IA",
+          "Flux Automatisation & IA",
           "Actif",
           "Automatisation reporting",
           "2026-07-06",
@@ -454,7 +504,7 @@ describe("client sheet parsing", () => {
         [
           "SOL-0002",
           "CLI-0001",
-          "Assistant IA",
+          "Flux Assistant IA",
           "Actif",
           "Assistant support",
           "2026-07-06",
@@ -467,7 +517,7 @@ describe("client sheet parsing", () => {
     expect(result.status).toBe("ok");
     if (result.status === "ok") {
       expect(result.client.services).toEqual([
-        "Site suivi : hbint.com",
+        "Flux Visibilité & Acquisition : Acquisition digitale",
         "Flux Automatisation & IA : Automatisation reporting",
         "Flux Assistant IA : Assistant support"
       ]);
@@ -481,11 +531,29 @@ describe("client sheet parsing", () => {
     }
   });
 
-  it("ignores inactive solutions", () => {
+  it("ignores non-active solutions", () => {
     const workbook = {
       ...structuredWorkbook,
       solutions: [
         structuredWorkbook.solutions[0],
+        [
+          "SOL-0000",
+          "CLI-0001",
+          "Flux Visibilité & Acquisition",
+          "En cours d'activation",
+          "Acquisition en activation",
+          "2026-07-06",
+          ""
+        ],
+        [
+          "SOL-0002",
+          "CLI-0001",
+          "Flux Assistant IA",
+          "En pause",
+          "Assistant en pause",
+          "2026-07-06",
+          ""
+        ],
         [
           "SOL-0001",
           "CLI-0001",
@@ -501,13 +569,13 @@ describe("client sheet parsing", () => {
 
     expect(result.status).toBe("ok");
     if (result.status === "ok") {
-      expect(result.client.services).toEqual([
-        "Site suivi : hbint.com",
-        "Site suivi : trial.hbint.com"
-      ]);
-      expect(result.client.impact.weeklyHours).toBe(3);
-      expect(result.client.impact.items).toHaveLength(1);
-      expect(result.client.impact.items[0].key).toBe("visibility_acquisition");
+      expect(result.client.services).toEqual(["Espace client Fluxperf"]);
+      expect(result.client.impact).toEqual({
+        weeklyHours: 0,
+        monthlyHours: 0,
+        items: [],
+        isEstimated: true
+      });
     }
   });
 

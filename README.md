@@ -112,9 +112,9 @@ Le module "Impacts" affiche le temps libere estime pour le client connecte.
 Le calcul est fait cote Pages Function dans `/api/me`, a chaque chargement du
 dashboard :
 
-- 1 site actif dans l'onglet `Sites` = 1,5 h / semaine
-- 1 ligne `automation_ai` active dans l'onglet `Solutions` = 1 h / semaine
-- 1 ligne `assistant_ai` active dans l'onglet `Solutions` = 2 h / semaine
+- 1 ligne `Flux Visibilité & Acquisition` active dans l'onglet `Solutions` = 1,5 h / semaine
+- 1 ligne `Flux Automatisation & IA` active dans l'onglet `Solutions` = 1 h / semaine
+- 1 ligne `Flux Assistant IA` active dans l'onglet `Solutions` = 2 h / semaine
 
 L'onglet `Solutions` est optionnel pour garder la compatibilite avec les bases
 existantes. Colonnes attendues :
@@ -129,7 +129,10 @@ date_activation
 notes
 ```
 
-Valeurs V1 attendues pour `type_solution` : `automation_ai`, `assistant_ai`.
+Valeurs V1 attendues pour `type_solution` : `Flux Visibilité & Acquisition`,
+`Flux Automatisation & IA`, `Flux Assistant IA`. Les anciens codes techniques
+`visibility_acquisition`, `automation_ai` et `assistant_ai` restent acceptes par
+compatibilite.
 
 ## Demande d'intervention
 

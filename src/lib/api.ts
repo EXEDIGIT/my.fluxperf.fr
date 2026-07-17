@@ -24,9 +24,7 @@ const demoResponse: MeResponse = {
     lastName: "Dupont",
     planLabel: "Abonnement actif",
     services: [
-      "Site internet",
-      "Visibilité Web",
-      "Google Ads",
+      "Flux Visibilité & Acquisition : Acquisition digitale",
       "Flux Automatisation & IA : Reporting automatique",
       "Flux Assistant IA : Assistant support"
     ],
@@ -47,15 +45,15 @@ const demoResponse: MeResponse = {
       }
     ],
     impact: {
-      weeklyHours: 6,
-      monthlyHours: 26,
+      weeklyHours: 4.5,
+      monthlyHours: 19.5,
       items: [
         {
           key: "visibility_acquisition",
           label: "Visibilité & Acquisition",
-          quantity: 2,
-          weeklyHours: 3,
-          monthlyHours: 13
+          quantity: 1,
+          weeklyHours: 1.5,
+          monthlyHours: 6.5
         },
         {
           key: "automation_ai",

@@ -84,15 +84,23 @@ notes
 ```text
 solution_id: SOL-0001
 client_id: CLI-0001
-type_solution: automation_ai
+type_solution: Flux Visibilité & Acquisition
 statut_solution: Actif
-nom_solution: Automatisation facturation
+nom_solution: Acquisition digitale
 date_activation: 2026-07-17
 notes:
 
 solution_id: SOL-0002
 client_id: CLI-0001
-type_solution: assistant_ai
+type_solution: Flux Automatisation & IA
+statut_solution: Actif
+nom_solution: Automatisation facturation
+date_activation: 2026-07-17
+notes:
+
+solution_id: SOL-0003
+client_id: CLI-0001
+type_solution: Flux Assistant IA
 statut_solution: Actif
 nom_solution: Assistant support
 date_activation: 2026-07-17
@@ -102,11 +110,44 @@ notes:
 ## Regles du module Impacts
 
 - Les lignes `Solutions` actives apparaissent aussi dans la section `Services actifs`.
-- `type_solution` peut contenir les codes `automation_ai` / `assistant_ai` ou les libelles `Flux Automatisation IA` / `Assistant IA`.
-- Les sites actifs de l'onglet `Sites` comptent pour Flux Visibilite & Acquisition.
+- `type_solution` doit utiliser les valeurs de reference `Flux Visibilité & Acquisition`, `Flux Automatisation & IA` ou `Flux Assistant IA`.
+- Les anciens codes `visibility_acquisition`, `automation_ai` et `assistant_ai` restent acceptes par compatibilite.
 - Une ligne `Solutions` compte uniquement si `statut_solution` vaut `Actif`.
-- `automation_ai` ajoute 1 h / semaine.
-- `assistant_ai` ajoute 2 h / semaine.
+- `Flux Visibilité & Acquisition` ajoute 1,5 h / semaine.
+- `Flux Automatisation & IA` ajoute 1 h / semaine.
+- `Flux Assistant IA` ajoute 2 h / semaine.
+
+## Onglet `Parametres`
+
+Ajouter les listes suivantes pour alimenter les listes deroulantes de `Solutions`.
+Dans le Google Sheet de production, `Solutions!C2:C1000` pointe vers
+`Parametres!B20:B22` et `Solutions!D2:D1000` pointe vers `Parametres!B23:B27`.
+
+```text
+categorie: type_solution
+valeur: Flux Visibilité & Acquisition
+
+categorie: type_solution
+valeur: Flux Automatisation & IA
+
+categorie: type_solution
+valeur: Flux Assistant IA
+
+categorie: statut_solution
+valeur: Actif
+
+categorie: statut_solution
+valeur: En cours d'activation
+
+categorie: statut_solution
+valeur: En pause
+
+categorie: statut_solution
+valeur: Inactif
+
+categorie: statut_solution
+valeur: Résilié
+```
 
 ## Onglet `Actions`
 
