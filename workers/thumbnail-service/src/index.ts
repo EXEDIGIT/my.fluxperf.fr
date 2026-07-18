@@ -17,7 +17,7 @@ type ThumbnailState = {
 };
 
 type BrowserRunBinding = {
-  quickAction(action: "screenshot", payload: Record<string, unknown>): Promise<Response>;
+  quickAction(action: "content" | "screenshot", payload: Record<string, unknown>): Promise<Response>;
 };
 
 type RateLimitBinding = {
@@ -64,6 +64,8 @@ const CACHE_ORIGIN = "https://thumbnail-cache.myfluxperf.local";
 const IMAGE_CACHE_CONTROL = "private, max-age=86400, stale-while-revalidate=604800";
 const DEFAULT_MAX_AGE_DAYS = 7;
 const DEFAULT_CRON_BATCH_SIZE = 10;
+const BROWSER_USER_AGENT =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36";
 
 function json(data: unknown, init: ResponseInit = {}): Response {
   return new Response(JSON.stringify(data), {
@@ -288,6 +290,43 @@ export function isStateStale(
   return !Number.isFinite(capturedAt) || now - capturedAt >= staleAfterMs;
 }
 
+export function looksLikeBlockedPage(content: string): boolean {
+  const normalized = content.replace(/\s+/g, " ").trim().toLowerCase();
+
+  return (
+    /<title>\s*(403|401|forbidden|access denied|request blocked|just a moment)/i.test(content) ||
+    /\b403\s*forbidden\b/.test(normalized) ||
+    /\b401\s*unauthorized\b/.test(normalized) ||
+    /\baccess denied\b/.test(normalized) ||
+    /\brequest blocked\b/.test(normalized) ||
+    /\benable javascript and cookies\b/.test(normalized)
+  );
+}
+
+function browserPagePayload(url: string): Record<string, unknown> {
+  return {
+    url,
+    userAgent: BROWSER_USER_AGENT,
+    gotoOptions: {
+      waitUntil: "networkidle2"
+    }
+  };
+}
+
+async function assertBrowserCanReadSource(source: ThumbnailSource, env: Env): Promise<void> {
+  const response = await env.BROWSER.quickAction("content", browserPagePayload(source.url));
+
+  if (!response.ok) {
+    throw new Error(`Browser Run content check returned ${response.status}.`);
+  }
+
+  const content = await response.text();
+
+  if (looksLikeBlockedPage(content)) {
+    throw new Error("Browser Run reached a blocked or forbidden page.");
+  }
+}
+
 async function fetchThumbnailSources(env: Env, solutionId?: string): Promise<ThumbnailSource[]> {
   const baseUrl = env.INTERNAL_API_BASE_URL?.trim().replace(/\/+$/, "");
 
@@ -330,8 +369,10 @@ async function captureAndStore(source: ThumbnailSource, env: Env): Promise<void>
       throw new Error("Capture URL is not allowed.");
     }
 
+    await assertBrowserCanReadSource(source, env);
+
     const screenshot = await env.BROWSER.quickAction("screenshot", {
-      url: source.url,
+      ...browserPagePayload(source.url),
       screenshotOptions: {
         type: "jpeg",
         quality: 78
@@ -371,11 +412,20 @@ async function captureAndStore(source: ThumbnailSource, env: Env): Promise<void>
       sourceUrlHash,
       error: error instanceof Error ? error.message : "Unknown capture error."
     });
+    await defaultCache().delete(cacheRequestForSolution(source.solutionId));
   }
 }
 
 async function serveThumbnail(solutionId: string, env: Env): Promise<Response> {
   const cacheKey = cacheRequestForSolution(solutionId);
+  const state = await readState(env, solutionId);
+
+  if (state?.status === "error") {
+    await defaultCache().delete(cacheKey);
+
+    return jsonError(404, "THUMBNAIL_NOT_READY", "Thumbnail is not ready yet.");
+  }
+
   const cached = await defaultCache().match(cacheKey);
 
   if (cached) {

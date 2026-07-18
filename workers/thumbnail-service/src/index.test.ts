@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isCaptureUrlAllowed, isStateStale } from "./index";
+import { isCaptureUrlAllowed, isStateStale, looksLikeBlockedPage } from "./index";
 
 describe("thumbnail worker guards", () => {
   it("accepts the configured domain and its subdomains", () => {
@@ -59,5 +59,14 @@ describe("thumbnail worker guards", () => {
         staleAfterMs
       )
     ).toBe(false);
+  });
+
+  it("detects blocked pages before storing a screenshot", () => {
+    expect(looksLikeBlockedPage("<html><head><title>403 Forbidden</title></head><body>Forbidden</body></html>")).toBe(
+      true
+    );
+    expect(looksLikeBlockedPage("<html><head><title>Accueil</title></head><body>Bienvenue</body></html>")).toBe(
+      false
+    );
   });
 });
