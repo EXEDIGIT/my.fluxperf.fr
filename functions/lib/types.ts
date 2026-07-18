@@ -19,6 +19,8 @@ export type AppEnv = {
   GOOGLE_CLIENTS_WRITE_RANGE?: string;
   GOOGLE_CONTACTS_WRITE_RANGE?: string;
   GOOGLE_SOLUTIONS_WRITE_RANGE?: string;
+  THUMBNAIL_WORKER_URL?: string;
+  THUMBNAIL_INTERNAL_SECRET?: string;
   N8N_INTERVENTION_WEBHOOK_URL?: string;
   N8N_INTERVENTION_WEBHOOK_SECRET?: string;
   BREVO_API_KEY?: string;
@@ -27,6 +29,15 @@ export type AppEnv = {
 export type PagesContext = {
   request: Request;
   env: AppEnv;
+  params?: Record<string, string | string[]>;
+};
+
+export type ClientImpactKey = "visibility_acquisition" | "automation_ai" | "assistant_ai";
+
+export type ClientSolutionThumbnailDto = {
+  kind: "website" | "placeholder";
+  endpoint: string | null;
+  placeholderKey: ClientImpactKey;
 };
 
 export type ClientSolutionDto = {
@@ -38,9 +49,18 @@ export type ClientSolutionDto = {
   domain: string;
   url: string;
   activatedAt: string;
+  thumbnail: ClientSolutionThumbnailDto;
 };
 
-export type ClientImpactKey = "visibility_acquisition" | "automation_ai" | "assistant_ai";
+export type ThumbnailSourceDto = {
+  solutionId: string;
+  clientId: string;
+  type: ClientImpactKey;
+  typeLabel: string;
+  name: string;
+  domain: string;
+  url: string;
+};
 
 export type ClientImpactItemDto = {
   key: ClientImpactKey;

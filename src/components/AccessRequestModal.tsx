@@ -77,7 +77,7 @@ export function AccessRequestModal({ isOpen, onClose }: AccessRequestModalProps)
 
   function validate(): string | null {
     if (form.firstName.trim().length < 1) {
-      return "Renseignez votre prenom.";
+      return "Renseignez votre prénom.";
     }
 
     if (form.lastName.trim().length < 1) {
@@ -93,7 +93,7 @@ export function AccessRequestModal({ isOpen, onClose }: AccessRequestModalProps)
     }
 
     if (form.message.trim().length < 10) {
-      return "Ajoutez une description pour guider nos equipes.";
+      return "Ajoutez une description pour guider nos équipes.";
     }
 
     return null;
@@ -126,7 +126,7 @@ export function AccessRequestModal({ isOpen, onClose }: AccessRequestModalProps)
       setFormError(
         error instanceof ApiError
           ? error.message
-          : "La demande n'a pas pu etre transmise pour le moment."
+          : "La demande n'a pas pu être transmise pour le moment."
       );
     } finally {
       setIsSubmitting(false);
@@ -134,14 +134,14 @@ export function AccessRequestModal({ isOpen, onClose }: AccessRequestModalProps)
   }
 
   return (
-    <div className="simple-modal-backdrop" role="dialog" aria-modal="true" aria-label="Demande d'acces MyFluxperf">
+    <div className="simple-modal-backdrop" role="dialog" aria-modal="true" aria-label="Demande d'accès MyFluxperf">
       <section className="simple-modal access-modal">
         <header className="simple-modal-header">
           <div>
-            <span className="section-kicker">Acces MyFluxperf</span>
-            <h2>Demander un acces</h2>
+            <span className="section-kicker">Accès MyFluxperf</span>
+            <h2>Demander un accès</h2>
           </div>
-          <button type="button" aria-label="Fermer la fenetre" disabled={isSubmitting} onClick={onClose}>
+          <button type="button" aria-label="Fermer la fenêtre" disabled={isSubmitting} onClick={onClose}>
             <X aria-hidden="true" />
           </button>
         </header>
@@ -151,7 +151,7 @@ export function AccessRequestModal({ isOpen, onClose }: AccessRequestModalProps)
             <CheckCircle2 aria-hidden="true" />
             <h3>Demande transmise</h3>
             <p>
-              Votre demande d'acces a bien ete envoyee a Fluxperf. Reference :{" "}
+              Votre demande d'accès a bien été envoyée à Fluxperf. Référence :{" "}
               <strong>{requestId}</strong>
             </p>
           </div>
@@ -160,13 +160,13 @@ export function AccessRequestModal({ isOpen, onClose }: AccessRequestModalProps)
             <div className="simple-form">
               <div className="access-field-grid">
                 <label className="simple-field">
-                  <span>Prenom</span>
+                  <span>Prénom</span>
                   <input
                     value={form.firstName}
                     maxLength={80}
                     autoComplete="given-name"
                     onChange={(event) => updateField("firstName", event.target.value)}
-                    placeholder="Votre prenom"
+                    placeholder="Votre prénom"
                   />
                 </label>
 
@@ -206,7 +206,7 @@ export function AccessRequestModal({ isOpen, onClose }: AccessRequestModalProps)
               </label>
 
               <label className="simple-field">
-                <span>Referent client ou contact Fluxperf connu (facultatif)</span>
+                <span>Référent client ou contact Fluxperf connu (facultatif)</span>
                 <input
                   value={form.referrer}
                   maxLength={180}
@@ -222,7 +222,7 @@ export function AccessRequestModal({ isOpen, onClose }: AccessRequestModalProps)
                   maxLength={4000}
                   rows={7}
                   onChange={(event) => updateField("message", event.target.value)}
-                  placeholder="Precisez pourquoi vous souhaitez acceder a MyFluxperf et toute information utile pour verifier la demande."
+                  placeholder="Précisez pourquoi vous souhaitez accéder à MyFluxperf et toute information utile pour vérifier la demande."
                 />
               </label>
 
@@ -240,9 +240,9 @@ export function AccessRequestModal({ isOpen, onClose }: AccessRequestModalProps)
             </div>
 
             <aside className="simple-context">
-              <strong>Verification Fluxperf</strong>
+              <strong>Vérification Fluxperf</strong>
               <p>
-                Nos equipes verifieront la demande avant toute creation ou ouverture d'acces a
+                Nos équipes vérifieront la demande avant toute création ou ouverture d'accès à
                 MyFluxperf.
               </p>
               <p>Utilisez votre adresse professionnelle pour faciliter le rattachement au bon espace client.</p>

@@ -78,7 +78,7 @@ export function SolutionsModal({ isOpen, onClose, onActivationRequest }: Solutio
             <span className="section-kicker">Solutions Fluxperf</span>
             <h2>Trois piliers pour développer votre solution.</h2>
           </div>
-          <button type="button" aria-label="Fermer la fenetre" onClick={onClose}>
+          <button type="button" aria-label="Fermer la fenêtre" onClick={onClose}>
             <X aria-hidden="true" />
           </button>
         </header>

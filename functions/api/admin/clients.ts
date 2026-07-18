@@ -42,7 +42,7 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
     const workbook = await readGoogleWorkbookValues(context.env);
 
     if (hasExistingClientEmail(workbook, input.email)) {
-      return jsonError(409, "CLIENT_EMAIL_EXISTS", "Cette adresse email existe deja dans la base client.");
+      return jsonError(409, "CLIENT_EMAIL_EXISTS", "Cette adresse email existe déjà dans la base client.");
     }
 
     const supabaseUser = await createSupabaseUserForClient(context.env, input.email);
@@ -70,7 +70,7 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
       notification = {
         status: "failed",
         email: input.email,
-        reason: "Email d'ouverture non envoye. Verifiez Brevo."
+        reason: "Email d'ouverture non envoyé. Vérifiez Brevo."
       };
     }
 
@@ -93,7 +93,7 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
     return jsonError(
       500,
       "CLIENT_CREATE_FAILED",
-      "Le client n'a pas pu etre cree completement. Verifiez la configuration Google Sheets, Supabase et Brevo."
+      "Le client n'a pas pu être créé complètement. Vérifiez la configuration Google Sheets, Supabase et Brevo."
     );
   }
 }

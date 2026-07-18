@@ -34,7 +34,7 @@ export async function requireAdmin(request: Request, env: AppEnv): Promise<{ ema
   const adminEmails = getAdminEmails(env);
 
   if (adminEmails.length === 0) {
-    return jsonError(403, "ADMIN_NOT_CONFIGURED", "La zone interne n'est pas encore configuree.");
+    return jsonError(403, "ADMIN_NOT_CONFIGURED", "La zone interne n'est pas encore configurée.");
   }
 
   if (!adminEmails.includes(email)) {

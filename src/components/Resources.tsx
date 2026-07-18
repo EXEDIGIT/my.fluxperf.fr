@@ -273,7 +273,7 @@ function ResourceModal({ resource, onClose }: ResourceModalProps) {
             <span className="section-kicker">Ressources utiles</span>
             <h2>{resource.title}</h2>
           </div>
-          <button type="button" aria-label="Fermer la fenetre" onClick={onClose}>
+          <button type="button" aria-label="Fermer la fenêtre" onClick={onClose}>
             <X aria-hidden="true" />
           </button>
         </header>

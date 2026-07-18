@@ -84,8 +84,8 @@ last_action_3_date: Il y a 2j
 ## Onglet `Solutions`
 
 Creer un onglet nomme `Solutions` pour declarer toutes les solutions Fluxperf
-rattachees aux clients. C'est la source des services actifs, des impacts et du
-contexte des demandes d'intervention.
+rattachees aux clients. C'est la source des services actifs, des impacts, des
+vignettes et du contexte des demandes d'intervention.
 
 ```text
 solution_id
@@ -142,6 +142,14 @@ notes:
 - `Flux Visibilité & Acquisition` ajoute 1,5 h / semaine.
 - `Flux Automatisation & IA` ajoute 1 h / semaine.
 - `Flux Assistant IA` ajoute 2 h / semaine.
+
+## Regles des vignettes Services actifs
+
+- Aucune source n'est lue depuis un onglet `Sites` : `solution_id` reste l'identifiant unique.
+- Une ligne active `Flux Visibilite & Acquisition` devient capturable si `url_ou_indication` contient une URL ou un domaine exploitable.
+- `domaine` sert de garde-fou : l'URL capturee doit correspondre a ce domaine ou a l'un de ses sous-domaines.
+- Les lignes `Flux Automatisation & IA` et `Flux Assistant IA` affichent un placeholder standardise, sans capture Browser Run.
+- Les URL localhost, IP privees/locales, protocoles non HTTP(S) et URL avec identifiants sont refusees.
 
 ## Onglet `Parametres`
 

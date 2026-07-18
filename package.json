@@ -10,7 +10,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "pages:dev": "pnpm run build && wrangler pages dev dist"
+    "pages:dev": "pnpm run build && wrangler pages dev dist",
+    "thumbnail:dev": "pnpm dlx wrangler@latest dev --remote -c workers/thumbnail-service/wrangler.toml",
+    "thumbnail:deploy": "pnpm dlx wrangler@latest deploy -c workers/thumbnail-service/wrangler.toml"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

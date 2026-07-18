@@ -15,10 +15,27 @@ const allowedNeeds = new Set([
   "content_update",
   "technical_issue",
   "new_creation",
+  "page_creation",
   "seo",
   "advertising_campaign",
+  "tracking_analytics",
+  "performance_optimization",
   "automation",
+  "dashboard_reporting",
+  "process_automation",
+  "tool_integration",
+  "workflow_issue",
+  "data_sync",
+  "ai_prompt_optimization",
+  "scenario_improvement",
   "ai_assistant",
+  "answer_adjustment",
+  "knowledge_base",
+  "prompt_instructions",
+  "access_issue",
+  "new_capability",
+  "conversation_analysis",
+  "user_support",
   "other"
 ]);
 
@@ -82,7 +99,7 @@ function validateFiles(files: File[]): Response | null {
     return jsonError(
       400,
       "FILES_TOTAL_TOO_LARGE",
-      "L'ensemble des fichiers joints depasse la limite de 15 Mo."
+      "L'ensemble des fichiers joints dépasse la limite de 15 Mo."
     );
   }
 
@@ -92,7 +109,7 @@ function validateFiles(files: File[]): Response | null {
     return jsonError(
       400,
       "FILE_TOO_LARGE",
-      `Le fichier "${oversizedFile.name}" depasse la limite de 10 Mo.`
+      `Le fichier "${oversizedFile.name}" dépasse la limite de 10 Mo.`
     );
   }
 
@@ -123,19 +140,19 @@ function validateRequest(
   const solutionIds = asStringArray(payload.solutionIds);
 
   if (!allowedServices.has(service)) {
-    return jsonError(400, "INVALID_SERVICE", "Le service selectionne est invalide.");
+    return jsonError(400, "INVALID_SERVICE", "Le service sélectionné est invalide.");
   }
 
   if (!allowedPriorities.has(priority)) {
-    return jsonError(400, "INVALID_PRIORITY", "La priorite selectionnee est invalide.");
+    return jsonError(400, "INVALID_PRIORITY", "La priorité sélectionnée est invalide.");
   }
 
   if (needs.length === 0 || needs.some((need) => !allowedNeeds.has(need))) {
-    return jsonError(400, "INVALID_NEEDS", "Selectionnez au moins un besoin valide.");
+    return jsonError(400, "INVALID_NEEDS", "Sélectionnez au moins un besoin valide.");
   }
 
   if (message.length < 10) {
-    return jsonError(400, "MESSAGE_REQUIRED", "Precisez votre demande en quelques mots.");
+    return jsonError(400, "MESSAGE_REQUIRED", "Précisez votre demande en quelques mots.");
   }
 
   const availableSolutions = (client.solutions ?? []).filter((solution) => solution.type === service);
@@ -145,15 +162,15 @@ function validateRequest(
   );
 
   if (invalidSolutionIds.length > 0) {
-    return jsonError(400, "SOLUTION_NOT_ALLOWED", "Une solution selectionnee ne correspond pas a votre compte.");
+    return jsonError(400, "SOLUTION_NOT_ALLOWED", "Une solution sélectionnée ne correspond pas à votre compte.");
   }
 
   if (availableSolutions.length === 0) {
-    return jsonError(400, "SOLUTION_NOT_ACTIVE", "Aucune solution active ne correspond a ce flux.");
+    return jsonError(400, "SOLUTION_NOT_ACTIVE", "Aucune solution active ne correspond à ce flux.");
   }
 
   if (selectedSolutions.length === 0) {
-    return jsonError(400, "SOLUTION_REQUIRED", "Selectionnez la solution concernee par votre demande.");
+    return jsonError(400, "SOLUTION_REQUIRED", "Sélectionnez la solution concernée par votre demande.");
   }
 
   return {
@@ -209,7 +226,7 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
       return jsonError(
         403,
         "CLIENT_NOT_CONFIGURED",
-        "Votre acces est authentifie, mais votre espace client n'est pas encore configure."
+        "Votre accès est authentifié, mais votre espace client n'est pas encore configuré."
       );
     }
 
@@ -260,7 +277,7 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
     });
 
     if (!webhookResponse.ok) {
-      return jsonError(502, "WEBHOOK_FAILED", "La demande n'a pas pu etre transmise a nos equipes.");
+      return jsonError(502, "WEBHOOK_FAILED", "La demande n'a pas pu être transmise à nos équipes.");
     }
 
     return json({ status: "received", requestId }, { status: 202 });
@@ -268,7 +285,7 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
     return jsonError(
       503,
       "REQUEST_UNAVAILABLE",
-      "Le service de demande est indisponible pour le moment. Merci de reessayer dans quelques instants."
+      "Le service de demande est indisponible pour le moment. Merci de réessayer dans quelques instants."
     );
   }
 }

@@ -68,9 +68,9 @@ const maxTotalFileSize = 15 * 1024 * 1024;
 
 const steps: Step[] = [
   { label: "Service", title: "Quel flux concerne votre demande ?" },
-  { label: "Contexte", title: "Precisez le contexte" },
-  { label: "Details", title: "Decrivez votre besoin" },
-  { label: "Confirmation", title: "Verifiez avant envoi" }
+  { label: "Contexte", title: "Précisez le contexte" },
+  { label: "Détails", title: "Décrivez votre besoin" },
+  { label: "Confirmation", title: "Vérifiez avant envoi" }
 ];
 
 const serviceOptions: ServiceOption[] = [
@@ -83,27 +83,51 @@ const serviceOptions: ServiceOption[] = [
   {
     id: "automation_ai",
     label: "Flux Automatisation & IA",
-    description: "Processus, integrations, agents et automatisations.",
+    description: "Processus, intégrations, agents et automatisations.",
     icon: Zap
   },
   {
     id: "assistant_ai",
     label: "Flux Assistant IA",
-    description: "Assistant IA, copilotes metier et support intelligent.",
+    description: "Assistant IA, copilotes métier et support intelligent.",
     icon: Bot
   }
 ];
 
-const needOptions: NeedOption[] = [
-  { id: "content_update", label: "Mise a jour de contenus" },
-  { id: "technical_issue", label: "Anomalie technique" },
-  { id: "new_creation", label: "Nouvelle creation" },
-  { id: "seo", label: "Referencement SEO" },
-  { id: "advertising_campaign", label: "Campagne publicitaire" },
-  { id: "automation", label: "Automatisation" },
-  { id: "ai_assistant", label: "Assistant IA" },
-  { id: "other", label: "Autre demande" }
-];
+const needOptionsByService: Record<InterventionService, NeedOption[]> = {
+  visibility_acquisition: [
+    { id: "content_update", label: "Mise à jour de contenus" },
+    { id: "technical_issue", label: "Anomalie technique site" },
+    { id: "page_creation", label: "Création / ajout de page" },
+    { id: "seo", label: "Référencement SEO" },
+    { id: "advertising_campaign", label: "Campagne publicitaire" },
+    { id: "tracking_analytics", label: "Tracking / analytics" },
+    { id: "performance_optimization", label: "Performance / optimisation" },
+    { id: "other", label: "Autre demande" }
+  ],
+  automation_ai: [
+    { id: "dashboard_reporting", label: "Tableau de bord / reporting" },
+    { id: "process_automation", label: "Automatisation de processus" },
+    { id: "tool_integration", label: "Connexion outils / intégration" },
+    { id: "workflow_issue", label: "Anomalie workflow" },
+    { id: "data_sync", label: "Données / synchronisation" },
+    { id: "ai_prompt_optimization", label: "Optimisation IA / prompt" },
+    { id: "scenario_improvement", label: "Amélioration de scénario" },
+    { id: "other", label: "Autre demande" }
+  ],
+  assistant_ai: [
+    { id: "answer_adjustment", label: "Ajustement des réponses" },
+    { id: "knowledge_base", label: "Base de connaissances" },
+    { id: "prompt_instructions", label: "Consignes / prompts" },
+    { id: "access_issue", label: "Accès ou anomalie" },
+    { id: "new_capability", label: "Nouvelle capacité" },
+    { id: "conversation_analysis", label: "Analyse / amélioration" },
+    { id: "user_support", label: "Accompagnement utilisateur" },
+    { id: "other", label: "Autre demande" }
+  ]
+};
+
+const allNeedOptions = Object.values(needOptionsByService).flat();
 
 const priorityOptions: PriorityOption[] = [
   {
@@ -115,7 +139,7 @@ const priorityOptions: PriorityOption[] = [
   {
     id: "urgent",
     label: "Urgente",
-    description: "A prioriser",
+    description: "À prioriser",
     icon: Flag
   },
   {
@@ -142,6 +166,12 @@ function labelFor<T extends { id: string; label: string }>(items: T[], id: strin
   return items.find((item) => item.id === id)?.label ?? id;
 }
 
+function labelForNeed(service: InterventionService | null, id: string): string {
+  const serviceNeeds = service ? needOptionsByService[service] : [];
+
+  return [...serviceNeeds, ...allNeedOptions].find((item) => item.id === id)?.label ?? id;
+}
+
 function solutionLabel(solution: ClientSolution): string {
   return solution.url || solution.domain || solution.name || solution.id;
 }
@@ -163,7 +193,7 @@ export function InterventionRequestModal({
 }: InterventionRequestModalProps) {
   const solutions = useMemo(() => client.solutions ?? [], [client.solutions]);
   const [step, setStep] = useState(0);
-  const [service, setService] = useState<InterventionService>("visibility_acquisition");
+  const [service, setService] = useState<InterventionService | null>(null);
   const [solutionIds, setSolutionIds] = useState<string[]>([]);
   const [needs, setNeeds] = useState<InterventionNeed[]>([]);
   const [priority, setPriority] = useState<InterventionPriority>("normal");
@@ -174,10 +204,11 @@ export function InterventionRequestModal({
   const [requestId, setRequestId] = useState<string | null>(null);
   const wasOpen = useRef(false);
 
-  const selectedService = serviceOptions.find((option) => option.id === service) ?? serviceOptions[0];
-  const SelectedServiceIcon = selectedService.icon;
+  const selectedService = service ? serviceOptions.find((option) => option.id === service) ?? null : null;
+  const SelectedServiceIcon = selectedService?.icon;
+  const needOptions = service ? needOptionsByService[service] : [];
   const serviceSolutions = useMemo(
-    () => solutions.filter((solution) => solution.type === service),
+    () => (service ? solutions.filter((solution) => solution.type === service) : []),
     [solutions, service]
   );
   const selectedSolutions = useMemo(
@@ -196,7 +227,7 @@ export function InterventionRequestModal({
     wasOpen.current = true;
 
     setStep(0);
-    setService("visibility_acquisition");
+    setService(null);
     setSolutionIds([]);
     setNeeds([]);
     setPriority("normal");
@@ -226,6 +257,11 @@ export function InterventionRequestModal({
   }, [isOpen, isSubmitting, onClose]);
 
   useEffect(() => {
+    if (!service) {
+      setSolutionIds([]);
+      return;
+    }
+
     setSolutionIds(serviceSolutions.length === 1 ? [serviceSolutions[0].id] : []);
   }, [service, serviceSolutions]);
 
@@ -235,20 +271,24 @@ export function InterventionRequestModal({
 
   function validateStep(index: number): string | null {
     if (index === 0 && !service) {
-      return "Selectionnez le flux concerne.";
+      return "Sélectionnez le flux concerné.";
     }
 
     if (index === 1) {
+      if (!service) {
+        return "Sélectionnez le flux concerné.";
+      }
+
       if (serviceSolutions.length === 0) {
-        return "Aucune solution active ne correspond a ce flux.";
+        return "Aucune solution active ne correspond à ce flux.";
       }
 
       if (solutionIds.length === 0) {
-        return "Selectionnez au moins une solution active.";
+        return "Sélectionnez au moins une solution active.";
       }
 
       if (needs.length === 0) {
-        return "Selectionnez au moins un besoin principal.";
+        return "Sélectionnez au moins un besoin principal.";
       }
     }
 
@@ -311,7 +351,7 @@ export function InterventionRequestModal({
     const oversized = incoming.find((file) => file.size > maxFileSize);
 
     if (oversized) {
-      setFormError(`Le fichier "${oversized.name}" depasse 10 Mo.`);
+      setFormError(`Le fichier "${oversized.name}" dépasse 10 Mo.`);
       return;
     }
 
@@ -338,9 +378,11 @@ export function InterventionRequestModal({
   }
 
   function requestSolutionInfo() {
+    const serviceLabel = selectedService?.label ?? "Fluxperf";
+
     onSupportRequest({
-      subject: `Information ou activation - ${selectedService.label}`,
-      message: `Bonjour,\n\nJe souhaite en savoir plus ou activer une solution ${selectedService.label} pour mon espace client.\n\nMerci.`
+      subject: `Information ou activation - ${serviceLabel}`,
+      message: `Bonjour,\n\nJe souhaite en savoir plus ou activer une solution ${serviceLabel} pour mon espace client.\n\nMerci.`
     });
   }
 
@@ -350,6 +392,12 @@ export function InterventionRequestModal({
     if (firstError) {
       setFormError(firstError);
       setStep(Math.max(0, [0, 1, 2].find((index) => validateStep(index)) ?? 0));
+      return;
+    }
+
+    if (!service) {
+      setFormError("Sélectionnez le flux concerné.");
+      setStep(0);
       return;
     }
 
@@ -371,7 +419,7 @@ export function InterventionRequestModal({
       setFormError(
         error instanceof ApiError
           ? error.message
-          : "La demande n'a pas pu etre transmise. Merci de reessayer."
+          : "La demande n'a pas pu être transmise. Merci de réessayer."
       );
     } finally {
       setIsSubmitting(false);
@@ -397,7 +445,10 @@ export function InterventionRequestModal({
                 key={option.id}
                 onClick={() => {
                   setService(option.id);
+                  setSolutionIds([]);
+                  setNeeds([]);
                   setFormError(null);
+                  setStep(1);
                 }}
               >
                 <Icon aria-hidden="true" />
@@ -415,6 +466,8 @@ export function InterventionRequestModal({
   }
 
   function renderContextStep() {
+    const ContextServiceIcon = SelectedServiceIcon ?? Sparkles;
+
     return (
       <div className="intervention-panel">
         <div className="intervention-panel-heading">
@@ -424,8 +477,8 @@ export function InterventionRequestModal({
 
         <div className="intervention-block">
           <div className="intervention-hint">
-            <SelectedServiceIcon aria-hidden="true" />
-            <span>Solutions actives pour {selectedService.label}</span>
+            <ContextServiceIcon aria-hidden="true" />
+            <span>Solutions actives pour {selectedService?.label ?? "ce flux"}</span>
           </div>
           {serviceSolutions.length > 0 ? (
             <div className="site-picker">
@@ -448,17 +501,17 @@ export function InterventionRequestModal({
             </div>
           ) : (
             <div className="intervention-empty">
-              <span>Aucune solution active n'est rattachee a ce flux.</span>
+              <span>Aucune solution active n'est rattachée à ce flux.</span>
               <button type="button" className="secondary-action" onClick={requestSolutionInfo}>
                 <Sparkles aria-hidden="true" />
-                Contacter l'equipe
+                Contacter l'équipe
               </button>
             </div>
           )}
         </div>
 
         <div className="intervention-block">
-          <h4>Besoin principal</h4>
+          <h4>Besoins principaux</h4>
           <div className="need-grid">
             {needOptions.map((need) => {
               const isSelected = needs.includes(need.id);
@@ -575,9 +628,9 @@ export function InterventionRequestModal({
       return (
         <div className="intervention-success">
           <CheckCircle2 aria-hidden="true" />
-          <h3>Demande recue</h3>
+          <h3>Demande reçue</h3>
           <p>
-            Votre demande a bien ete transmise a l'equipe Fluxperf. Reference :{" "}
+            Votre demande a bien été transmise à l'équipe Fluxperf. Référence :{" "}
             <strong>{requestId}</strong>
           </p>
         </div>
@@ -593,15 +646,15 @@ export function InterventionRequestModal({
         <div className="review-grid">
           <div>
             <small>Service</small>
-            <strong>{selectedService.label}</strong>
+            <strong>{selectedService?.label ?? "Non sélectionné"}</strong>
           </div>
           <div>
-            <small>Priorite</small>
+            <small>Priorité</small>
             <strong>{labelFor(priorityOptions, priority)}</strong>
           </div>
           <div>
             <small>Besoin</small>
-            <strong>{needs.map((need) => labelFor(needOptions, need)).join(", ")}</strong>
+            <strong>{needs.map((need) => labelForNeed(service, need)).join(", ")}</strong>
           </div>
           <div>
             <small>Solution</small>
@@ -616,7 +669,7 @@ export function InterventionRequestModal({
             <p>{message}</p>
           </div>
           <div>
-            <small>Pieces jointes</small>
+            <small>Pièces jointes</small>
             <strong>
               {files.length > 0
                 ? `${files.length} fichier${files.length > 1 ? "s" : ""}`
@@ -662,7 +715,7 @@ export function InterventionRequestModal({
             <Clock aria-hidden="true" />
             Moins de 5 min
           </span>
-          <button type="button" aria-label="Fermer la fenetre" disabled={isSubmitting} onClick={onClose}>
+          <button type="button" aria-label="Fermer la fenêtre" disabled={isSubmitting} onClick={onClose}>
             <X aria-hidden="true" />
           </button>
         </header>
@@ -703,10 +756,12 @@ export function InterventionRequestModal({
                 {formatFileSize(totalFileSize(files))}/15 Mo
               </span>
             </div>
-            <div>
-              <SelectedServiceIcon aria-hidden="true" />
-              <span>{selectedService.label}</span>
-            </div>
+            {selectedService && SelectedServiceIcon ? (
+              <div>
+                <SelectedServiceIcon aria-hidden="true" />
+                <span>{selectedService.label}</span>
+              </div>
+            ) : null}
             {selectedSolutions.length > 0 ? (
               <div>
                 <Globe2 aria-hidden="true" />
@@ -725,7 +780,7 @@ export function InterventionRequestModal({
             <>
               <button type="button" className="secondary-action" disabled={step === 0 || isSubmitting} onClick={goPrevious}>
                 <ArrowLeft aria-hidden="true" />
-                Precedent
+                Précédent
               </button>
               {canSubmit ? (
                 <button type="button" className="primary-action" disabled={isSubmitting} onClick={handleSubmit}>
@@ -733,7 +788,7 @@ export function InterventionRequestModal({
                   Envoyer la demande
                 </button>
               ) : (
-                <button type="button" className="primary-action" disabled={isSubmitting} onClick={goNext}>
+                <button type="button" className="primary-action" disabled={isSubmitting || (step === 0 && !service)} onClick={goNext}>
                   Suivant
                   <ArrowRight aria-hidden="true" />
                 </button>

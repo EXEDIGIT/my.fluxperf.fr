@@ -109,7 +109,7 @@ export function SupportRequestModal({
             <span className="section-kicker">Support Fluxperf</span>
             <h2>Écrire à nos équipes</h2>
           </div>
-          <button type="button" aria-label="Fermer la fenetre" disabled={isSubmitting} onClick={onClose}>
+          <button type="button" aria-label="Fermer la fenêtre" disabled={isSubmitting} onClick={onClose}>
             <X aria-hidden="true" />
           </button>
         </header>

@@ -97,26 +97,26 @@ function loginErrorMessage(error: { message?: string; status?: number }) {
   const message = error.message?.toLowerCase() ?? "";
 
   if (error.status === 429 || message.includes("rate limit")) {
-    return "Une demande vient deja d'etre envoyee. Patientez quelques instants.";
+    return "Une demande vient déjà d'être envoyée. Patientez quelques instants.";
   }
 
   if (message.includes("signup") || message.includes("not found")) {
-    return "Cette adresse n'a pas de compte Supabase autorise.";
+    return "Cette adresse n'est pas autorisée pour la console interne.";
   }
 
-  return "Le lien de connexion admin n'a pas pu etre envoye.";
+  return "Le lien de connexion admin n'a pas pu être envoyé.";
 }
 
 function notificationLabel(notification: AdminCreateClientResponse["notification"]): string {
   if (notification.status === "sent") {
-    return "email envoye";
+    return "email envoyé";
   }
 
   if (notification.status === "failed") {
-    return "email non envoye";
+    return "email non envoyé";
   }
 
-  return "email desactive";
+  return "email désactivé";
 }
 
 function AdminLoginPanel() {
@@ -137,7 +137,7 @@ function AdminLoginPanel() {
     if (!hasSupabaseConfig() || !supabase) {
       setState({
         status: "error",
-        message: "La connexion Supabase n'est pas configuree."
+        message: "La connexion Supabase n'est pas configurée."
       });
       return;
     }
@@ -179,8 +179,8 @@ function AdminLoginPanel() {
           <LockKeyhole aria-hidden="true" />
           Console interne
         </span>
-        <h1>Acces securise Fluxperf</h1>
-        <p>Connexion reservee aux emails internes autorises.</p>
+        <h1>Accès sécurisé Fluxperf</h1>
+        <p>Connexion réservée aux emails internes autorisés.</p>
 
         <form className="admin-login-form" onSubmit={handleSubmit}>
           <label htmlFor="admin-email">Email interne</label>
@@ -204,7 +204,7 @@ function AdminLoginPanel() {
 
         {state.status === "sent" ? (
           <div className="admin-message success" role="status">
-            Lien envoye a {state.email}.
+            Lien envoyé à {state.email}.
           </div>
         ) : null}
 
@@ -257,7 +257,7 @@ export function AdminConsolePage() {
 
         setLoadState({
           status: "error",
-          message: error instanceof Error ? error.message : "Acces interne indisponible."
+          message: error instanceof Error ? error.message : "Accès interne indisponible."
         });
       }
     }
@@ -266,7 +266,7 @@ export function AdminConsolePage() {
       if (!hasSupabaseConfig() || !supabase) {
         setLoadState({
           status: "error",
-          message: "La connexion Supabase n'est pas configuree."
+          message: "La connexion Supabase n'est pas configurée."
         });
         return;
       }
@@ -369,7 +369,7 @@ export function AdminConsolePage() {
     );
 
     if (selectedSolutions.length === 0) {
-      setSubmitError("Selectionnez au moins une solution.");
+      setSubmitError("Sélectionnez au moins une solution.");
       return;
     }
 
@@ -392,7 +392,7 @@ export function AdminConsolePage() {
       setSubmitError(
         error instanceof ApiError
           ? error.message
-          : "Le client n'a pas pu etre cree. Verifiez les informations puis reessayez."
+          : "Le client n'a pas pu être créé. Vérifiez les informations puis réessayez."
       );
     } finally {
       setIsSubmitting(false);
@@ -404,7 +404,7 @@ export function AdminConsolePage() {
       <main className="center-state">
         <img src="/assets/img/logo-fluxperf.svg" alt="Fluxperf" />
         <Loader2 className="loading-icon" aria-hidden="true" />
-        <h1>Verification interne</h1>
+        <h1>Vérification interne</h1>
       </main>
     );
   }
@@ -418,7 +418,7 @@ export function AdminConsolePage() {
       <main className="center-state error-center">
         <img src="/assets/img/logo-fluxperf.svg" alt="Fluxperf" />
         <LockKeyhole aria-hidden="true" />
-        <h1>Acces refuse</h1>
+        <h1>Accès refusé</h1>
         <p>{loadState.message}</p>
         <button type="button" onClick={handleLogout}>
           Changer de compte
@@ -435,8 +435,8 @@ export function AdminConsolePage() {
             <ShieldCheck aria-hidden="true" />
             Zone interne
           </span>
-          <h1>Creation client MyFluxperf</h1>
-          <p>Ajout rapide dans Google Sheets, creation Supabase et notification client.</p>
+          <h1>Création client MyFluxperf</h1>
+          <p>Ajout rapide dans Google Sheets, création Supabase et notification client.</p>
         </div>
         <button type="button" onClick={handleLogout}>
           <LogOut aria-hidden="true" />
@@ -476,7 +476,7 @@ export function AdminConsolePage() {
               />
             </label>
             <label>
-              Prenom contact
+              Prénom contact
               <input
                 value={contactFirstName}
                 onChange={(event) => setContactFirstName(event.target.value)}
@@ -499,7 +499,7 @@ export function AdminConsolePage() {
             <Sparkles aria-hidden="true" />
             <div>
               <h2>Solutions actives</h2>
-              <p>Chaque solution cochee cree une ligne active dans l'onglet Solutions.</p>
+              <p>Chaque solution cochée crée une ligne active dans l'onglet Solutions.</p>
             </div>
           </div>
 
@@ -535,7 +535,7 @@ export function AdminConsolePage() {
                         </button>
                       </div>
                       <label>
-                        Nom affiche
+                        Nom affiché
                         <select
                           value={draft.name}
                           onChange={(event) => updateSolution(option.type, draft.id, { name: event.target.value })}
@@ -578,7 +578,7 @@ export function AdminConsolePage() {
               onChange={(event) => setNotifyClient(event.target.checked)}
             />
             <span>
-              <strong>Envoyer l'email d'ouverture d'acces</strong>
+              <strong>Envoyer l'email d'ouverture d'accès</strong>
               <small>Le client recevra l'adresse du portail et utilisera son email pour demander son lien.</small>
             </span>
           </label>
@@ -592,7 +592,7 @@ export function AdminConsolePage() {
           {success ? (
             <div className="admin-message success" role="status">
               <CheckCircle2 aria-hidden="true" />
-              Client {success.client.companyName} cree : {success.client.id}. Supabase :{" "}
+              Client {success.client.companyName} créé : {success.client.id}. Supabase :{" "}
               {success.supabaseUser.status}. {notificationLabel(success.notification)}.
               {success.notification.reason ? ` ${success.notification.reason}` : ""}
             </div>
@@ -600,7 +600,7 @@ export function AdminConsolePage() {
 
           <button className="admin-submit-button" type="submit" disabled={isSubmitting}>
             {isSubmitting ? <Loader2 className="loading-icon" aria-hidden="true" /> : <Plus aria-hidden="true" />}
-            Creer le client
+            Créer le client
           </button>
         </section>
       </form>

@@ -84,11 +84,11 @@ function validatePayload(payload: IncomingPayload | null): ValidatedPayload | Re
   const message = isString(payload.message) ? payload.message.trim() : "";
 
   if (!firstName) {
-    return jsonError(400, "FIRST_NAME_REQUIRED", "Renseignez votre prenom.");
+    return jsonError(400, "FIRST_NAME_REQUIRED", "Renseignez votre prénom.");
   }
 
   if (firstName.length > 80) {
-    return jsonError(400, "FIRST_NAME_TOO_LONG", "Le prenom doit contenir 80 caracteres maximum.");
+    return jsonError(400, "FIRST_NAME_TOO_LONG", "Le prénom doit contenir 80 caractères maximum.");
   }
 
   if (!lastName) {
@@ -96,7 +96,7 @@ function validatePayload(payload: IncomingPayload | null): ValidatedPayload | Re
   }
 
   if (lastName.length > 80) {
-    return jsonError(400, "LAST_NAME_TOO_LONG", "Le nom doit contenir 80 caracteres maximum.");
+    return jsonError(400, "LAST_NAME_TOO_LONG", "Le nom doit contenir 80 caractères maximum.");
   }
 
   if (!isValidEmail(email)) {
@@ -104,7 +104,7 @@ function validatePayload(payload: IncomingPayload | null): ValidatedPayload | Re
   }
 
   if (email.length > 180) {
-    return jsonError(400, "EMAIL_TOO_LONG", "L'email doit contenir 180 caracteres maximum.");
+    return jsonError(400, "EMAIL_TOO_LONG", "L'email doit contenir 180 caractères maximum.");
   }
 
   if (companyName.length < 2) {
@@ -112,19 +112,19 @@ function validatePayload(payload: IncomingPayload | null): ValidatedPayload | Re
   }
 
   if (companyName.length > 140) {
-    return jsonError(400, "COMPANY_TOO_LONG", "L'entreprise doit contenir 140 caracteres maximum.");
+    return jsonError(400, "COMPANY_TOO_LONG", "L'entreprise doit contenir 140 caractères maximum.");
   }
 
   if (referrer.length > 180) {
-    return jsonError(400, "REFERRER_TOO_LONG", "Le referent doit contenir 180 caracteres maximum.");
+    return jsonError(400, "REFERRER_TOO_LONG", "Le référent doit contenir 180 caractères maximum.");
   }
 
   if (message.length < 10) {
-    return jsonError(400, "MESSAGE_REQUIRED", "Decrivez votre demande en quelques mots.");
+    return jsonError(400, "MESSAGE_REQUIRED", "Décrivez votre demande en quelques mots.");
   }
 
   if (message.length > 4000) {
-    return jsonError(400, "MESSAGE_TOO_LONG", "La description doit contenir 4000 caracteres maximum.");
+    return jsonError(400, "MESSAGE_TOO_LONG", "La description doit contenir 4000 caractères maximum.");
   }
 
   return {
@@ -144,12 +144,12 @@ function requesterName(payload: ValidatedPayload): string {
 function buildBrevoBody(requestId: string, payload: ValidatedPayload) {
   const name = requesterName(payload);
   const escapedMessage = escapeHtml(payload.message).replace(/\n/g, "<br>");
-  const referrerLine = payload.referrer ? `Referent : ${payload.referrer}` : "Referent : non renseigne";
+  const referrerLine = payload.referrer ? `Référent : ${payload.referrer}` : "Référent : non renseigné";
   const referrerHtml = payload.referrer
     ? escapeHtml(payload.referrer)
-    : "non renseigne";
+    : "non renseigné";
   const textContent = [
-    `Reference : ${requestId}`,
+    `Référence : ${requestId}`,
     `Entreprise : ${payload.companyName}`,
     `Demandeur : ${name} <${payload.email}>`,
     referrerLine,
@@ -172,12 +172,12 @@ function buildBrevoBody(requestId: string, payload: ValidatedPayload) {
       email: payload.email,
       name
     },
-    subject: `[MyFluxperf] Demande d'acces - ${payload.companyName}`,
+    subject: `[MyFluxperf] Demande d'accès - ${payload.companyName}`,
     htmlContent: [
-      `<p><strong>Reference :</strong> ${escapeHtml(requestId)}</p>`,
+      `<p><strong>Référence :</strong> ${escapeHtml(requestId)}</p>`,
       `<p><strong>Entreprise :</strong> ${escapeHtml(payload.companyName)}</p>`,
       `<p><strong>Demandeur :</strong> ${escapeHtml(name)} &lt;${escapeHtml(payload.email)}&gt;</p>`,
-      `<p><strong>Referent :</strong> ${referrerHtml}</p>`,
+      `<p><strong>Référent :</strong> ${referrerHtml}</p>`,
       `<p>${escapedMessage}</p>`
     ].join(""),
     textContent
@@ -195,7 +195,7 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
     const brevoApiKey = context.env.BREVO_API_KEY?.trim();
 
     if (!brevoApiKey && isProduction(context.env)) {
-      return jsonError(503, "BREVO_NOT_CONFIGURED", "La demande d'acces est indisponible pour le moment.");
+      return jsonError(503, "BREVO_NOT_CONFIGURED", "La demande d'accès est indisponible pour le moment.");
     }
 
     const requestId = buildRequestId();
@@ -215,7 +215,7 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
     });
 
     if (!brevoResponse.ok) {
-      return jsonError(502, "BREVO_FAILED", "La demande n'a pas pu etre transmise au support.");
+      return jsonError(502, "BREVO_FAILED", "La demande n'a pas pu être transmise au support.");
     }
 
     return json({ status: "received", requestId }, { status: 202 });
@@ -223,7 +223,7 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
     return jsonError(
       500,
       "ACCESS_REQUEST_FAILED",
-      "La demande d'acces est indisponible pour le moment. Merci de reessayer."
+      "La demande d'accès est indisponible pour le moment. Merci de réessayer."
     );
   }
 }

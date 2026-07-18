@@ -777,19 +777,94 @@ svg {
 }
 
 .service-card {
-  min-height: 196px;
+  min-height: 320px;
 }
 
-.service-card span {
-  width: 48px;
-  height: 48px;
+.service-thumbnail {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
   display: grid;
   place-items: center;
-  margin-bottom: 18px;
+  margin-bottom: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 111, 120, 0.16);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(135deg, rgba(231, 244, 243, 0.96), rgba(255, 243, 202, 0.72)),
+    var(--green-soft);
+}
+
+.service-thumbnail::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 4px;
+  background: var(--yellow);
+}
+
+.service-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top center;
+}
+
+.service-thumbnail-placeholder {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  padding: 18px;
+  color: var(--green);
+  text-align: center;
+}
+
+.service-thumbnail-placeholder svg {
+  width: 34px;
+  height: 34px;
+}
+
+.service-thumbnail-placeholder span {
+  max-width: 100%;
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.service-thumbnail small {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  max-width: calc(100% - 20px);
+  padding: 5px 8px;
   border-radius: 999px;
-  background: var(--green);
-  color: var(--white);
-  font-size: 1.35rem;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--green);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.2;
+  box-shadow: 0 6px 14px rgba(8, 45, 66, 0.12);
+}
+
+.service-thumbnail-automation_ai {
+  background:
+    linear-gradient(135deg, rgba(255, 243, 202, 0.94), rgba(231, 244, 243, 0.78)),
+    var(--yellow-soft);
+}
+
+.service-thumbnail-assistant_ai {
+  background:
+    linear-gradient(135deg, rgba(0, 111, 120, 0.12), rgba(255, 255, 255, 0.88)),
+    var(--green-soft);
+}
+
+.service-thumbnail.has-image {
+  background: #eef5f4;
 }
 
 .service-card strong {

@@ -37,7 +37,12 @@ const demoResponse: MeResponse = {
         name: "Flux Visibilité & Acquisition • Site web",
         domain: "a2-cm.fr",
         url: "https://www.a2-cm.fr",
-        activatedAt: "2026-07-06"
+        activatedAt: "2026-07-06",
+        thumbnail: {
+          kind: "website",
+          endpoint: "/api/thumbnails/SOL-0001",
+          placeholderKey: "visibility_acquisition"
+        }
       },
       {
         id: "SOL-0002",
@@ -47,7 +52,42 @@ const demoResponse: MeResponse = {
         name: "Flux Visibilité & Acquisition • Site e-shop",
         domain: "blog.a2-cm.fr",
         url: "https://blog.a2-cm.fr",
-        activatedAt: "2026-07-06"
+        activatedAt: "2026-07-06",
+        thumbnail: {
+          kind: "website",
+          endpoint: "/api/thumbnails/SOL-0002",
+          placeholderKey: "visibility_acquisition"
+        }
+      },
+      {
+        id: "SOL-0003",
+        type: "automation_ai",
+        typeLabel: "Flux Automatisation & IA",
+        status: "Actif",
+        name: "Flux Automatisation & IA - Tableau de bord",
+        domain: "",
+        url: "Centralisation KPIs",
+        activatedAt: "2026-07-06",
+        thumbnail: {
+          kind: "placeholder",
+          endpoint: null,
+          placeholderKey: "automation_ai"
+        }
+      },
+      {
+        id: "SOL-0004",
+        type: "assistant_ai",
+        typeLabel: "Flux Assistant IA",
+        status: "Actif",
+        name: "Flux Assistant IA - Copilote entreprise",
+        domain: "",
+        url: "",
+        activatedAt: "2026-07-06",
+        thumbnail: {
+          kind: "placeholder",
+          endpoint: null,
+          placeholderKey: "assistant_ai"
+        }
       }
     ],
     impact: {
@@ -155,10 +195,27 @@ export type InterventionNeed =
   | "content_update"
   | "technical_issue"
   | "new_creation"
+  | "page_creation"
   | "seo"
   | "advertising_campaign"
+  | "tracking_analytics"
+  | "performance_optimization"
   | "automation"
+  | "dashboard_reporting"
+  | "process_automation"
+  | "tool_integration"
+  | "workflow_issue"
+  | "data_sync"
+  | "ai_prompt_optimization"
+  | "scenario_improvement"
   | "ai_assistant"
+  | "answer_adjustment"
+  | "knowledge_base"
+  | "prompt_instructions"
+  | "access_issue"
+  | "new_capability"
+  | "conversation_analysis"
+  | "user_support"
   | "other";
 
 export type InterventionRequestInput = {
@@ -260,7 +317,7 @@ export async function submitInterventionRequest(
     const contentType = response.headers.get("Content-Type") ?? "";
 
     if (!contentType.includes("application/json")) {
-      throw new ApiError(response.status || 500, "INVALID_RESPONSE", "RÃ©ponse API invalide.");
+      throw new ApiError(response.status || 500, "INVALID_RESPONSE", "Réponse API invalide.");
     }
 
     const data = (await response.json()) as InterventionRequestResponse & ApiErrorResponse;

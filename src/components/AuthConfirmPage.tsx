@@ -49,7 +49,7 @@ export function AuthConfirmPage() {
     if (error) {
       setState({
         status: "error",
-        message: "Ce lien de connexion est invalide ou expire. Demandez un nouveau lien."
+        message: "Ce lien de connexion est invalide ou expiré. Demandez un nouveau lien."
       });
       return;
     }
@@ -73,7 +73,7 @@ export function AuthConfirmPage() {
         {state.status === "error"
           ? state.message
           : canConfirm
-            ? "Cliquez sur le bouton ci-dessous pour acceder a votre espace client Fluxperf."
+            ? "Cliquez sur le bouton ci-dessous pour accéder à votre espace client Fluxperf."
             : "Ce lien de connexion est incomplet. Demandez un nouveau lien."}
       </p>
       {canConfirm && state.status !== "error" ? (

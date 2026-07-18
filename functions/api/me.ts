@@ -19,7 +19,7 @@ export async function onRequestGet(context: PagesContext): Promise<Response> {
       return jsonError(
         403,
         "CLIENT_NOT_CONFIGURED",
-        "Votre acces est authentifie, mais votre espace client n'est pas encore configure. Contactez Fluxperf."
+        "Votre accès est authentifié, mais votre espace client n'est pas encore configuré. Contactez Fluxperf."
       );
     }
 
@@ -33,7 +33,7 @@ export async function onRequestGet(context: PagesContext): Promise<Response> {
     return jsonError(
       503,
       "DATA_UNAVAILABLE",
-      "Les donnees de votre espace client sont indisponibles pour le moment. Merci de reessayer dans quelques instants."
+      "Les données de votre espace client sont indisponibles pour le moment. Merci de réessayer dans quelques instants."
     );
   }
 }

@@ -23,12 +23,15 @@ GOOGLE_ACTIONS_RANGE=Actions!A1:J1000
 GOOGLE_PARAMETERS_RANGE=Parametres!A1:B1000
 GOOGLE_SERVICE_ACCOUNT_EMAIL=
 GOOGLE_PRIVATE_KEY=
+THUMBNAIL_WORKER_URL=
+THUMBNAIL_INTERNAL_SECRET=
 N8N_INTERVENTION_WEBHOOK_URL=
 N8N_INTERVENTION_WEBHOOK_SECRET=
 BREVO_API_KEY=
 ```
 
-Configurer `GOOGLE_PRIVATE_KEY` et `BREVO_API_KEY` comme secrets Cloudflare Pages. Ces cles doivent rester cote serveur.
+Configurer `GOOGLE_PRIVATE_KEY`, `BREVO_API_KEY` et `THUMBNAIL_INTERNAL_SECRET`
+comme secrets Cloudflare Pages. Ces cles doivent rester cote serveur.
 
 ## Checklist Supabase
 
@@ -67,6 +70,18 @@ Configurer `GOOGLE_PRIVATE_KEY` et `BREVO_API_KEY` comme secrets Cloudflare Page
 6. Tester la popin publique de demande d'acces depuis `/login`.
 7. Verifier que l'email de demande d'acces arrive a `support@fluxperf.fr` avec un reply-to demandeur.
 
+## Checklist Vignettes Services Actifs
+
+Procedure detaillee : `docs/cloudflare-thumbnail-service.md`.
+
+1. Verifier que les solutions site web actives dans `Solutions` ont `domaine` et `url_ou_indication`.
+2. Creer le bucket R2 `myfluxperf-thumbnails`.
+3. Deployer le Worker `workers/thumbnail-service` avec `pnpm run thumbnail:deploy`.
+4. Ajouter cote Worker les secrets `INTERNAL_API_BASE_URL=https://my.fluxperf.fr` et `THUMBNAIL_INTERNAL_SECRET`.
+5. Ajouter cote Pages `THUMBNAIL_WORKER_URL` avec l'URL du Worker et le meme `THUMBNAIL_INTERNAL_SECRET`.
+6. Tester `GET /api/internal/thumbnail-sources` via Worker uniquement, jamais depuis le navigateur public.
+7. Lancer un `POST /api/thumbnails/:solution_id/refresh` avec un compte client autorise pour les premieres captures.
+
 ## Test final
 
 1. Deployer sur Cloudflare Pages.
@@ -78,3 +93,4 @@ Configurer `GOOGLE_PRIVATE_KEY` et `BREVO_API_KEY` comme secrets Cloudflare Page
 7. Verifier qu'un email authentifie mais absent du Sheet retourne l'erreur client non configure.
 8. Tester la demande d'intervention native avec et sans piece jointe.
 9. Tester la carte Support, la popin Solutions, le module Impacts et les ressources.
+10. Verifier que les services actifs affichent une vignette site ou un placeholder Fluxperf.

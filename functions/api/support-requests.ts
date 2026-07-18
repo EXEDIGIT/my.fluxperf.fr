@@ -63,15 +63,15 @@ function validatePayload(payload: IncomingPayload | null): ValidatedPayload | Re
   }
 
   if (subject.length > 140) {
-    return jsonError(400, "SUBJECT_TOO_LONG", "L'objet doit contenir 140 caracteres maximum.");
+    return jsonError(400, "SUBJECT_TOO_LONG", "L'objet doit contenir 140 caractères maximum.");
   }
 
   if (message.length < 10) {
-    return jsonError(400, "MESSAGE_REQUIRED", "Decrivez votre demande en quelques mots.");
+    return jsonError(400, "MESSAGE_REQUIRED", "Décrivez votre demande en quelques mots.");
   }
 
   if (message.length > 4000) {
-    return jsonError(400, "MESSAGE_TOO_LONG", "La description doit contenir 4000 caracteres maximum.");
+    return jsonError(400, "MESSAGE_TOO_LONG", "La description doit contenir 4000 caractères maximum.");
   }
 
   return { subject, message };
@@ -90,7 +90,7 @@ function buildBrevoBody(
   const name = requesterName(client, email);
   const escapedMessage = escapeHtml(payload.message).replace(/\n/g, "<br>");
   const textContent = [
-    `Reference : ${requestId}`,
+    `Référence : ${requestId}`,
     `Client : ${client.companyName} (${client.id || "sans id"})`,
     `Demandeur : ${name} <${email}>`,
     `Objet : ${payload.subject}`,
@@ -115,7 +115,7 @@ function buildBrevoBody(
     },
     subject: `[MyFluxperf] ${client.companyName} - ${payload.subject}`,
     htmlContent: [
-      `<p><strong>Reference :</strong> ${escapeHtml(requestId)}</p>`,
+      `<p><strong>Référence :</strong> ${escapeHtml(requestId)}</p>`,
       `<p><strong>Client :</strong> ${escapeHtml(client.companyName)} (${escapeHtml(client.id || "sans id")})</p>`,
       `<p><strong>Demandeur :</strong> ${escapeHtml(name)} &lt;${escapeHtml(email)}&gt;</p>`,
       `<p><strong>Objet :</strong> ${escapeHtml(payload.subject)}</p>`,
@@ -152,7 +152,7 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
       return jsonError(
         403,
         "CLIENT_NOT_CONFIGURED",
-        "Votre acces est authentifie, mais votre espace client n'est pas encore configure."
+        "Votre accès est authentifié, mais votre espace client n'est pas encore configuré."
       );
     }
 
@@ -173,7 +173,7 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
     });
 
     if (!brevoResponse.ok) {
-      return jsonError(502, "BREVO_FAILED", "La demande n'a pas pu etre transmise au support.");
+      return jsonError(502, "BREVO_FAILED", "La demande n'a pas pu être transmise au support.");
     }
 
     return json({ status: "received", requestId }, { status: 202 });
@@ -181,7 +181,7 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
     return jsonError(
       500,
       "SUPPORT_REQUEST_FAILED",
-      "La demande support est indisponible pour le moment. Merci de reessayer."
+      "La demande support est indisponible pour le moment. Merci de réessayer."
     );
   }
 }

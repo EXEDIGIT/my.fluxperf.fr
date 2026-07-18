@@ -268,15 +268,15 @@ export function App() {
         <section className="support-band" id="support">
           <div>
             <span className="section-kicker">Support Fluxperf</span>
-            <h2>Une question specifique ?</h2>
-            <p>Notre equipe reste disponible pour echanger sur votre projet et vos demandes.</p>
+            <h2>Une question spécifique ?</h2>
+            <p>Notre équipe reste disponible pour échanger sur votre projet et vos demandes.</p>
           </div>
           <button
             type="button"
             onClick={() => openSupportRequest()}
           >
             <MessageCircle aria-hidden="true" />
-            Contacter l'equipe
+            Contacter l'équipe
           </button>
         </section>
       </main>

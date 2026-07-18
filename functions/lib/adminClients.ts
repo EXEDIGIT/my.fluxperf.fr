@@ -127,7 +127,7 @@ export function validateAdminClientInput(
   }
 
   if (!contactFirstName && !contactLastName) {
-    return "Renseignez au moins le prenom ou le nom du contact.";
+    return "Renseignez au moins le prénom ou le nom du contact.";
   }
 
   if (!isValidEmail(email)) {
@@ -135,25 +135,25 @@ export function validateAdminClientInput(
   }
 
   if (!Array.isArray(payload.solutions) || payload.solutions.length === 0) {
-    return "Selectionnez au moins une solution Fluxperf.";
+    return "Sélectionnez au moins une solution Fluxperf.";
   }
 
   const solutions = payload.solutions.map((item): AdminClientInput["solutions"][number] | string => {
     if (!isRecord(item)) {
-      return "Une solution selectionnee est invalide.";
+      return "Une solution sélectionnée est invalide.";
     }
 
     const type = asText(item.type) as AdminSolutionType;
 
     if (!solutionOptions.some((option) => option.type === type)) {
-      return "Une solution selectionnee est invalide.";
+      return "Une solution sélectionnée est invalide.";
     }
 
     const urlOrIndication = asText(item.urlOrIndication) || asText(item.url);
     const name = asText(item.name) || defaultNameForType(solutionOptions, type);
 
     if (!optionAllowsSolution(solutionOptions, type, name)) {
-      return "Le nom de solution selectionne est invalide.";
+      return "Le nom de solution sélectionné est invalide.";
     }
 
     return {
@@ -211,7 +211,7 @@ export function buildAdminClientRows(input: AdminClientInput, now = new Date()):
     "Oui",
     "Actif",
     date,
-    "Cree depuis la zone interne"
+    "Créé depuis la zone interne"
   ];
   const solutionRows = input.solutions.map((solution) => [
     buildId("SOL", now),
@@ -260,7 +260,7 @@ export async function sendClientWelcomeEmail(
     return {
       status: "skipped",
       email,
-      reason: "Notification client desactivee."
+      reason: "Notification client désactivée."
     };
   }
 
@@ -272,7 +272,7 @@ export async function sendClientWelcomeEmail(
     return {
       status: "skipped",
       email,
-      reason: "Brevo non configure en local."
+      reason: "Brevo non configuré en local."
     };
   }
 
@@ -280,18 +280,18 @@ export async function sendClientWelcomeEmail(
   const name = compactName(input.contactFirstName, input.contactLastName) || input.companyName;
   const htmlContent = [
     `<p>Bonjour ${escapeHtml(name)},</p>`,
-    `<p>Votre espace client MyFluxperf est pret pour ${escapeHtml(input.companyName)}.</p>`,
-    `<p>Vous pouvez demander votre lien de connexion securise depuis <a href="${escapeHtml(accessUrl)}">${escapeHtml(accessUrl)}</a> avec cette adresse email : <strong>${escapeHtml(email)}</strong>.</p>`,
-    "<p>A tres vite,<br>L'equipe Fluxperf</p>"
+    `<p>Votre espace client MyFluxperf est prêt pour ${escapeHtml(input.companyName)}.</p>`,
+    `<p>Vous pouvez demander votre lien de connexion sécurisé depuis <a href="${escapeHtml(accessUrl)}">${escapeHtml(accessUrl)}</a> avec cette adresse email : <strong>${escapeHtml(email)}</strong>.</p>`,
+    "<p>À très vite,<br>L'équipe Fluxperf</p>"
   ].join("");
   const textContent = [
     `Bonjour ${name},`,
     "",
-    `Votre espace client MyFluxperf est pret pour ${input.companyName}.`,
-    `Vous pouvez demander votre lien de connexion securise depuis ${accessUrl} avec cette adresse email : ${email}.`,
+    `Votre espace client MyFluxperf est prêt pour ${input.companyName}.`,
+    `Vous pouvez demander votre lien de connexion sécurisé depuis ${accessUrl} avec cette adresse email : ${email}.`,
     "",
-    "A tres vite,",
-    "L'equipe Fluxperf"
+    "À très vite,",
+    "L'équipe Fluxperf"
   ].join("\n");
   const response = await fetcher("https://api.brevo.com/v3/smtp/email", {
     method: "POST",
@@ -311,7 +311,7 @@ export async function sendClientWelcomeEmail(
           name
         }
       ],
-      subject: "Votre espace MyFluxperf est pret",
+      subject: "Votre espace MyFluxperf est prêt",
       htmlContent,
       textContent
     })

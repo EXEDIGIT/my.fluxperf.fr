@@ -25,14 +25,14 @@ function signInErrorMessage(error: { message?: string; status?: number }) {
   const message = error.message?.toLowerCase() ?? "";
 
   if (error.status === 429 || message.includes("rate limit") || message.includes("security purposes")) {
-    return "Une demande de connexion vient deja d'etre envoyee. Patientez quelques instants, puis demandez un nouveau lien.";
+    return "Une demande de connexion vient déjà d'être envoyée. Patientez quelques instants, puis demandez un nouveau lien.";
   }
 
   if (message.includes("signup") || message.includes("user not found") || message.includes("not found")) {
-    return "Cette adresse email ne semble pas rattachee a un espace Fluxperf. Verifiez l'adresse ou contactez le support.";
+    return "Cette adresse email ne semble pas rattachée à un espace Fluxperf. Vérifiez l'adresse ou contactez le support.";
   }
 
-  return "Le lien de connexion n'a pas pu etre envoye pour le moment. Patientez quelques instants, puis reessayez.";
+  return "Le lien de connexion n'a pas pu être envoyé pour le moment. Patientez quelques instants, puis réessayez.";
 }
 
 export function LoginPage() {
@@ -72,7 +72,7 @@ export function LoginPage() {
     if (!hasSupabaseConfig() || !supabase) {
       setState({
         status: "error",
-        message: "La connexion Fluxperf n'est pas encore configuree."
+        message: "La connexion Fluxperf n'est pas encore configurée."
       });
       return;
     }
@@ -113,7 +113,7 @@ export function LoginPage() {
 
   return (
     <main className="auth-page">
-      <section className="auth-panel" aria-label="Connexion a MyFluxperf">
+      <section className="auth-panel" aria-label="Connexion à MyFluxperf">
         <div className="auth-brand">
           <img src="/assets/img/logo-fluxperf.svg" alt="Fluxperf" />
           <span>MyFluxperf</span>
@@ -122,10 +122,10 @@ export function LoginPage() {
         <div className="auth-copy">
           <span className="auth-kicker">
             <ShieldCheck aria-hidden="true" />
-            Espace client securise
+            Espace client sécurisé
           </span>
-          <h1>Connexion a votre espace client</h1>
-          <p>Recevez un lien de connexion sur l'adresse email rattachee a votre espace Fluxperf.</p>
+          <h1>Connexion à votre espace client</h1>
+          <p>Recevez un lien de connexion sur l'adresse email rattachée à votre espace Fluxperf.</p>
         </div>
 
         <form className="auth-form" onSubmit={handleSubmit}>
@@ -156,8 +156,8 @@ export function LoginPage() {
 
         {state.status === "sent" ? (
           <div className="auth-message success" role="status">
-            <strong>Lien envoye</strong>
-            <p>Consultez la boite mail de {state.email}. Le lien expire automatiquement.</p>
+            <strong>Lien envoyé</strong>
+            <p>Consultez la boîte mail de {state.email}. Le lien expire automatiquement.</p>
             {isCoolingDown ? <p>Vous pourrez demander un nouveau lien dans {cooldownRemaining}s.</p> : null}
           </div>
         ) : null}
@@ -171,7 +171,7 @@ export function LoginPage() {
 
         <button className="auth-support" type="button" onClick={() => setIsAccessRequestOpen(true)}>
           <LifeBuoy aria-hidden="true" />
-          Demander un acces a MyFluxperf
+          Demander un accès à MyFluxperf
         </button>
       </section>
 

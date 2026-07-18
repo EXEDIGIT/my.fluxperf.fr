@@ -1,4 +1,12 @@
-import type { ClientDto, ClientImpactDto, ClientImpactKey, ClientSolutionDto, RawClientRow } from "./types";
+import type {
+  ClientDto,
+  ClientImpactDto,
+  ClientImpactKey,
+  ClientSolutionDto,
+  ClientSolutionThumbnailDto,
+  RawClientRow,
+  ThumbnailSourceDto
+} from "./types";
 
 const expectedColumns: Array<keyof RawClientRow> = [
   "client_id",
@@ -42,7 +50,7 @@ export const demoSheetValues: string[][] = [
     "/ressources",
     "Tristan",
     "hello@fluxperf.fr",
-    "Demande de modification envoyee",
+    "Demande de modification envoyée",
     "Il y a 2h",
     "Rapport mensuel disponible",
     "Il y a 1j",
@@ -269,11 +277,11 @@ function labelFromActionRecord(action: SheetRecord): string {
   const type = getValue(action, "type_action");
 
   if (type === "intervention_request") {
-    return "Demande d'intervention envoyee";
+    return "Demande d'intervention envoyée";
   }
 
   if (type === "support_request") {
-    return "Message support envoye";
+    return "Message support envoyé";
   }
 
   return type || "Action Fluxperf";
@@ -343,6 +351,120 @@ function domainFromUrl(value: string): string {
   } catch {
     return "";
   }
+}
+
+function urlFromUrlOrIndication(value: string): URL | null {
+  const text = value.trim();
+
+  if (!text || /\s/.test(text)) {
+    return null;
+  }
+
+  const candidate = /^https?:\/\//i.test(text) ? text : isLikelyUrl(text) ? `https://${text}` : "";
+
+  if (!candidate) {
+    return null;
+  }
+
+  try {
+    const url = new URL(candidate);
+
+    return url.protocol === "http:" || url.protocol === "https:" ? url : null;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeHostname(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/^\[|\]$/g, "")
+    .replace(/\.$/, "")
+    .replace(/^www\./, "");
+}
+
+function ipv4Parts(hostname: string): number[] | null {
+  if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(hostname)) {
+    return null;
+  }
+
+  const parts = hostname.split(".").map(Number);
+
+  return parts.every((part) => Number.isInteger(part) && part >= 0 && part <= 255) ? parts : null;
+}
+
+function isBlockedIpv4(hostname: string): boolean {
+  const parts = ipv4Parts(hostname);
+
+  if (!parts) {
+    return false;
+  }
+
+  const [first, second] = parts;
+
+  return (
+    first === 0 ||
+    first === 10 ||
+    first === 127 ||
+    first >= 224 ||
+    (first === 100 && second >= 64 && second <= 127) ||
+    (first === 169 && second === 254) ||
+    (first === 172 && second >= 16 && second <= 31) ||
+    (first === 192 && second === 168) ||
+    (first === 198 && (second === 18 || second === 19))
+  );
+}
+
+function isBlockedHostname(hostname: string): boolean {
+  const normalized = normalizeHostname(hostname);
+
+  if (!normalized) {
+    return true;
+  }
+
+  if (normalized.includes(":")) {
+    return (
+      normalized === "::1" ||
+      normalized.startsWith("fc") ||
+      normalized.startsWith("fd") ||
+      normalized.startsWith("fe80")
+    );
+  }
+
+  return (
+    normalized === "localhost" ||
+    normalized.endsWith(".localhost") ||
+    normalized.endsWith(".local") ||
+    isBlockedIpv4(normalized)
+  );
+}
+
+function hostnameMatchesDomain(hostname: string, domain: string): boolean {
+  const normalizedHost = normalizeHostname(hostname);
+  const normalizedDomain = normalizeHostname(domain);
+
+  if (!normalizedHost || !normalizedDomain) {
+    return false;
+  }
+
+  return normalizedHost === normalizedDomain || normalizedHost.endsWith(`.${normalizedDomain}`);
+}
+
+export function thumbnailSourceUrl(urlOrIndication: string, domain: string): string {
+  const url = urlFromUrlOrIndication(urlOrIndication);
+
+  if (!url || url.username || url.password || isBlockedHostname(url.hostname)) {
+    return "";
+  }
+
+  const expectedDomain = domain || domainFromUrl(url.href);
+
+  if (!hostnameMatchesDomain(url.hostname, expectedDomain)) {
+    return "";
+  }
+
+  return url.href;
 }
 
 function isAffirmative(value: string): boolean {
@@ -592,6 +714,68 @@ function activeSolutionsForClient(client: SheetRecord, solutions: SheetRecord[])
   });
 }
 
+function activeClientIdsFromWorkbook(workbook: ClientWorkbookValues): Set<string> {
+  const structuredClients = hasStructuredClientHeaders(workbook.clients);
+
+  return new Set(
+    parseRecords(workbook.clients)
+      .filter((client) =>
+        structuredClients
+          ? clientIsActive(client)
+          : isActiveStatus(getValue(client, "status", "statut_client"))
+      )
+      .map((client) => getValue(client, "client_id"))
+      .filter(Boolean)
+  );
+}
+
+function thumbnailSourceFromSolution(solution: SheetRecord): ThumbnailSourceDto | null {
+  const type = solutionImpactKey(solution);
+
+  if (type !== "visibility_acquisition") {
+    return null;
+  }
+
+  if (!isActiveStatus(getValue(solution, "statut_solution", "status", "statut"))) {
+    return null;
+  }
+
+  const solutionId = getValue(solution, "solution_id", "id");
+  const clientId = getValue(solution, "client_id");
+  const urlOrIndication = getValue(solution, "url_ou_indication", "url");
+  const domain = getValue(solution, "domaine", "domain") || domainFromUrl(urlOrIndication);
+  const sourceUrl = thumbnailSourceUrl(urlOrIndication, domain);
+
+  if (!solutionId || !clientId || !sourceUrl) {
+    return null;
+  }
+
+  return {
+    solutionId,
+    clientId,
+    type,
+    typeLabel: solutionTypeLabel(type, solution),
+    name:
+      getValue(solution, "nom_solution", "name", "nom", "solution") ||
+      solutionTypeLabel(type, solution),
+    domain,
+    url: sourceUrl
+  };
+}
+
+export function getThumbnailSourcesFromWorkbook(workbook: ClientWorkbookValues): ThumbnailSourceDto[] {
+  const activeClientIds = activeClientIdsFromWorkbook(workbook);
+
+  if (activeClientIds.size === 0) {
+    return [];
+  }
+
+  return parseRecords(workbook.solutions ?? [])
+    .filter((solution) => activeClientIds.has(getValue(solution, "client_id")))
+    .map(thumbnailSourceFromSolution)
+    .filter((source): source is ThumbnailSourceDto => Boolean(source));
+}
+
 function solutionTypeLabel(type: ClientImpactKey | null, solution: SheetRecord): string {
   const officialLabels: Record<ClientImpactKey, string> = {
     visibility_acquisition: "Flux Visibilité & Acquisition",
@@ -602,6 +786,26 @@ function solutionTypeLabel(type: ClientImpactKey | null, solution: SheetRecord):
   return type ? officialLabels[type] : getValue(solution, "type_solution", "type", "solution_type");
 }
 
+function thumbnailPlaceholderKey(type: ClientImpactKey | null): ClientImpactKey {
+  return type ?? "automation_ai";
+}
+
+function thumbnailForSolution(
+  id: string,
+  type: ClientImpactKey | null,
+  url: string,
+  domain: string
+): ClientSolutionThumbnailDto {
+  const sourceUrl = thumbnailSourceUrl(url, domain);
+  const hasWebsiteThumbnail = type === "visibility_acquisition" && Boolean(sourceUrl);
+
+  return {
+    kind: hasWebsiteThumbnail ? "website" : "placeholder",
+    endpoint: hasWebsiteThumbnail ? `/api/thumbnails/${encodeURIComponent(id)}` : null,
+    placeholderKey: thumbnailPlaceholderKey(type)
+  };
+}
+
 function solutionRecordToDto(solution: SheetRecord): ClientSolutionDto {
   const url = getValue(solution, "url_ou_indication", "url");
   const domain = getValue(solution, "domaine", "domain") || domainFromUrl(url);
@@ -610,16 +814,18 @@ function solutionRecordToDto(solution: SheetRecord): ClientSolutionDto {
     getValue(solution, "nom_solution", "name", "nom", "solution") ||
     solutionTypeLabel(type, solution) ||
     "Solution Fluxperf";
+  const id = getValue(solution, "solution_id", "id") || name || domain || url;
 
   return {
-    id: getValue(solution, "solution_id", "id") || name || domain || url,
+    id,
     type: type ?? getValue(solution, "type_solution", "type", "solution_type"),
     typeLabel: solutionTypeLabel(type, solution),
     status: getValue(solution, "statut_solution", "status", "statut") || "Actif",
     name,
     domain,
     url,
-    activatedAt: getValue(solution, "date_activation", "activated_at", "date")
+    activatedAt: getValue(solution, "date_activation", "activated_at", "date"),
+    thumbnail: thumbnailForSolution(id, type, url, domain)
   };
 }
 
@@ -674,7 +880,7 @@ function latestActionsFromStructuredClient(client: SheetRecord, solutions: Sheet
 
   if (updateDate) {
     actions.push({
-      label: "Fiche client mise a jour",
+      label: "Fiche client mise à jour",
       date: updateDate
     });
   }
@@ -690,7 +896,7 @@ function latestActionsFromStructuredClient(client: SheetRecord, solutions: Sheet
 
   if (creationDate && actions.length < 3) {
     actions.push({
-      label: "Espace client cree",
+      label: "Espace client créé",
       date: creationDate
     });
   }

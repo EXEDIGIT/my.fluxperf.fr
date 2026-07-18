@@ -49,7 +49,7 @@ export function AuthCallbackPage() {
       const callbackError = searchParams.get("error_description") || searchParams.get("error");
 
       if (!supabase || callbackError) {
-        throw new Error("Lien de connexion invalide ou expire.");
+        throw new Error("Lien de connexion invalide ou expiré.");
       }
 
       if (code) {
@@ -62,7 +62,7 @@ export function AuthCallbackPage() {
         const hashSession = getHashSession();
 
         if (!hashSession) {
-          throw new Error("Lien de connexion invalide ou expire.");
+          throw new Error("Lien de connexion invalide ou expiré.");
         }
 
         const { error } = await supabase.auth.setSession(hashSession);
@@ -80,7 +80,7 @@ export function AuthCallbackPage() {
       if (isMounted) {
         setState({
           status: "error",
-          message: "Ce lien de connexion est invalide ou expire. Demandez un nouveau lien."
+          message: "Ce lien de connexion est invalide ou expiré. Demandez un nouveau lien."
         });
       }
     });
@@ -107,7 +107,7 @@ export function AuthCallbackPage() {
       <img src="/assets/img/logo-fluxperf.svg" alt="Fluxperf" />
       <LoaderCircle className="loading-icon" aria-hidden="true" />
       <h1>Connexion en cours</h1>
-      <p>Nous securisons votre session Fluxperf.</p>
+      <p>Nous sécurisons votre session Fluxperf.</p>
     </main>
   );
 }

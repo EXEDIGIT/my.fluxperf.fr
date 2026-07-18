@@ -31,7 +31,7 @@ async function responseBody(response: Response) {
 const validPayload = {
   service: "automation_ai",
   solutionIds: ["SOL-DEMO-2"],
-  needs: ["automation"],
+  needs: ["process_automation"],
   priority: "normal",
   message: "Merci de verifier cette automatisation client."
 };

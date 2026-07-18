@@ -10,27 +10,27 @@ function getErrorContent(error: unknown) {
     if (error.status === 401) {
       return {
         title: "Connexion requise",
-        message: "Connectez-vous a votre espace Fluxperf pour continuer."
+        message: "Connectez-vous à votre espace Fluxperf pour continuer."
       };
     }
 
     if (error.status === 403) {
       return {
-        title: "Espace client non configure",
+        title: "Espace client non configuré",
         message:
-          "Votre adresse est authentifiee, mais aucun espace client Fluxperf n'est encore rattache a cet email."
+          "Votre adresse est authentifiée, mais aucun espace client Fluxperf n'est encore rattaché à cet email."
       };
     }
 
     return {
-      title: "Donnees indisponibles",
+      title: "Données indisponibles",
       message: error.message
     };
   }
 
   return {
-    title: "Donnees indisponibles",
-    message: "Une erreur empeche l'affichage de votre espace client pour le moment."
+    title: "Données indisponibles",
+    message: "Une erreur empêche l'affichage de votre espace client pour le moment."
   };
 }
 

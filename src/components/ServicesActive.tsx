@@ -1,4 +1,6 @@
-import { Bot, Globe2, Megaphone, MonitorSmartphone, Sparkles, Wrench, Zap } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Bot, Globe2, Megaphone, MonitorSmartphone, Sparkles, Wrench, Zap, type LucideIcon } from "lucide-react";
+import { getSupabaseAccessToken } from "../lib/supabase";
 import type { Client } from "../types/client";
 
 type ServicesActiveProps = {
@@ -28,11 +30,11 @@ function descriptionForService(service: string) {
   const normalized = normalizeService(service);
 
   if (normalized.includes("assistant")) {
-    return "Assistant IA actif, suivi avec son contexte metier et ses evolutions utiles.";
+    return "Assistant IA actif, suivi avec son contexte métier et ses évolutions utiles.";
   }
 
   if (normalized.includes("automatisation")) {
-    return "Automatisations, integrations et workflows IA rattaches a votre compte.";
+    return "Automatisations, intégrations et workflows IA rattachés à votre compte.";
   }
 
   if (normalized.includes("visibil") || normalized.includes("ads") || normalized.includes("sea")) {
@@ -40,10 +42,10 @@ function descriptionForService(service: string) {
   }
 
   if (normalized.includes("site")) {
-    return "Site rattache a votre espace client avec les informations de suivi a jour.";
+    return "Site rattaché à votre espace client avec les informations de suivi à jour.";
   }
 
-  return "Suivi dans votre espace client avec les informations et acces utiles a jour.";
+  return "Suivi dans votre espace client avec les informations et accès utiles à jour.";
 }
 
 function solutionDetail(solution: Client["solutions"][number]): string {
@@ -52,6 +54,121 @@ function solutionDetail(solution: Client["solutions"][number]): string {
 
 function descriptionForSolution(solution: Client["solutions"][number]) {
   return descriptionForService(`${solution.typeLabel} ${solution.name}`);
+}
+
+function placeholderLabel(solution: Client["solutions"][number]): string {
+  if (solution.thumbnail.placeholderKey === "assistant_ai") {
+    return "Assistant IA";
+  }
+
+  if (solution.thumbnail.placeholderKey === "automation_ai") {
+    return "Automatisation & IA";
+  }
+
+  return "Visibilité & Acquisition";
+}
+
+function ServiceThumbnail({
+  solution,
+  Icon
+}: {
+  solution: Client["solutions"][number];
+  Icon: LucideIcon;
+}) {
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [status, setStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const endpoint = solution.thumbnail.kind === "website" ? solution.thumbnail.endpoint : null;
+
+  useEffect(() => {
+    let isCurrent = true;
+    let objectUrl: string | null = null;
+
+    setImageUrl(null);
+
+    if (!endpoint) {
+      setStatus("idle");
+
+      return () => {
+        isCurrent = false;
+      };
+    }
+
+    async function loadThumbnail() {
+      try {
+        setStatus("loading");
+        const token = await getSupabaseAccessToken();
+        const response = await fetch(endpoint as string, {
+          headers: token
+            ? {
+                Authorization: `Bearer ${token}`
+              }
+            : undefined
+        });
+        const contentType = response.headers.get("Content-Type") ?? "";
+
+        if (!response.ok || !contentType.startsWith("image/")) {
+          throw new Error("Thumbnail unavailable.");
+        }
+
+        const blob = await response.blob();
+        objectUrl = URL.createObjectURL(blob);
+
+        if (isCurrent) {
+          setImageUrl(objectUrl);
+          setStatus("ready");
+        } else {
+          URL.revokeObjectURL(objectUrl);
+          objectUrl = null;
+        }
+      } catch {
+        if (isCurrent) {
+          setStatus("error");
+        }
+      }
+    }
+
+    void loadThumbnail();
+
+    return () => {
+      isCurrent = false;
+
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [endpoint]);
+
+  const shouldShowPlaceholder = !imageUrl;
+
+  return (
+    <div
+      className={`service-thumbnail service-thumbnail-${solution.thumbnail.placeholderKey} ${
+        imageUrl ? "has-image" : ""
+      } ${status === "loading" ? "is-loading" : ""} ${status === "error" ? "is-error" : ""}`}
+      aria-busy={status === "loading" ? "true" : undefined}
+    >
+      {imageUrl ? (
+        <img src={imageUrl} alt={`Aperçu ${solution.name || solution.typeLabel}`} />
+      ) : (
+        <div className="service-thumbnail-placeholder" aria-label={placeholderLabel(solution)}>
+          <Icon aria-hidden="true" />
+          <span>{placeholderLabel(solution)}</span>
+        </div>
+      )}
+      {shouldShowPlaceholder && status === "loading" ? <small>Capture en préparation</small> : null}
+    </div>
+  );
+}
+
+function FallbackServiceThumbnail({ service, Icon }: { service: string; Icon: LucideIcon }) {
+  return (
+    <div className="service-thumbnail service-thumbnail-generic">
+      <div className="service-thumbnail-placeholder" aria-label={service}>
+        <Icon aria-hidden="true" />
+        <span>{service}</span>
+      </div>
+    </div>
+  );
 }
 
 export function ServicesActive({ services, solutions }: ServicesActiveProps) {
@@ -71,9 +188,7 @@ export function ServicesActive({ services, solutions }: ServicesActiveProps) {
 
           return (
             <article className="service-card" key={solution.id}>
-              <span>
-                <Icon aria-hidden="true" />
-              </span>
+              <ServiceThumbnail solution={solution} Icon={Icon} />
               <strong>{solution.name || solution.typeLabel}</strong>
               <p>{detail}</p>
               <p>{descriptionForSolution(solution)}</p>
@@ -84,9 +199,7 @@ export function ServicesActive({ services, solutions }: ServicesActiveProps) {
 
           return (
             <article className="service-card" key={`${service}-${index}`}>
-              <span>
-                <Icon aria-hidden="true" />
-              </span>
+              <FallbackServiceThumbnail service={service} Icon={Icon} />
               <strong>{service}</strong>
               <p>{descriptionForService(service)}</p>
             </article>

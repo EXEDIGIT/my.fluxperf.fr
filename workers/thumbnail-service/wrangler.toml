@@ -1,0 +1,28 @@
+name = "myfluxperf-thumbnail-service"
+main = "src/index.ts"
+compatibility_date = "2026-07-18"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+[vars]
+THUMBNAIL_MAX_AGE_DAYS = "7"
+THUMBNAIL_CRON_BATCH_SIZE = "10"
+
+[browser]
+binding = "BROWSER"
+remote = true
+
+[[r2_buckets]]
+binding = "THUMBNAILS_BUCKET"
+bucket_name = "myfluxperf-thumbnails"
+
+[[ratelimits]]
+name = "REFRESH_RATE_LIMITER"
+namespace_id = "2026071801"
+
+[ratelimits.simple]
+limit = 5
+period = 60
+
+[triggers]
+crons = ["0 4 * * 1"]

@@ -20,6 +20,9 @@ Imagine le portail comme une agence FluxPerf avec plusieurs personnes a l'accuei
 | React/Vite | La salle d'accueil client | Affiche le dashboard, les cartes, les services et les ressources |
 | `/api/me` | Le guichet prive | Recupere l'email connecte et retourne une seule fiche client |
 | Pages Functions | Le bureau cote serveur | Execute le code API sur Cloudflare, sans exposer les secrets au navigateur |
+| Thumbnail Worker | Le photographe interne | Sert et rafraichit les vignettes de services actifs par `solution_id` |
+| Cloudflare R2 | Le casier images | Stocke durablement les captures homepage des solutions site web |
+| Browser Run | L'appareil photo headless | Genere les screenshots de homepage depuis les URL autorisees |
 | Google Sheet | Le classeur clients | Contient les donnees clients, contacts, solutions et actions |
 | Google Service Account | Le badge lecteur | Autorise l'API a lire le Google Sheet sans compte humain |
 | Google Sheets API | Le bibliothecaire | Donne les lignes demandees au serveur apres verification du badge |
@@ -58,6 +61,8 @@ flowchart LR
   GS --> DB["Google Sheet<br/>Clients / Contacts / Solutions / Actions"]
   DB --> API
   API --> P
+  P --> THAPI["/api/thumbnails/:solution_id"]
+  THAPI --> TH["Thumbnail Worker<br/>R2 / Browser Run"]
   P --> REQ["/api/intervention-requests"]
   REQ --> N8N["n8n webhook"]
 ```
@@ -99,9 +104,16 @@ GOOGLE_PRIVATE_KEY=...
 CF_ACCESS_HOSTNAME=my.fluxperf.fr
 N8N_INTERVENTION_WEBHOOK_URL=...
 N8N_INTERVENTION_WEBHOOK_SECRET=...
+THUMBNAIL_WORKER_URL=https://myfluxperf-thumbnail-service.<account>.workers.dev
+THUMBNAIL_INTERNAL_SECRET=...
 ```
 
 `GOOGLE_PRIVATE_KEY` doit rester en secret Cloudflare. Elle ne doit jamais etre mise dans GitHub.
+
+Le Worker vignettes a sa propre configuration dans `workers/thumbnail-service`.
+Il utilise le bucket R2 `myfluxperf-thumbnails`, le binding Browser Run
+`BROWSER`, le binding Rate Limiting `REFRESH_RATE_LIMITER` et le cron
+hebdomadaire `0 4 * * 1`.
 
 ## Securite
 
@@ -111,6 +123,9 @@ Ce qui protege les donnees :
 - `/api/me` ignore les emails simules en production.
 - L'API ne renvoie qu'un seul client : celui associe a l'email connecte.
 - `/api/intervention-requests` reverifie l'identite et refuse les solutions non rattachees au client.
+- `/api/thumbnails/:solution_id` reverifie l'identite et refuse les solutions non rattachees au client.
+- Le Worker n'accepte jamais d'URL depuis le frontend ; il relit les sources autorisees via un endpoint interne protege.
+- Les captures bloquent localhost, IP privees, IP locales, protocoles non HTTP(S) et domaines qui ne correspondent pas a `Solutions.domaine`.
 - La cle Google reste cote Cloudflare Pages Functions.
 - Le navigateur ne voit jamais la feuille complete ni la cle privee.
 - L'URL `pages.dev` ne doit pas servir de portail client principal.
@@ -123,6 +138,7 @@ Ce qui protege les donnees :
 | `CLIENT_NOT_CONFIGURED` | L'utilisateur est connecte mais aucun client actif ne correspond | Verifier `email_principal`, `Contacts.email`, `statut_client`, `espace_client_actif` |
 | `DATA_UNAVAILABLE` | L'API n'arrive pas a lire Google Sheets | Verifier variables Cloudflare, cle privee, partage du Sheet au Service Account, onglets/ranges |
 | `WEBHOOK_FAILED` | n8n n'a pas accepte une demande | Verifier le workflow n8n, l'URL webhook et le secret partage |
+| `THUMBNAIL_UNAVAILABLE` | Une vignette n'est pas prete ou le Worker ne repond pas | Verifier R2, Worker, secret interne et premiere capture |
 
 ## Checklist de reprise pour un developpeur
 

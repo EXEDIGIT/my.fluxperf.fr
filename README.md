@@ -71,6 +71,8 @@ GOOGLE_CONTACTS_WRITE_RANGE=Contacts!A:J
 GOOGLE_SOLUTIONS_WRITE_RANGE=Solutions!A:I
 GOOGLE_SERVICE_ACCOUNT_EMAIL=
 GOOGLE_PRIVATE_KEY=
+THUMBNAIL_WORKER_URL=
+THUMBNAIL_INTERNAL_SECRET=
 N8N_INTERVENTION_WEBHOOK_URL=
 N8N_INTERVENTION_WEBHOOK_SECRET=
 BREVO_API_KEY=
@@ -171,6 +173,38 @@ compatibilite.
 La colonne `url_ou_indication` accepte soit une URL, soit une indication de
 service. Elle est conservee telle que saisie ; si la valeur n'est pas une URL,
 `domaine` reste vide.
+
+## Vignettes des services actifs
+
+Les cartes "Services actifs" utilisent toujours `Solutions` comme source unique.
+Pour chaque solution active, `/api/me` ajoute une propriete `thumbnail` :
+
+- `Flux Visibilite & Acquisition` avec URL capturable : vignette privee via `/api/thumbnails/:solution_id` ;
+- `Flux Automatisation & IA` et `Flux Assistant IA` : placeholder local standardise ;
+- aucune URL libre n'est acceptee depuis le frontend.
+
+Le navigateur appelle `/api/thumbnails/:solution_id` avec le jeton Supabase. La
+Pages Function reverifie que la solution appartient au client connecte, puis
+relaie vers le Worker `myfluxperf-thumbnail-service` avec un secret interne.
+
+Le Worker est dans `workers/thumbnail-service` et utilise :
+
+- R2 bucket `myfluxperf-thumbnails` ;
+- Browser Run binding `BROWSER` ;
+- Cache API avant lecture R2 ;
+- Rate Limiting binding `REFRESH_RATE_LIMITER` pour les refresh manuels ;
+- cron hebdomadaire `0 4 * * 1`.
+
+Commandes utiles :
+
+```bash
+pnpm run thumbnail:dev
+pnpm run thumbnail:deploy
+```
+
+Les secrets `THUMBNAIL_INTERNAL_SECRET` doivent etre identiques cote Pages et
+cote Worker. `INTERNAL_API_BASE_URL` cote Worker doit pointer vers
+`https://my.fluxperf.fr`.
 
 ## Demande d'intervention
 

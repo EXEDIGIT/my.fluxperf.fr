@@ -3,6 +3,7 @@ import {
   clientEmails,
   findClientForEmail,
   findClientForEmailInWorkbook,
+  getThumbnailSourcesFromWorkbook,
   parseClientRows
 } from "./clients";
 
@@ -259,7 +260,12 @@ describe("client sheet parsing", () => {
           name: "Flux Visibilité & Acquisition • Site web",
           domain: "hbint.com",
           url: "https://www.hbint.com",
-          activatedAt: "2026-07-06"
+          activatedAt: "2026-07-06",
+          thumbnail: {
+            kind: "website",
+            endpoint: "/api/thumbnails/SOL-0001",
+            placeholderKey: "visibility_acquisition"
+          }
         },
         {
           id: "SOL-0002",
@@ -269,7 +275,12 @@ describe("client sheet parsing", () => {
           name: "Flux Visibilité & Acquisition • Site e-shop",
           domain: "trial.hbint.com",
           url: "https://trial.hbint.com",
-          activatedAt: "2026-07-06"
+          activatedAt: "2026-07-06",
+          thumbnail: {
+            kind: "website",
+            endpoint: "/api/thumbnails/SOL-0002",
+            placeholderKey: "visibility_acquisition"
+          }
         }
       ]);
       expect(result.client.impact).toEqual({
@@ -348,6 +359,96 @@ describe("client sheet parsing", () => {
         date: "17/07/2026"
       });
     }
+  });
+
+  it("returns only active website thumbnail sources from Solutions", () => {
+    const sources = getThumbnailSourcesFromWorkbook(structuredWorkbook);
+
+    expect(sources).toEqual([
+      {
+        solutionId: "SOL-0001",
+        clientId: "CLI-0001",
+        type: "visibility_acquisition",
+        typeLabel: "Flux Visibilité & Acquisition",
+        name: "Flux Visibilité & Acquisition • Site web",
+        domain: "hbint.com",
+        url: "https://www.hbint.com/"
+      },
+      {
+        solutionId: "SOL-0002",
+        clientId: "CLI-0001",
+        type: "visibility_acquisition",
+        typeLabel: "Flux Visibilité & Acquisition",
+        name: "Flux Visibilité & Acquisition • Site e-shop",
+        domain: "trial.hbint.com",
+        url: "https://trial.hbint.com/"
+      }
+    ]);
+  });
+
+  it("rejects unsafe or mismatched thumbnail source URLs", () => {
+    const sources = getThumbnailSourcesFromWorkbook({
+      ...structuredWorkbook,
+      solutions: [
+        [
+          "solution_id",
+          "client_id",
+          "type_solution",
+          "statut_solution",
+          "nom_solution",
+          "domaine",
+          "url_ou_indication",
+          "date_activation",
+          "notes"
+        ],
+        [
+          "SOL-LOCAL",
+          "CLI-0001",
+          "visibility_acquisition",
+          "Actif",
+          "Localhost",
+          "localhost",
+          "http://localhost:5173",
+          "2026-07-06",
+          ""
+        ],
+        [
+          "SOL-PRIVATE",
+          "CLI-0001",
+          "visibility_acquisition",
+          "Actif",
+          "Private IP",
+          "192.168.1.20",
+          "https://192.168.1.20",
+          "2026-07-06",
+          ""
+        ],
+        [
+          "SOL-MISMATCH",
+          "CLI-0001",
+          "visibility_acquisition",
+          "Actif",
+          "Mismatched domain",
+          "hbint.com",
+          "https://example.com",
+          "2026-07-06",
+          ""
+        ],
+        [
+          "SOL-AUTOM",
+          "CLI-0001",
+          "automation_ai",
+          "Actif",
+          "Automation",
+          "",
+          "Centralisation donnees",
+          "2026-07-06",
+          ""
+        ]
+      ]
+    });
+
+    expect(sources).toEqual([]);
   });
 
   it("reads the new url_ou_indication column without turning indications into domains", () => {
@@ -531,7 +632,12 @@ describe("client sheet parsing", () => {
           name: "Automatisation facturation",
           domain: "",
           url: "",
-          activatedAt: "2026-07-06"
+          activatedAt: "2026-07-06",
+          thumbnail: {
+            kind: "placeholder",
+            endpoint: null,
+            placeholderKey: "automation_ai"
+          }
         }
       ]);
       expect(result.client.services).toEqual([

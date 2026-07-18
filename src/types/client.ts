@@ -1,3 +1,11 @@
+export type ClientImpactKey = "visibility_acquisition" | "automation_ai" | "assistant_ai";
+
+export type ClientSolutionThumbnail = {
+  kind: "website" | "placeholder";
+  endpoint: string | null;
+  placeholderKey: ClientImpactKey;
+};
+
 export type ClientSolution = {
   id: string;
   type: string;
@@ -7,9 +15,8 @@ export type ClientSolution = {
   domain: string;
   url: string;
   activatedAt: string;
+  thumbnail: ClientSolutionThumbnail;
 };
-
-export type ClientImpactKey = "visibility_acquisition" | "automation_ai" | "assistant_ai";
 
 export type ClientImpactItem = {
   key: ClientImpactKey;
