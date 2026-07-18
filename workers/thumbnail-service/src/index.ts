@@ -65,7 +65,7 @@ const IMAGE_CACHE_CONTROL = "private, max-age=86400, stale-while-revalidate=6048
 const DEFAULT_MAX_AGE_DAYS = 7;
 const DEFAULT_CRON_BATCH_SIZE = 10;
 const BROWSER_USER_AGENT =
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36";
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
 
 function json(data: unknown, init: ResponseInit = {}): Response {
   return new Response(JSON.stringify(data), {
