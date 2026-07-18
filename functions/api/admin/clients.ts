@@ -6,6 +6,7 @@ import {
   validateAdminClientInput
 } from "../../lib/adminClients";
 import { buildAdminSolutionOptions } from "../../lib/adminOptions";
+import { buildAdminClientList } from "../../lib/adminWorkbook";
 import {
   appendGoogleSheetValues,
   getGoogleWriteRanges,
@@ -15,6 +16,24 @@ import {
 import { json, jsonError } from "../../lib/response";
 import { createSupabaseUserForClient } from "../../lib/supabaseAdmin";
 import type { PagesContext } from "../../lib/types";
+
+export async function onRequestGet(context: PagesContext): Promise<Response> {
+  const admin = await requireAdmin(context.request, context.env);
+
+  if (admin instanceof Response) {
+    return admin;
+  }
+
+  try {
+    const workbook = await readGoogleWorkbookValues(context.env);
+
+    return json({
+      clients: buildAdminClientList(workbook)
+    });
+  } catch {
+    return jsonError(503, "ADMIN_CLIENTS_UNAVAILABLE", "La liste clients est indisponible.");
+  }
+}
 
 export async function onRequestPost(context: PagesContext): Promise<Response> {
   const admin = await requireAdmin(context.request, context.env);

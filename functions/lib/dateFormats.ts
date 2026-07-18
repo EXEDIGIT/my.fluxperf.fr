@@ -27,3 +27,15 @@ export function formatCompactFrenchDate(now = new Date()): string {
 
   return `${day}${month}${year}`;
 }
+
+export function formatParisDateKey(now = new Date()): string {
+  const { day, month, year } = frenchDateParts(now);
+
+  return `${year}-${month}-${day}`;
+}
+
+export function formatParisMonthKey(now = new Date()): string {
+  const { month, year } = frenchDateParts(now);
+
+  return `${year}-${month}`;
+}

@@ -224,3 +224,23 @@ actions`.
 `date_action` doit rester une date technique triable, idealement en ISO. La
 reference visible (`reference`) utilise le format compact francais, par exemple
 `FP-17072026-ABCD`.
+
+## Onglet `Connexions`
+
+Creer un onglet nomme `Connexions` pour journaliser les acces reussis a
+MyFluxperf. La console tente aussi de creer cet onglet automatiquement si le
+Service Account a les droits suffisants.
+
+```text
+connexion_id
+client_id
+email
+date_connexion
+jour
+mois
+source
+user_agent
+```
+
+Une seule ligne est ajoutee par client et par jour. Ces donnees alimentent les
+statistiques de connexion du tableau de bord admin.

@@ -116,6 +116,7 @@ export type ClientWorkbookValues = {
   contacts?: string[][];
   solutions?: string[][];
   actions?: string[][];
+  connections?: string[][];
 };
 
 type SheetRecord = Record<string, string>;

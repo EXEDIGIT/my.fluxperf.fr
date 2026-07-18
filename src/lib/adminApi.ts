@@ -2,6 +2,10 @@ import type { ApiErrorResponse } from "../types/client";
 import type {
   AdminCreateClientInput,
   AdminCreateClientResponse,
+  AdminClientActionResponse,
+  AdminClientDetailResponse,
+  AdminClientsResponse,
+  AdminDashboardResponse,
   AdminOptionsResponse,
   AdminSessionResponse
 } from "../types/admin";
@@ -53,9 +57,49 @@ export function getAdminOptions(): Promise<AdminOptionsResponse> {
   return adminFetch<AdminOptionsResponse>("/api/admin/options");
 }
 
+export function getAdminClients(): Promise<AdminClientsResponse> {
+  return adminFetch<AdminClientsResponse>("/api/admin/clients");
+}
+
+export function getAdminClient(clientId: string): Promise<AdminClientDetailResponse> {
+  return adminFetch<AdminClientDetailResponse>(`/api/admin/clients/${encodeURIComponent(clientId)}`);
+}
+
+export function getAdminDashboard(): Promise<AdminDashboardResponse> {
+  return adminFetch<AdminDashboardResponse>("/api/admin/dashboard");
+}
+
 export function createAdminClient(input: AdminCreateClientInput): Promise<AdminCreateClientResponse> {
   return adminFetch<AdminCreateClientResponse>("/api/admin/clients", {
     method: "POST",
     body: JSON.stringify(input)
   });
+}
+
+export function deactivateAdminClient(clientId: string): Promise<AdminClientActionResponse> {
+  return adminFetch<AdminClientActionResponse>(`/api/admin/clients/${encodeURIComponent(clientId)}/deactivate`, {
+    method: "POST"
+  });
+}
+
+export function addAdminClientSolution(
+  clientId: string,
+  input: AdminCreateClientInput["solutions"][number]
+): Promise<AdminClientActionResponse> {
+  return adminFetch<AdminClientActionResponse>(`/api/admin/clients/${encodeURIComponent(clientId)}/solutions`, {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export function deactivateAdminClientSolution(
+  clientId: string,
+  solutionId: string
+): Promise<AdminClientActionResponse> {
+  return adminFetch<AdminClientActionResponse>(
+    `/api/admin/clients/${encodeURIComponent(clientId)}/solutions/${encodeURIComponent(solutionId)}/deactivate`,
+    {
+      method: "POST"
+    }
+  );
 }

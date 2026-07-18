@@ -8,10 +8,23 @@ const DEFAULT_RANGE = "Clients!A1:Z1000";
 const DEFAULT_CONTACTS_RANGE = "Contacts!A1:Z1000";
 const DEFAULT_SOLUTIONS_RANGE = "Solutions!A1:Z1000";
 const DEFAULT_ACTIONS_RANGE = "Actions!A1:J1000";
+const DEFAULT_CONNECTIONS_RANGE = "Connexions!A1:H1000";
 const DEFAULT_PARAMETERS_RANGE = "Parametres!A1:B1000";
 const DEFAULT_CLIENTS_WRITE_RANGE = "Clients!A:K";
 const DEFAULT_CONTACTS_WRITE_RANGE = "Contacts!A:J";
 const DEFAULT_SOLUTIONS_WRITE_RANGE = "Solutions!A:I";
+const DEFAULT_CONNECTIONS_WRITE_RANGE = "Connexions!A:H";
+const CONNECTIONS_SHEET_NAME = "Connexions";
+const CONNECTIONS_HEADERS = [
+  "connexion_id",
+  "client_id",
+  "email",
+  "date_connexion",
+  "jour",
+  "mois",
+  "source",
+  "user_agent"
+];
 
 type Fetcher = typeof fetch;
 
@@ -35,6 +48,14 @@ type GoogleAppendResponse = {
     updatedRange?: string;
     updatedRows?: number;
   };
+  error?: {
+    message?: string;
+  };
+};
+
+type GoogleUpdateResponse = GoogleAppendResponse;
+
+type GoogleBatchUpdateResponse = {
   error?: {
     message?: string;
   };
@@ -208,7 +229,8 @@ export async function readGoogleWorkbookValues(
         clients: demoSheetValues,
         contacts: [],
         solutions: demoSolutionsValues,
-        actions: []
+        actions: [],
+        connections: []
       };
     }
 
@@ -216,7 +238,7 @@ export async function readGoogleWorkbookValues(
   }
 
   const accessToken = await getGoogleAccessToken(env, fetcher);
-  const [clients, contacts, solutions, actions] = await Promise.all([
+  const [clients, contacts, solutions, actions, connections] = await Promise.all([
     readGoogleSheetRange(env, accessToken, env.GOOGLE_SHEET_RANGE || DEFAULT_RANGE, fetcher),
     readOptionalGoogleSheetRange(
       env,
@@ -235,6 +257,12 @@ export async function readGoogleWorkbookValues(
       accessToken,
       env.GOOGLE_ACTIONS_RANGE || DEFAULT_ACTIONS_RANGE,
       fetcher
+    ),
+    readOptionalGoogleSheetRange(
+      env,
+      accessToken,
+      env.GOOGLE_CONNECTIONS_RANGE || DEFAULT_CONNECTIONS_RANGE,
+      fetcher
     )
   ]);
 
@@ -242,7 +270,8 @@ export async function readGoogleWorkbookValues(
     clients,
     contacts,
     solutions,
-    actions
+    actions,
+    connections
   };
 }
 
@@ -309,10 +338,83 @@ export async function appendGoogleSheetValues(
   return data.updates;
 }
 
+export async function updateGoogleSheetValues(
+  env: AppEnv,
+  rangeName: string,
+  rows: string[][],
+  fetcher: Fetcher = fetch
+): Promise<GoogleUpdateResponse["updates"]> {
+  if (!isSheetsConfigured(env)) {
+    throw new Error("Google Sheets configuration is missing.");
+  }
+
+  const accessToken = await getGoogleAccessToken(env, fetcher);
+  const sheetId = encodeURIComponent(env.GOOGLE_SHEET_ID as string);
+  const range = encodeURIComponent(rangeName);
+  const response = await fetcher(
+    `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}?valueInputOption=USER_ENTERED`,
+    {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        values: rows
+      })
+    }
+  );
+  const data = (await response.json()) as GoogleUpdateResponse;
+
+  if (!response.ok) {
+    throw new Error(data.error?.message || `Unable to update Google Sheet range ${rangeName}.`);
+  }
+
+  return data.updates;
+}
+
+export async function ensureConnectionsSheet(
+  env: AppEnv,
+  fetcher: Fetcher = fetch
+): Promise<void> {
+  if (!isSheetsConfigured(env)) {
+    throw new Error("Google Sheets configuration is missing.");
+  }
+
+  const accessToken = await getGoogleAccessToken(env, fetcher);
+  const sheetId = encodeURIComponent(env.GOOGLE_SHEET_ID as string);
+  const response = await fetcher(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}:batchUpdate`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      requests: [
+        {
+          addSheet: {
+            properties: {
+              title: CONNECTIONS_SHEET_NAME
+            }
+          }
+        }
+      ]
+    })
+  });
+  const data = (await response.json().catch(() => ({}))) as GoogleBatchUpdateResponse;
+
+  if (!response.ok && !data.error?.message?.toLowerCase().includes("already exists")) {
+    throw new Error(data.error?.message || "Unable to create Connexions sheet.");
+  }
+
+  await updateGoogleSheetValues(env, `${CONNECTIONS_SHEET_NAME}!A1:H1`, [CONNECTIONS_HEADERS], fetcher);
+}
+
 export function getGoogleWriteRanges(env: AppEnv) {
   return {
     clients: env.GOOGLE_CLIENTS_WRITE_RANGE || DEFAULT_CLIENTS_WRITE_RANGE,
     contacts: env.GOOGLE_CONTACTS_WRITE_RANGE || DEFAULT_CONTACTS_WRITE_RANGE,
-    solutions: env.GOOGLE_SOLUTIONS_WRITE_RANGE || DEFAULT_SOLUTIONS_WRITE_RANGE
+    solutions: env.GOOGLE_SOLUTIONS_WRITE_RANGE || DEFAULT_SOLUTIONS_WRITE_RANGE,
+    connections: env.GOOGLE_CONNECTIONS_WRITE_RANGE || DEFAULT_CONNECTIONS_WRITE_RANGE
   };
 }

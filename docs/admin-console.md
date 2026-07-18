@@ -35,6 +35,8 @@ APP_PUBLIC_URL=https://my.fluxperf.fr
 GOOGLE_CLIENTS_WRITE_RANGE=Clients!A:K
 GOOGLE_CONTACTS_WRITE_RANGE=Contacts!A:J
 GOOGLE_SOLUTIONS_WRITE_RANGE=Solutions!A:I
+GOOGLE_CONNECTIONS_RANGE=Connexions!A1:H1000
+GOOGLE_CONNECTIONS_WRITE_RANGE=Connexions!A:H
 GOOGLE_PARAMETERS_RANGE=Parametres!A1:B1000
 ```
 
@@ -105,3 +107,34 @@ La console ne demande plus le champ `domaine` : elle le deduit uniquement quand
 `url_ou_indication` contient une URL. Une indication de service reste du texte
 et laisse `domaine` vide. La valeur `url_ou_indication` est ecrite telle que
 saisie, sans ajout automatique de protocole.
+
+`Connexions`
+
+```text
+connexion_id
+client_id
+email
+date_connexion
+jour
+mois
+source
+user_agent
+```
+
+La console V2 journalise au maximum une connexion par client et par jour apres
+un acces reussi a `/api/me`. Cette journalisation alimente les statistiques de
+connexion du tableau de bord et ne bloque jamais l'acces client si Google
+Sheets est indisponible.
+
+## Console V2
+
+La console interne est organisee en trois onglets :
+
+- `Tableau de bord` : comptes clients, solutions actives, demandes
+  d'intervention, connexions et tops clients ;
+- `Clients` : recherche, fiche client, desactivation client, ajout et
+  desactivation de solution ;
+- `Nouveau client` : formulaire de creation existant.
+
+Les actions de desactivation ne suppriment aucune ligne : elles passent les
+statuts a `Inactif` et conservent l'historique.

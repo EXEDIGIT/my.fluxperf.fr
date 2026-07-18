@@ -1,21 +1,43 @@
 import {
   ArrowRight,
+  Ban,
+  BarChart3,
   CheckCircle2,
+  LayoutDashboard,
   Loader2,
   LockKeyhole,
   LogOut,
   Mail,
   Plus,
+  Search,
   ShieldCheck,
   Sparkles,
   Trash2,
-  UserPlus
+  UserPlus,
+  Users
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ApiError } from "../lib/api";
-import { createAdminClient, getAdminOptions, getAdminSession } from "../lib/adminApi";
+import {
+  addAdminClientSolution,
+  createAdminClient,
+  deactivateAdminClient,
+  deactivateAdminClientSolution,
+  getAdminClient,
+  getAdminClients,
+  getAdminDashboard,
+  getAdminOptions,
+  getAdminSession
+} from "../lib/adminApi";
 import { getSupabaseClient, hasSupabaseConfig } from "../lib/supabase";
-import type { AdminCreateClientResponse, AdminSolutionOption, AdminSolutionType } from "../types/admin";
+import type {
+  AdminClientDetail,
+  AdminClientSummary,
+  AdminCreateClientResponse,
+  AdminDashboard,
+  AdminSolutionOption,
+  AdminSolutionType
+} from "../types/admin";
 
 type LoadState =
   | { status: "loading" }
@@ -36,6 +58,8 @@ type SolutionDraft = {
 };
 
 type SolutionDraftsByType = Record<AdminSolutionType, SolutionDraft[]>;
+
+type AdminTab = "dashboard" | "clients" | "create";
 
 const consolePath = "/fp-console";
 
@@ -220,6 +244,7 @@ function AdminLoginPanel() {
 
 export function AdminConsolePage() {
   const [loadState, setLoadState] = useState<LoadState>({ status: "loading" });
+  const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
   const [companyName, setCompanyName] = useState("");
   const [contactFirstName, setContactFirstName] = useState("");
   const [contactLastName, setContactLastName] = useState("");
@@ -228,9 +253,36 @@ export function AdminConsolePage() {
   const [notifyClient, setNotifyClient] = useState(true);
   const [solutionOptions, setSolutionOptions] = useState<AdminSolutionOption[]>(fallbackSolutionOptions);
   const [solutions, setSolutions] = useState(emptySolutions);
+  const [dashboard, setDashboard] = useState<AdminDashboard | null>(null);
+  const [adminClients, setAdminClients] = useState<AdminClientSummary[]>([]);
+  const [selectedClient, setSelectedClient] = useState<AdminClientDetail | null>(null);
+  const [clientQuery, setClientQuery] = useState("");
+  const [clientMessage, setClientMessage] = useState<string | null>(null);
+  const [clientError, setClientError] = useState<string | null>(null);
+  const [isAdminDataLoading, setIsAdminDataLoading] = useState(false);
+  const [isClientActionPending, setIsClientActionPending] = useState(false);
+  const [clientSolutionType, setClientSolutionType] = useState<AdminSolutionType>("visibility_acquisition");
+  const [clientSolutionName, setClientSolutionName] = useState(fallbackSolutionOptions[0].defaultName);
+  const [clientSolutionValue, setClientSolutionValue] = useState("");
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [success, setSuccess] = useState<AdminCreateClientResponse | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const selectedSolutionOption =
+    solutionOptions.find((option) => option.type === clientSolutionType) ?? solutionOptions[0] ?? fallbackSolutionOptions[0];
+  const filteredAdminClients = useMemo(() => {
+    const query = clientQuery.trim().toLowerCase();
+
+    if (!query) {
+      return adminClients;
+    }
+
+    return adminClients.filter((client) =>
+      [client.companyName, client.email, client.contactName, client.id]
+        .join(" ")
+        .toLowerCase()
+        .includes(query)
+    );
+  }, [adminClients, clientQuery]);
 
   useEffect(() => {
     let isMounted = true;
@@ -238,11 +290,18 @@ export function AdminConsolePage() {
 
     async function loadAdminSession() {
       try {
-        const [session, options] = await Promise.all([getAdminSession(), getAdminOptions()]);
+        const [session, options, clientsData, dashboardData] = await Promise.all([
+          getAdminSession(),
+          getAdminOptions(),
+          getAdminClients(),
+          getAdminDashboard()
+        ]);
 
         if (isMounted) {
           setSolutionOptions(options.solutionOptions);
           setSolutions(emptySolutions(options.solutionOptions));
+          setAdminClients(clientsData.clients);
+          setDashboard(dashboardData.dashboard);
           setLoadState({ status: "ready", email: session.admin.email });
         }
       } catch (error) {
@@ -305,6 +364,113 @@ export function AdminConsolePage() {
       listener?.data.subscription.unsubscribe();
     };
   }, []);
+
+  async function refreshAdminData(clientId = selectedClient?.id) {
+    setIsAdminDataLoading(true);
+
+    try {
+      const [clientsData, dashboardData] = await Promise.all([getAdminClients(), getAdminDashboard()]);
+
+      setAdminClients(clientsData.clients);
+      setDashboard(dashboardData.dashboard);
+
+      if (clientId) {
+        const detail = await getAdminClient(clientId);
+
+        setSelectedClient(detail.client);
+      }
+    } finally {
+      setIsAdminDataLoading(false);
+    }
+  }
+
+  async function openClient(clientId: string) {
+    setClientError(null);
+    setClientMessage(null);
+    setIsAdminDataLoading(true);
+
+    try {
+      const detail = await getAdminClient(clientId);
+
+      setSelectedClient(detail.client);
+    } catch (error) {
+      setClientError(error instanceof ApiError ? error.message : "La fiche client est indisponible.");
+    } finally {
+      setIsAdminDataLoading(false);
+    }
+  }
+
+  async function handleDeactivateClient(client: AdminClientDetail) {
+    if (!window.confirm(`Desactiver l'acces MyFluxperf de ${client.companyName} ?`)) {
+      return;
+    }
+
+    setClientError(null);
+    setClientMessage(null);
+    setIsClientActionPending(true);
+
+    try {
+      const result = await deactivateAdminClient(client.id);
+
+      setClientMessage(
+        result.auth?.status === "failed"
+          ? `Client desactive. Blocage Auth a verifier : ${result.auth.reason}`
+          : "Client desactive."
+      );
+      await refreshAdminData(client.id);
+    } catch (error) {
+      setClientError(error instanceof ApiError ? error.message : "Le client n'a pas pu etre desactive.");
+    } finally {
+      setIsClientActionPending(false);
+    }
+  }
+
+  async function handleAddClientSolution(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedClient) {
+      return;
+    }
+
+    setClientError(null);
+    setClientMessage(null);
+    setIsClientActionPending(true);
+
+    try {
+      await addAdminClientSolution(selectedClient.id, {
+        type: clientSolutionType,
+        name: clientSolutionName || selectedSolutionOption.defaultName,
+        urlOrIndication: clientSolutionValue
+      });
+      setClientSolutionValue("");
+      setClientMessage("Solution ajoutee.");
+      await refreshAdminData(selectedClient.id);
+    } catch (error) {
+      setClientError(error instanceof ApiError ? error.message : "La solution n'a pas pu etre ajoutee.");
+    } finally {
+      setIsClientActionPending(false);
+    }
+  }
+
+  async function handleDeactivateSolution(solutionId: string) {
+    if (!selectedClient) {
+      return;
+    }
+
+    setClientError(null);
+    setClientMessage(null);
+    setIsClientActionPending(true);
+
+    try {
+      await deactivateAdminClientSolution(selectedClient.id, solutionId);
+      setClientMessage("Solution desactivee.");
+      await refreshAdminData(selectedClient.id);
+    } catch (error) {
+      setClientError(error instanceof ApiError ? error.message : "La solution n'a pas pu etre desactivee.");
+    } finally {
+      setIsClientActionPending(false);
+    }
+  }
 
   function setSolutionEnabled(option: AdminSolutionOption, enabled: boolean) {
     setSolutions((current) => {
@@ -388,6 +554,7 @@ export function AdminConsolePage() {
 
       setSuccess(result);
       resetForm();
+      await refreshAdminData();
     } catch (error) {
       setSubmitError(
         error instanceof ApiError
@@ -435,8 +602,8 @@ export function AdminConsolePage() {
             <ShieldCheck aria-hidden="true" />
             Zone interne
           </span>
-          <h1>Création client MyFluxperf</h1>
-          <p>Ajout rapide dans Google Sheets, création Supabase et notification client.</p>
+          <h1>Console admin MyFluxperf</h1>
+          <p>Pilotage clients, solutions actives et indicateurs internes.</p>
         </div>
         <button type="button" onClick={handleLogout}>
           <LogOut aria-hidden="true" />
@@ -451,6 +618,220 @@ export function AdminConsolePage() {
         <span>Brevo</span>
       </section>
 
+      <nav className="admin-tabs" aria-label="Navigation admin">
+        <button type="button" className={activeTab === "dashboard" ? "is-active" : ""} onClick={() => setActiveTab("dashboard")}>
+          <LayoutDashboard aria-hidden="true" />
+          Tableau de bord
+        </button>
+        <button type="button" className={activeTab === "clients" ? "is-active" : ""} onClick={() => setActiveTab("clients")}>
+          <Users aria-hidden="true" />
+          Clients
+        </button>
+        <button type="button" className={activeTab === "create" ? "is-active" : ""} onClick={() => setActiveTab("create")}>
+          <UserPlus aria-hidden="true" />
+          Nouveau client
+        </button>
+      </nav>
+
+      {activeTab === "dashboard" ? (
+        <section className="admin-client-form">
+          <div className="admin-dashboard-grid">
+            <article className="admin-stat-card">
+              <span>Comptes actifs</span>
+              <strong>{dashboard?.totals.activeClients ?? 0}</strong>
+              <small>{dashboard?.totals.totalClients ?? 0} comptes au total</small>
+            </article>
+            <article className="admin-stat-card">
+              <span>Solutions actives</span>
+              <strong>{dashboard?.totals.activeSolutions ?? 0}</strong>
+              <small>Sur clients actifs</small>
+            </article>
+            <article className="admin-stat-card">
+              <span>Demandes 12 mois</span>
+              <strong>{dashboard?.totals.interventionRequests12Months ?? 0}</strong>
+              <small>{dashboard?.totals.interventionRequestsAveragePerMonth ?? 0} / mois</small>
+            </article>
+            <article className="admin-stat-card">
+              <span>Connexions 12 mois</span>
+              <strong>{dashboard?.totals.connections12Months ?? 0}</strong>
+              <small>{dashboard?.totals.connectionsAveragePerMonth ?? 0} / mois</small>
+            </article>
+          </div>
+
+          <section className="admin-form-panel">
+            <div className="admin-panel-heading">
+              <BarChart3 aria-hidden="true" />
+              <div>
+                <h2>Demandes d'intervention</h2>
+                <p>Moyenne globale : {dashboard?.totals.interventionRequestsAveragePerActiveClient ?? 0} demande / client actif.</p>
+              </div>
+            </div>
+            <div className="admin-chart">
+              {(dashboard?.interventionRequestsByMonth ?? []).map((item) => {
+                const max = Math.max(1, ...(dashboard?.interventionRequestsByMonth ?? []).map((month) => month.count));
+
+                return (
+                  <div className="admin-chart-bar" key={item.month}>
+                    <span style={{ height: `${Math.max(6, (item.count / max) * 100)}%` }} />
+                    <small>{item.label}</small>
+                    <strong>{item.count}</strong>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          <div className="admin-rank-grid">
+            <section className="admin-form-panel">
+              <div className="admin-panel-heading">
+                <Sparkles aria-hidden="true" />
+                <div>
+                  <h2>Top demandes</h2>
+                  <p>Clients avec le plus de demandes sur 12 mois.</p>
+                </div>
+              </div>
+              <ol className="admin-rank-list">
+                {(dashboard?.topInterventionClients ?? []).map((client) => (
+                  <li key={client.clientId}>
+                    <span>{client.companyName}</span>
+                    <strong>{client.count}</strong>
+                  </li>
+                ))}
+              </ol>
+            </section>
+            <section className="admin-form-panel">
+              <div className="admin-panel-heading">
+                <Users aria-hidden="true" />
+                <div>
+                  <h2>Top connexions</h2>
+                  <p>Clients les plus actifs sur MyFluxperf.</p>
+                </div>
+              </div>
+              <ol className="admin-rank-list">
+                {(dashboard?.topConnectionClients ?? []).map((client) => (
+                  <li key={client.clientId}>
+                    <span>{client.companyName}</span>
+                    <strong>{client.count}</strong>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          </div>
+        </section>
+      ) : null}
+
+      {activeTab === "clients" ? (
+        <section className="admin-client-form">
+          <section className="admin-form-panel">
+            <div className="admin-panel-heading">
+              <Users aria-hidden="true" />
+              <div>
+                <h2>Clients</h2>
+                <p>{filteredAdminClients.length} client{filteredAdminClients.length > 1 ? "s" : ""} affiché{filteredAdminClients.length > 1 ? "s" : ""}.</p>
+              </div>
+            </div>
+            <label className="admin-search-field">
+              <Search aria-hidden="true" />
+              <input value={clientQuery} placeholder="Rechercher un client, email ou ID" onChange={(event) => setClientQuery(event.target.value)} />
+            </label>
+            <div className="admin-client-list">
+              {filteredAdminClients.map((client) => (
+                <button type="button" className={selectedClient?.id === client.id ? "is-selected" : ""} key={client.id} onClick={() => openClient(client.id)}>
+                  <span>
+                    <strong>{client.companyName}</strong>
+                    <small>{client.email}</small>
+                  </span>
+                  <span>{client.activeSolutions} solution{client.activeSolutions > 1 ? "s" : ""}</span>
+                  <em>{client.portalEnabled && client.status.toLowerCase() === "actif" ? "Actif" : "Inactif"}</em>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {selectedClient ? (
+            <section className="admin-form-panel">
+              <div className="admin-panel-heading">
+                <ShieldCheck aria-hidden="true" />
+                <div>
+                  <h2>{selectedClient.companyName}</h2>
+                  <p>{selectedClient.id} - {selectedClient.email}</p>
+                </div>
+              </div>
+
+              {clientMessage ? <div className="admin-message success">{clientMessage}</div> : null}
+              {clientError ? <div className="admin-message error">{clientError}</div> : null}
+
+              <div className="admin-detail-grid">
+                <span>Statut : <strong>{selectedClient.status}</strong></span>
+                <span>Accès portail : <strong>{selectedClient.portalEnabled ? "Oui" : "Non"}</strong></span>
+                <span>Solutions actives : <strong>{selectedClient.activeSolutions}</strong></span>
+                <span>Dernière activité : <strong>{selectedClient.lastActivityLabel}</strong></span>
+              </div>
+
+              <div className="admin-detail-actions">
+                <button type="button" disabled={isClientActionPending || !selectedClient.portalEnabled} onClick={() => handleDeactivateClient(selectedClient)}>
+                  <Ban aria-hidden="true" />
+                  Désactiver le client
+                </button>
+              </div>
+
+              <form className="admin-inline-form" onSubmit={handleAddClientSolution}>
+                <h3>Ajouter une solution</h3>
+                <select
+                  value={clientSolutionType}
+                  onChange={(event) => {
+                    const type = event.target.value as AdminSolutionType;
+                    const option = solutionOptions.find((item) => item.type === type) ?? fallbackSolutionOptions[0];
+
+                    setClientSolutionType(type);
+                    setClientSolutionName(option.defaultName);
+                  }}
+                >
+                  {solutionOptions.map((option) => (
+                    <option value={option.type} key={option.type}>{option.label}</option>
+                  ))}
+                </select>
+                <select value={clientSolutionName} onChange={(event) => setClientSolutionName(event.target.value)}>
+                  {selectedSolutionOption.nameOptions.map((name) => (
+                    <option value={name} key={name}>{name}</option>
+                  ))}
+                </select>
+                <input value={clientSolutionValue} placeholder="exemple.fr ou indication" onChange={(event) => setClientSolutionValue(event.target.value)} />
+                <button type="submit" disabled={isClientActionPending}>
+                  <Plus aria-hidden="true" />
+                  Ajouter
+                </button>
+              </form>
+
+              <div className="admin-solution-list">
+                {selectedClient.solutions.map((solution) => (
+                  <article key={solution.id}>
+                    <span>
+                      <strong>{solution.name || solution.type}</strong>
+                      <small>{solution.domain || solution.urlOrIndication || "Sans indication"}</small>
+                    </span>
+                    <em>{solution.status}</em>
+                    <button type="button" disabled={isClientActionPending || solution.status.toLowerCase() !== "actif"} onClick={() => handleDeactivateSolution(solution.id)}>
+                      <Trash2 aria-hidden="true" />
+                      Désactiver
+                    </button>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ) : (
+            <section className="admin-form-panel">
+              <div className="admin-empty-detail">
+                {isAdminDataLoading ? <Loader2 className="loading-icon" aria-hidden="true" /> : <Users aria-hidden="true" />}
+                <strong>Sélectionnez un client</strong>
+                <span>Sa fiche, ses solutions et ses actions apparaîtront ici.</span>
+              </div>
+            </section>
+          )}
+        </section>
+      ) : null}
+
+      {activeTab === "create" ? (
       <form className="admin-client-form" onSubmit={handleSubmit}>
         <section className="admin-form-panel">
           <div className="admin-panel-heading">
@@ -604,6 +985,7 @@ export function AdminConsolePage() {
           </button>
         </section>
       </form>
+      ) : null}
     </main>
   );
 }

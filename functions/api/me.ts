@@ -1,5 +1,6 @@
 import { getAuthenticatedEmail } from "../lib/auth";
 import { findClientForEmailInWorkbook } from "../lib/clients";
+import { logClientConnectionOncePerDay } from "../lib/connections";
 import { readGoogleWorkbookValues } from "../lib/googleSheets";
 import { json, jsonError } from "../lib/response";
 import type { PagesContext } from "../lib/types";
@@ -21,6 +22,12 @@ export async function onRequestGet(context: PagesContext): Promise<Response> {
         "CLIENT_NOT_CONFIGURED",
         "Votre accès est authentifié, mais votre espace client n'est pas encore configuré. Contactez Fluxperf."
       );
+    }
+
+    try {
+      await logClientConnectionOncePerDay(context.env, workbook, result.client, email, context.request);
+    } catch (error) {
+      console.error("connection_log_failed", error instanceof Error ? error.message : "Unknown error");
     }
 
     return json({

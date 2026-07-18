@@ -25,6 +25,8 @@ export type AdminClientInput = {
   }>;
 };
 
+export type AdminClientSolutionInput = AdminClientInput["solutions"][number];
+
 export type BuiltAdminClientRows = {
   clientId: string;
   contactId: string;
@@ -179,6 +181,28 @@ export function validateAdminClientInput(
   };
 }
 
+export function validateAdminSolutionInput(
+  payload: unknown,
+  solutionOptions: AdminSolutionOption[] = fallbackAdminSolutionOptions
+): AdminClientSolutionInput | string {
+  const input = validateAdminClientInput(
+    {
+      companyName: "Client existant",
+      contactFirstName: "Admin",
+      contactLastName: "",
+      email: "admin@example.com",
+      solutions: [payload]
+    },
+    solutionOptions
+  );
+
+  if (typeof input === "string") {
+    return input;
+  }
+
+  return input.solutions[0];
+}
+
 export function hasExistingClientEmail(workbook: ClientWorkbookValues, email: string): boolean {
   return findClientForEmailInWorkbook(workbook, email).status !== "not_found";
 }
@@ -213,7 +237,25 @@ export function buildAdminClientRows(input: AdminClientInput, now = new Date()):
     date,
     "Créé depuis la zone interne"
   ];
-  const solutionRows = input.solutions.map((solution) => [
+  const solutionRows = input.solutions.map((solution) => buildAdminSolutionRow(clientId, solution, now));
+
+  return {
+    clientId,
+    contactId,
+    clientRow,
+    contactRow,
+    solutionRows
+  };
+}
+
+export function buildAdminSolutionRow(
+  clientId: string,
+  solution: AdminClientSolutionInput,
+  now = new Date()
+): string[] {
+  const date = formatFrenchDate(now);
+
+  return [
     buildId("SOL", now),
     clientId,
     solutionLabelForType(solution.type),
@@ -223,15 +265,7 @@ export function buildAdminClientRows(input: AdminClientInput, now = new Date()):
     solution.urlOrIndication,
     date,
     ""
-  ]);
-
-  return {
-    clientId,
-    contactId,
-    clientRow,
-    contactRow,
-    solutionRows
-  };
+  ];
 }
 
 function portalUrl(env: AppEnv, request: Request): string {
