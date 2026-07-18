@@ -9,6 +9,7 @@ import {
   LogOut,
   Mail,
   Plus,
+  RotateCcw,
   Search,
   ShieldCheck,
   Sparkles,
@@ -27,7 +28,8 @@ import {
   getAdminClients,
   getAdminDashboard,
   getAdminOptions,
-  getAdminSession
+  getAdminSession,
+  reactivateAdminClientSolution
 } from "../lib/adminApi";
 import { getSupabaseClient, hasSupabaseConfig } from "../lib/supabase";
 import type {
@@ -100,6 +102,24 @@ function createSolutionDraft(option: AdminSolutionOption): SolutionDraft {
     name: option.defaultName,
     urlOrIndication: ""
   };
+}
+
+function solutionStatusKind(status: string): "active" | "inactive" | "other" {
+  const normalized = status
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  if (["actif", "active"].includes(normalized)) {
+    return "active";
+  }
+
+  if (["inactif", "inactive"].includes(normalized)) {
+    return "inactive";
+  }
+
+  return "other";
 }
 
 function emptySolutions(options: AdminSolutionOption[] = fallbackSolutionOptions): SolutionDraftsByType {
@@ -472,6 +492,26 @@ export function AdminConsolePage() {
     }
   }
 
+  async function handleReactivateSolution(solutionId: string) {
+    if (!selectedClient) {
+      return;
+    }
+
+    setClientError(null);
+    setClientMessage(null);
+    setIsClientActionPending(true);
+
+    try {
+      await reactivateAdminClientSolution(selectedClient.id, solutionId);
+      setClientMessage("Solution réactivée.");
+      await refreshAdminData(selectedClient.id);
+    } catch (error) {
+      setClientError(error instanceof ApiError ? error.message : "La solution n'a pas pu être réactivée.");
+    } finally {
+      setIsClientActionPending(false);
+    }
+  }
+
   function setSolutionEnabled(option: AdminSolutionOption, enabled: boolean) {
     setSolutions((current) => {
       const currentDrafts = current[option.type] ?? [];
@@ -804,19 +844,31 @@ export function AdminConsolePage() {
               </form>
 
               <div className="admin-solution-list">
-                {selectedClient.solutions.map((solution) => (
-                  <article key={solution.id}>
-                    <span>
-                      <strong>{solution.name || solution.type}</strong>
-                      <small>{solution.domain || solution.urlOrIndication || "Sans indication"}</small>
-                    </span>
-                    <em>{solution.status}</em>
-                    <button type="button" disabled={isClientActionPending || solution.status.toLowerCase() !== "actif"} onClick={() => handleDeactivateSolution(solution.id)}>
-                      <Trash2 aria-hidden="true" />
-                      Désactiver
-                    </button>
-                  </article>
-                ))}
+                {selectedClient.solutions.map((solution) => {
+                  const statusKind = solutionStatusKind(solution.status);
+
+                  return (
+                    <article key={solution.id}>
+                      <span>
+                        <strong>{solution.name || solution.type}</strong>
+                        <small>{solution.domain || solution.urlOrIndication || "Sans indication"}</small>
+                      </span>
+                      <em className={`is-${statusKind}`}>{solution.status}</em>
+                      {statusKind === "active" ? (
+                        <button type="button" disabled={isClientActionPending} onClick={() => handleDeactivateSolution(solution.id)}>
+                          <Trash2 aria-hidden="true" />
+                          Désactiver
+                        </button>
+                      ) : null}
+                      {statusKind === "inactive" ? (
+                        <button type="button" disabled={isClientActionPending} onClick={() => handleReactivateSolution(solution.id)}>
+                          <RotateCcw aria-hidden="true" />
+                          Réactiver
+                        </button>
+                      ) : null}
+                    </article>
+                  );
+                })}
               </div>
             </section>
           ) : (

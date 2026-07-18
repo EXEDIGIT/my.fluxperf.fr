@@ -103,3 +103,15 @@ export function deactivateAdminClientSolution(
     }
   );
 }
+
+export function reactivateAdminClientSolution(
+  clientId: string,
+  solutionId: string
+): Promise<AdminClientActionResponse> {
+  return adminFetch<AdminClientActionResponse>(
+    `/api/admin/clients/${encodeURIComponent(clientId)}/solutions/${encodeURIComponent(solutionId)}/reactivate`,
+    {
+      method: "POST"
+    }
+  );
+}

@@ -120,7 +120,7 @@ export type AdminDashboardResponse = {
 };
 
 export type AdminClientActionResponse = {
-  status: "deactivated" | "created";
+  status: "deactivated" | "created" | "reactivated";
   clientId: string;
   solutionId?: string;
   activeSolutions?: number;
