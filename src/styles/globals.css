@@ -886,6 +886,37 @@ svg {
   font-weight: 700;
 }
 
+.section-note-content {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.section-note-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--green);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.section-note-link:hover,
+.section-note-link:focus-visible {
+  color: var(--green-dark);
+}
+
+.section-note-link:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
 .secondary-link {
   min-height: 40px;
   display: inline-flex;

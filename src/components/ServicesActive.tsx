@@ -6,6 +6,7 @@ import type { Client } from "../types/client";
 type ServicesActiveProps = {
   services: Client["services"];
   solutions: Client["solutions"];
+  onSupportRequest: () => void;
 };
 
 function iconForService(service: string) {
@@ -171,7 +172,7 @@ function FallbackServiceThumbnail({ service, Icon }: { service: string; Icon: Lu
   );
 }
 
-export function ServicesActive({ services, solutions }: ServicesActiveProps) {
+export function ServicesActive({ services, solutions, onSupportRequest }: ServicesActiveProps) {
   const activeSolutions = solutions.length > 0 ? solutions : null;
   const visibleServices = services.length > 0 ? services : ["Espace client Fluxperf"];
 
@@ -208,7 +209,12 @@ export function ServicesActive({ services, solutions }: ServicesActiveProps) {
       </div>
       <div className="section-note">
         <Sparkles aria-hidden="true" />
-        Les services affichés proviennent de l'onglet Solutions de votre fiche client Fluxperf.
+        <span className="section-note-content">
+          Il s'agit de vos services Fluxperf® actuellement recensés.
+          <button className="section-note-link" type="button" onClick={onSupportRequest}>
+            Contacter le support
+          </button>
+        </span>
       </div>
     </section>
   );

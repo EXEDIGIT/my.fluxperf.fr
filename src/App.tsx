@@ -261,7 +261,17 @@ export function App() {
           <LatestActions actions={client.latestActions} />
         </div>
 
-        <ServicesActive services={client.services} solutions={client.solutions} />
+        <ServicesActive
+          services={client.services}
+          solutions={client.solutions}
+          onSupportRequest={() =>
+            openSupportRequest({
+              subject: "Question sur mes services Fluxperf",
+              message:
+                "Bonjour,\n\nJe souhaite vous contacter au sujet des services Fluxperf actuellement recensés dans mon espace client.\n\nMerci."
+            })
+          }
+        />
 
         <Resources resourcesUrl={client.links.resources} />
 
