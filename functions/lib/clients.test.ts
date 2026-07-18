@@ -355,7 +355,7 @@ describe("client sheet parsing", () => {
     if (result.status === "ok") {
       expect(result.client.solutions[0].activatedAt).toBe("17/07/2026");
       expect(result.client.latestActions).toContainEqual({
-        label: "Fiche client mise a jour",
+        label: "Fiche client mise à jour",
         date: "17/07/2026"
       });
     }
@@ -519,7 +519,7 @@ describe("client sheet parsing", () => {
             "CLI-0001",
             "2026-07-16T08:00:00.000Z",
             "support_request",
-            "Message support envoye",
+            "Message support envoyé",
             "SUP-20260716-0001",
             "tdacunha@exedigit.fr",
             "myfluxperf",
@@ -543,7 +543,7 @@ describe("client sheet parsing", () => {
             "CLI-0001",
             "2026-07-17T10:00:00.000Z",
             "intervention_request",
-            "Demande d'intervention envoyee - Flux Automatisation & IA",
+            "Demande d'intervention envoyée - Flux Automatisation & IA",
             "FP-20260717-0001",
             "tdacunha@exedigit.fr",
             "myfluxperf",
@@ -559,11 +559,11 @@ describe("client sheet parsing", () => {
     if (result.status === "ok") {
       expect(result.client.latestActions).toEqual([
         {
-          label: "Demande d'intervention envoyee - Flux Automatisation & IA",
+          label: "Demande d'intervention envoyée - Flux Automatisation & IA",
           date: "17/07/2026 12:00"
         },
         {
-          label: "Message support envoye",
+          label: "Message support envoyé",
           date: "16/07/2026 10:00"
         }
       ]);

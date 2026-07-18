@@ -156,7 +156,7 @@ describe("POST /api/admin/clients", () => {
     expect(body.notification).toMatchObject({
       status: "failed",
       email: "client@example.com",
-      reason: "Email d'ouverture non envoye. Verifiez Brevo."
+      reason: "Email d'ouverture non envoyé. Vérifiez Brevo."
     });
     expect(consoleError).toHaveBeenCalledWith("brevo_welcome_email_failed", "Brevo sender rejected");
 

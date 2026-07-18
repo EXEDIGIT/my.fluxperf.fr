@@ -38,7 +38,7 @@ export async function requireAdmin(request: Request, env: AppEnv): Promise<{ ema
   }
 
   if (!adminEmails.includes(email)) {
-    return jsonError(403, "ADMIN_FORBIDDEN", "Votre compte n'est pas autorise sur cette zone interne.");
+    return jsonError(403, "ADMIN_FORBIDDEN", "Votre compte n'est pas autorisé sur cette zone interne.");
   }
 
   return { email };

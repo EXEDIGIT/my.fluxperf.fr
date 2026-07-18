@@ -23,11 +23,11 @@ Importer dans n8n :
 docs/n8n/myfluxperf-intervention-workflow.json
 ```
 
-Apres import, garder le workflow inactif jusqu'a la fin des tests.
+Après import, garder le workflow inactif jusqu'à la fin des tests.
 
 ## Variables n8n à créer
 
-Creer ces variables dans n8n :
+Créer ces variables dans n8n :
 
 ```text
 MYFLUXPERF_WEBHOOK_SECRET=<secret long aleatoire>
@@ -108,9 +108,9 @@ Paramètres d'envoi :
 - expéditeur : `Fluxperf <notifications@fluxperf.fr>`
 - destinataire : email du demandeur MyFluxperf
 - objet : `Demande reçue - {{requestId}}`
-- contenu : message genere par OpenAI
+- contenu : message généré par OpenAI
 
-Verifier dans Brevo que `notifications@fluxperf.fr` est un expéditeur autorise.
+Vérifier dans Brevo que `notifications@fluxperf.fr` est un expéditeur autorisé.
 
 ### Trello - Add Comment
 
@@ -125,7 +125,7 @@ Le commentaire final indique :
 
 ## Configuration Cloudflare Pages
 
-Apres validation du workflow n8n en URL de test :
+Après validation du workflow n8n en URL de test :
 
 1. activer le workflow n8n ;
 2. copier l'URL production du Webhook ;

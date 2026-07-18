@@ -139,9 +139,9 @@ describe("POST /api/access-requests", () => {
         email: "marie.martin@example.com",
         name: "Marie Martin"
       },
-      subject: "[MyFluxperf] Demande d'acces - A2-CM"
+      subject: "[MyFluxperf] Demande d'accès - A2-CM"
     });
-    expect(String(brevoBody.textContent)).toContain("Referent : Anthony Dupont");
+    expect(String(brevoBody.textContent)).toContain("Référent : Anthony Dupont");
   });
 
   it("escapes HTML content in the Brevo email body", async () => {

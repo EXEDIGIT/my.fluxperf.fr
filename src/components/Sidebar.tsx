@@ -82,7 +82,7 @@ export function Sidebar({ onLogout }: SidebarProps) {
         {onLogout ? (
           <button className="logout-link" type="button" onClick={onLogout}>
             <LogOut aria-hidden="true" />
-            <span>Deconnexion</span>
+            <span>Déconnexion</span>
           </button>
         ) : null}
       </aside>
@@ -99,7 +99,7 @@ export function Sidebar({ onLogout }: SidebarProps) {
           {onLogout ? (
             <button className="logout-link" type="button" onClick={onLogout}>
               <LogOut aria-hidden="true" />
-              <span>Deconnexion</span>
+              <span>Déconnexion</span>
             </button>
           ) : null}
         </div>
