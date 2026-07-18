@@ -103,4 +103,5 @@ notes
 
 La console ne demande plus le champ `domaine` : elle le deduit uniquement quand
 `url_ou_indication` contient une URL. Une indication de service reste du texte
-et laisse `domaine` vide.
+et laisse `domaine` vide. La valeur `url_ou_indication` est ecrite telle que
+saisie, sans ajout automatique de protocole.

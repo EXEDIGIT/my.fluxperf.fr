@@ -551,7 +551,7 @@ export function AdminConsolePage() {
                         URL ou indication
                         <input
                           value={draft.urlOrIndication}
-                          placeholder="https://exemple.fr ou Indication de service"
+                          placeholder="exemple.fr ou indication de service"
                           onChange={(event) => updateSolution(option.type, draft.id, { urlOrIndication: event.target.value })}
                         />
                       </label>

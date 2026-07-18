@@ -169,7 +169,8 @@ Valeurs V1 attendues pour `type_solution` : `Flux Visibilité & Acquisition`,
 compatibilite.
 
 La colonne `url_ou_indication` accepte soit une URL, soit une indication de
-service. Si la valeur n'est pas une URL, `domaine` reste vide.
+service. Elle est conservee telle que saisie ; si la valeur n'est pas une URL,
+`domaine` reste vide.
 
 ## Demande d'intervention
 

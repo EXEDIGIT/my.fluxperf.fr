@@ -64,20 +64,6 @@ function isLikelyUrl(value: string): boolean {
   return /^www\./i.test(host) || /^[a-z0-9-]+(\.[a-z0-9-]+)+(:\d+)?$/i.test(host);
 }
 
-function normalizeUrlOrIndication(value: string): string {
-  const text = value.trim();
-
-  if (!text) {
-    return "";
-  }
-
-  if (/^https?:\/\//i.test(text)) {
-    return text;
-  }
-
-  return isLikelyUrl(text) ? `https://${text}` : text;
-}
-
 function domainFromUrlOrIndication(value: string): string {
   const text = value.trim();
 
@@ -163,7 +149,7 @@ export function validateAdminClientInput(
       return "Une solution selectionnee est invalide.";
     }
 
-    const urlOrIndication = normalizeUrlOrIndication(asText(item.urlOrIndication) || asText(item.url));
+    const urlOrIndication = asText(item.urlOrIndication) || asText(item.url);
     const name = asText(item.name) || defaultNameForType(solutionOptions, type);
 
     if (!optionAllowsSolution(solutionOptions, type, name)) {

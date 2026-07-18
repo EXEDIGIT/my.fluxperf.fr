@@ -141,7 +141,7 @@ describe("POST /api/admin/clients", () => {
     expect(solutionRows[0][5]).toBe("");
     expect(solutionRows[0][6]).toBe("Centralisation donnees");
     expect(solutionRows[1][5]).toBe("hbint.com");
-    expect(solutionRows[1][6]).toBe("https://hbint.com");
+    expect(solutionRows[1][6]).toBe("hbint.com");
   });
 
   it("keeps the client creation successful when Brevo fails", async () => {

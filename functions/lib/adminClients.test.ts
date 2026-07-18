@@ -25,7 +25,7 @@ describe("admin client helpers", () => {
       expect(input.solutions[0]).toEqual({
         type: "visibility_acquisition",
         name: fallbackAdminSolutionOptions[0].defaultName,
-        urlOrIndication: "https://a2-cm.fr"
+        urlOrIndication: "a2-cm.fr"
       });
     }
   });
@@ -72,7 +72,38 @@ describe("admin client helpers", () => {
 
     expect(typeof input).toBe("object");
     if (typeof input !== "string") {
-      expect(input.solutions[0].urlOrIndication).toBe("https://www.legacy-client.fr");
+      expect(input.solutions[0].urlOrIndication).toBe("www.legacy-client.fr");
+    }
+  });
+
+  it("derives domains without rewriting url_or_indication values", () => {
+    const input = validateAdminClientInput({
+      companyName: "Domain Client",
+      contactFirstName: "Camille",
+      contactLastName: "Martin",
+      email: "contact@domain-client.fr",
+      solutions: [
+        {
+          type: "visibility_acquisition",
+          name: fallbackAdminSolutionOptions[0].defaultName,
+          urlOrIndication: "www.hbint.com"
+        },
+        {
+          type: "visibility_acquisition",
+          name: fallbackAdminSolutionOptions[0].defaultName,
+          urlOrIndication: "https://www.hbint.com"
+        }
+      ]
+    });
+
+    expect(typeof input).toBe("object");
+    if (typeof input !== "string") {
+      const rows = buildAdminClientRows(input, new Date("2026-07-17T10:00:00.000Z"));
+
+      expect(rows.solutionRows[0][5]).toBe("hbint.com");
+      expect(rows.solutionRows[0][6]).toBe("www.hbint.com");
+      expect(rows.solutionRows[1][5]).toBe("hbint.com");
+      expect(rows.solutionRows[1][6]).toBe("https://www.hbint.com");
     }
   });
 
@@ -140,7 +171,7 @@ describe("admin client helpers", () => {
         "Actif",
         fallbackAdminSolutionOptions[1].defaultName,
         "hbint.com",
-        "https://hbint.com",
+        "hbint.com",
         "17/07/2026"
       ]);
     }
