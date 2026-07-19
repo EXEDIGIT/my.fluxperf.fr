@@ -25,8 +25,42 @@ describe("admin client helpers", () => {
       expect(input.solutions[0]).toEqual({
         type: "visibility_acquisition",
         name: fallbackAdminSolutionOptions[0].defaultName,
-        urlOrIndication: "a2-cm.fr"
+        urlOrIndication: "a2-cm.fr",
+        ga4PropertyId: ""
       });
+    }
+  });
+
+  it("keeps a GA4 property id for visibility solutions only", () => {
+    const input = validateAdminClientInput({
+      companyName: "Stats Client",
+      contactFirstName: "Camille",
+      contactLastName: "Martin",
+      email: "contact@stats-client.fr",
+      solutions: [
+        {
+          type: "visibility_acquisition",
+          name: fallbackAdminSolutionOptions[0].defaultName,
+          urlOrIndication: "stats-client.fr",
+          ga4PropertyId: "properties/123456789"
+        },
+        {
+          type: "automation_ai",
+          name: fallbackAdminSolutionOptions[1].defaultName,
+          urlOrIndication: "Centralisation",
+          ga4PropertyId: "987654321"
+        }
+      ]
+    });
+
+    expect(typeof input).toBe("object");
+    if (typeof input !== "string") {
+      const rows = buildAdminClientRows(input, new Date("2026-07-17T10:00:00.000Z"));
+
+      expect(input.solutions[0].ga4PropertyId).toBe("123456789");
+      expect(input.solutions[1].ga4PropertyId).toBe("");
+      expect(rows.solutionRows[0][9]).toBe("123456789");
+      expect(rows.solutionRows[1][9]).toBe("");
     }
   });
 

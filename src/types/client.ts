@@ -6,6 +6,12 @@ export type ClientSolutionThumbnail = {
   placeholderKey: ClientImpactKey;
 };
 
+export type ClientStatisticsStatus = "available" | "pending_setup" | "not_applicable";
+
+export type ClientSolutionStatistics = {
+  status: ClientStatisticsStatus;
+};
+
 export type ClientSolution = {
   id: string;
   type: string;
@@ -16,6 +22,7 @@ export type ClientSolution = {
   url: string;
   activatedAt: string;
   thumbnail: ClientSolutionThumbnail;
+  statistics: ClientSolutionStatistics;
 };
 
 export type ClientImpactItem = {

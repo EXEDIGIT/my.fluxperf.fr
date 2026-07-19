@@ -15,6 +15,7 @@ import { Resources } from "./components/Resources";
 import { ServicesActive } from "./components/ServicesActive";
 import { Sidebar } from "./components/Sidebar";
 import { SolutionsModal } from "./components/SolutionsModal";
+import { StatisticsPage } from "./components/StatisticsPage";
 import { SupportRequestModal } from "./components/SupportRequestModal";
 import { ApiError, getMe } from "./lib/api";
 import { getSupabaseClient, hasSupabaseConfig } from "./lib/supabase";
@@ -37,6 +38,7 @@ export function App() {
   const [isRequestOpen, setIsRequestOpen] = useState(false);
   const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [isSolutionsOpen, setIsSolutionsOpen] = useState(false);
+  const [statisticsSolutionId, setStatisticsSolutionId] = useState<string | null>(null);
   const [supportPreset, setSupportPreset] = useState<SupportPreset>({
     key: 0,
     subject: "",
@@ -132,6 +134,7 @@ export function App() {
     }
 
     setState({ status: "anonymous" });
+    setStatisticsSolutionId(null);
   }
 
   function openSupportRequest(preset?: Partial<Omit<SupportPreset, "key">>) {
@@ -181,6 +184,9 @@ export function App() {
   }
 
   const { client, user } = state.data;
+  const selectedStatisticsSolution = statisticsSolutionId
+    ? client.solutions.find((solution) => solution.id === statisticsSolutionId) ?? null
+    : null;
 
   return (
     <>
@@ -200,6 +206,13 @@ export function App() {
           <span>Données client filtrées côté serveur</span>
         </section>
 
+        {selectedStatisticsSolution ? (
+          <StatisticsPage
+            solution={selectedStatisticsSolution}
+            onBack={() => setStatisticsSolutionId(null)}
+          />
+        ) : (
+          <>
         <section className="dashboard-section" id="demandes">
           <div className="section-heading section-heading-row">
             <div>
@@ -264,6 +277,7 @@ export function App() {
         <ServicesActive
           services={client.services}
           solutions={client.solutions}
+          onOpenStatistics={(solution) => setStatisticsSolutionId(solution.id)}
           onSupportRequest={() =>
             openSupportRequest({
               subject: "Question sur mes services Fluxperf",
@@ -289,6 +303,8 @@ export function App() {
             Contacter l'équipe
           </button>
         </section>
+          </>
+        )}
       </main>
 
       <InterventionRequestModal

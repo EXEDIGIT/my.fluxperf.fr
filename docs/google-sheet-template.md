@@ -97,6 +97,7 @@ domaine
 url_ou_indication
 date_activation
 notes
+ga4_property_id
 ```
 
 ## Exemple de lignes `Solutions`
@@ -111,6 +112,7 @@ domaine: hbint.com
 url_ou_indication: https://www.hbint.com
 date_activation: 17/07/2026
 notes:
+ga4_property_id: 123456789
 
 solution_id: SOL-0002
 client_id: CLI-0001
@@ -121,6 +123,7 @@ domaine: trial.hbint.com
 url_ou_indication: https://trial.hbint.com
 date_activation: 17/07/2026
 notes:
+ga4_property_id:
 
 solution_id: SOL-0003
 client_id: CLI-0001
@@ -131,6 +134,7 @@ domaine:
 url_ou_indication: Centralisation donnees
 date_activation: 17/07/2026
 notes:
+ga4_property_id:
 ```
 
 ## Regles du module Impacts
@@ -150,6 +154,13 @@ notes:
 - `domaine` sert de garde-fou : l'URL capturee doit correspondre a ce domaine ou a l'un de ses sous-domaines.
 - Les lignes `Flux Automatisation & IA` et `Flux Assistant IA` affichent un placeholder standardise, sans capture Browser Run.
 - Les URL localhost, IP privees/locales, protocoles non HTTP(S) et URL avec identifiants sont refusees.
+
+## Regles du module Statistiques
+
+- Une ligne active `Flux Visibilite & Acquisition` avec `domaine` affiche un CTA `Statistiques`.
+- Si `ga4_property_id` est vide, le client voit `Statistiques en cours de raccordement`.
+- Si `ga4_property_id` est renseigne, il doit contenir l'identifiant numerique de la propriete GA4.
+- Le navigateur ne recoit jamais l'ID GA4 ; l'API le relit cote serveur avant d'appeler Google Analytics Data API.
 
 ## Onglet `Parametres`
 

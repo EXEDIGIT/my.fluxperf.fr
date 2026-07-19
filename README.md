@@ -69,7 +69,7 @@ GOOGLE_CONNECTIONS_RANGE=Connexions!A1:H1000
 GOOGLE_PARAMETERS_RANGE=Parametres!A1:B1000
 GOOGLE_CLIENTS_WRITE_RANGE=Clients!A:K
 GOOGLE_CONTACTS_WRITE_RANGE=Contacts!A:J
-GOOGLE_SOLUTIONS_WRITE_RANGE=Solutions!A:I
+GOOGLE_SOLUTIONS_WRITE_RANGE=Solutions!A:J
 GOOGLE_CONNECTIONS_WRITE_RANGE=Connexions!A:H
 GOOGLE_SERVICE_ACCOUNT_EMAIL=
 GOOGLE_PRIVATE_KEY=
@@ -165,6 +165,7 @@ domaine
 url_ou_indication
 date_activation
 notes
+ga4_property_id
 ```
 
 Valeurs V1 attendues pour `type_solution` : `Flux Visibilité & Acquisition`,
@@ -175,6 +176,31 @@ compatibilite.
 La colonne `url_ou_indication` accepte soit une URL, soit une indication de
 service. Elle est conservee telle que saisie ; si la valeur n'est pas une URL,
 `domaine` reste vide.
+
+La colonne `ga4_property_id` est renseignee uniquement pour les lignes actives
+`Flux Visibilite & Acquisition` raccordees a GA4. Elle contient l'identifiant
+numerique de propriete GA4 et reste uniquement lue cote serveur.
+
+## Module Statistiques GA4
+
+Le module "Statistiques" affiche les donnees GA4 principales pour chaque
+solution active `Flux Visibilite & Acquisition` avec domaine :
+
+- periodes disponibles : 7 jours, 30 jours, 90 jours et 1 an ;
+- visites, visiteurs uniques et duree moyenne ;
+- acquisition par canal et source ;
+- top pays, villes, pages et evenements utiles ;
+- etat "Statistiques en cours de raccordement" si `ga4_property_id` est vide.
+
+La Pages Function `/api/statistics/:solution_id` reverifie l'identite, controle
+que la solution appartient au client connecte, puis interroge GA4 cote serveur.
+Le navigateur ne recoit jamais `ga4_property_id`.
+
+Configuration Google a prevoir :
+
+1. Activer Google Analytics Data API dans le projet Google Cloud.
+2. Ajouter le Service Account Fluxperf en lecture sur les proprietes GA4.
+3. Renseigner `ga4_property_id` dans `Solutions` pour les solutions eligibles.
 
 ## Vignettes des services actifs
 

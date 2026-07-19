@@ -12,7 +12,7 @@ const DEFAULT_CONNECTIONS_RANGE = "Connexions!A1:H1000";
 const DEFAULT_PARAMETERS_RANGE = "Parametres!A1:B1000";
 const DEFAULT_CLIENTS_WRITE_RANGE = "Clients!A:K";
 const DEFAULT_CONTACTS_WRITE_RANGE = "Contacts!A:J";
-const DEFAULT_SOLUTIONS_WRITE_RANGE = "Solutions!A:I";
+const DEFAULT_SOLUTIONS_WRITE_RANGE = "Solutions!A:J";
 const DEFAULT_CONNECTIONS_WRITE_RANGE = "Connexions!A:H";
 const CONNECTIONS_SHEET_NAME = "Connexions";
 const CONNECTIONS_HEADERS = [
@@ -117,7 +117,7 @@ async function signJwt(unsignedJwt: string, privateKey: string): Promise<string>
   return base64UrlEncode(signature);
 }
 
-async function createGoogleJwt(env: AppEnv): Promise<string> {
+async function createGoogleJwt(env: AppEnv, scope = GOOGLE_SCOPE): Promise<string> {
   if (!env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !env.GOOGLE_PRIVATE_KEY) {
     throw new Error("Google Service Account configuration is missing.");
   }
@@ -129,7 +129,7 @@ async function createGoogleJwt(env: AppEnv): Promise<string> {
   };
   const payload = {
     iss: env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-    scope: GOOGLE_SCOPE,
+    scope,
     aud: GOOGLE_TOKEN_URL,
     exp: now + 3600,
     iat: now
@@ -142,8 +142,12 @@ async function createGoogleJwt(env: AppEnv): Promise<string> {
   return `${unsignedJwt}.${signature}`;
 }
 
-async function getGoogleAccessToken(env: AppEnv, fetcher: Fetcher): Promise<string> {
-  const assertion = await createGoogleJwt(env);
+export async function getGoogleAccessTokenForScope(
+  env: AppEnv,
+  scope = GOOGLE_SCOPE,
+  fetcher: Fetcher = fetch
+): Promise<string> {
+  const assertion = await createGoogleJwt(env, scope);
   const body = new URLSearchParams({
     grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
     assertion
@@ -176,7 +180,7 @@ export async function readGoogleSheetValues(
     throw new Error("Google Sheets configuration is missing.");
   }
 
-  const accessToken = await getGoogleAccessToken(env, fetcher);
+  const accessToken = await getGoogleAccessTokenForScope(env, GOOGLE_SCOPE, fetcher);
 
   return readGoogleSheetRange(env, accessToken, env.GOOGLE_SHEET_RANGE || DEFAULT_RANGE, fetcher);
 }
@@ -237,7 +241,7 @@ export async function readGoogleWorkbookValues(
     throw new Error("Google Sheets configuration is missing.");
   }
 
-  const accessToken = await getGoogleAccessToken(env, fetcher);
+  const accessToken = await getGoogleAccessTokenForScope(env, GOOGLE_SCOPE, fetcher);
   const [clients, contacts, solutions, actions, connections] = await Promise.all([
     readGoogleSheetRange(env, accessToken, env.GOOGLE_SHEET_RANGE || DEFAULT_RANGE, fetcher),
     readOptionalGoogleSheetRange(
@@ -287,7 +291,7 @@ export async function readGoogleParametersValues(
     throw new Error("Google Sheets configuration is missing.");
   }
 
-  const accessToken = await getGoogleAccessToken(env, fetcher);
+  const accessToken = await getGoogleAccessTokenForScope(env, GOOGLE_SCOPE, fetcher);
 
   return readOptionalGoogleSheetRange(
     env,
@@ -313,7 +317,7 @@ export async function appendGoogleSheetValues(
     };
   }
 
-  const accessToken = await getGoogleAccessToken(env, fetcher);
+  const accessToken = await getGoogleAccessTokenForScope(env, GOOGLE_SCOPE, fetcher);
   const sheetId = encodeURIComponent(env.GOOGLE_SHEET_ID as string);
   const range = encodeURIComponent(rangeName);
   const response = await fetcher(
@@ -348,7 +352,7 @@ export async function updateGoogleSheetValues(
     throw new Error("Google Sheets configuration is missing.");
   }
 
-  const accessToken = await getGoogleAccessToken(env, fetcher);
+  const accessToken = await getGoogleAccessTokenForScope(env, GOOGLE_SCOPE, fetcher);
   const sheetId = encodeURIComponent(env.GOOGLE_SHEET_ID as string);
   const range = encodeURIComponent(rangeName);
   const response = await fetcher(
@@ -381,7 +385,7 @@ export async function ensureConnectionsSheet(
     throw new Error("Google Sheets configuration is missing.");
   }
 
-  const accessToken = await getGoogleAccessToken(env, fetcher);
+  const accessToken = await getGoogleAccessTokenForScope(env, GOOGLE_SCOPE, fetcher);
   const sheetId = encodeURIComponent(env.GOOGLE_SHEET_ID as string);
   const response = await fetcher(`https://sheets.googleapis.com/v4/spreadsheets/${sheetId}:batchUpdate`, {
     method: "POST",

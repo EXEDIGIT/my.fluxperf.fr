@@ -17,7 +17,7 @@ vi.mock("../../lib/googleSheets", () => ({
   getGoogleWriteRanges: vi.fn(() => ({
     clients: "Clients!A:K",
     contacts: "Contacts!A:J",
-    solutions: "Solutions!A:I"
+    solutions: "Solutions!A:J"
   })),
   appendGoogleSheetValues: vi.fn(async () => ({ updatedRows: 1 }))
 }));

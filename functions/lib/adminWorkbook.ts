@@ -44,6 +44,7 @@ export type AdminClientDetail = AdminClientSummary & {
     urlOrIndication: string;
     activatedAt: string;
     notes: string;
+    ga4PropertyId: string;
   }>;
   actions: Array<{
     id: string;
@@ -362,7 +363,8 @@ export function buildAdminClientDetail(workbook: ClientWorkbookValues, id: strin
       domain: getValue(record, "domaine", "domain"),
       urlOrIndication: getValue(record, "url_ou_indication", "url"),
       activatedAt: getValue(record, "date_activation"),
-      notes: getValue(record, "notes")
+      notes: getValue(record, "notes"),
+      ga4PropertyId: getValue(record, "ga4_property_id", "ga4_property", "analytics_property_id")
     })),
     actions: clientActions.map(({ record }) => ({
       id: getValue(record, "action_id", "id"),

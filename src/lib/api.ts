@@ -42,6 +42,9 @@ const demoResponse: MeResponse = {
           kind: "website",
           endpoint: "/api/thumbnails/SOL-0001",
           placeholderKey: "visibility_acquisition"
+        },
+        statistics: {
+          status: "available"
         }
       },
       {
@@ -57,6 +60,9 @@ const demoResponse: MeResponse = {
           kind: "website",
           endpoint: "/api/thumbnails/SOL-0002",
           placeholderKey: "visibility_acquisition"
+        },
+        statistics: {
+          status: "pending_setup"
         }
       },
       {
@@ -72,6 +78,9 @@ const demoResponse: MeResponse = {
           kind: "placeholder",
           endpoint: null,
           placeholderKey: "automation_ai"
+        },
+        statistics: {
+          status: "not_applicable"
         }
       },
       {
@@ -87,6 +96,9 @@ const demoResponse: MeResponse = {
           kind: "placeholder",
           endpoint: null,
           placeholderKey: "assistant_ai"
+        },
+        statistics: {
+          status: "not_applicable"
         }
       }
     ],
@@ -257,6 +269,82 @@ export type AccessRequestResponse = {
   requestId: string;
 };
 
+export type StatisticsPeriod = {
+  id: "7d" | "30d" | "90d" | "365d";
+  label: string;
+  startDate: string;
+  endDate: string;
+};
+
+export type StatisticsValueRow = {
+  label: string;
+  value: number;
+  percentage: number;
+};
+
+export type StatisticsTrafficRow = {
+  label: string;
+  sessions: number;
+  activeUsers: number;
+  percentage: number;
+  averageVisitDurationSeconds: number;
+};
+
+export type StatisticsPageRow = {
+  label: string;
+  views: number;
+  percentage: number;
+  averageVisitDurationSeconds: number;
+};
+
+export type StatisticsEventRow = {
+  label: string;
+  eventName: string;
+  count: number;
+  percentage: number;
+};
+
+export type StatisticsReadyResponse = {
+  status: "ready";
+  generatedAt: string;
+  period: StatisticsPeriod;
+  solution: {
+    id: string;
+    name: string;
+    domain: string;
+  };
+  overview: {
+    visits: number;
+    uniqueVisitors: number;
+    averageVisitDurationSeconds: number;
+    topEvents: StatisticsEventRow[];
+    countries: StatisticsValueRow[];
+    cities: StatisticsValueRow[];
+    topPages: StatisticsPageRow[];
+  };
+  acquisition: {
+    channels: StatisticsTrafficRow[];
+    sources: StatisticsTrafficRow[];
+  };
+  behavior: {
+    pages: StatisticsPageRow[];
+    events: StatisticsEventRow[];
+  };
+};
+
+export type StatisticsPendingResponse = {
+  status: "pending_setup";
+  period: StatisticsPeriod;
+  solution: {
+    id: string;
+    name: string;
+    domain: string;
+  };
+};
+
+export type StatisticsResponse = StatisticsReadyResponse | StatisticsPendingResponse;
+export type StatisticsPeriodId = StatisticsPeriod["id"];
+
 function buildDemoRequestId(): string {
   const parts = new Intl.DateTimeFormat("fr-FR", {
     timeZone: "Europe/Paris",
@@ -281,6 +369,109 @@ function buildAccessDemoRequestId(): string {
   const date = `${part("day")}${part("month")}${part("year")}`;
 
   return `ACC-${date}-DEMO`;
+}
+
+function demoPeriod(period: StatisticsPeriodId): StatisticsPeriod {
+  const labels: Record<StatisticsPeriodId, string> = {
+    "7d": "7 derniers jours",
+    "30d": "30 derniers jours",
+    "90d": "90 derniers jours",
+    "365d": "Depuis 1 an"
+  };
+
+  return {
+    id: period,
+    label: labels[period],
+    startDate: period === "365d" ? "365daysAgo" : `${period.replace("d", "")}daysAgo`,
+    endDate: "yesterday"
+  };
+}
+
+function buildDemoStatistics(solutionId: string, period: StatisticsPeriodId): StatisticsResponse {
+  if (solutionId === "SOL-0002") {
+    return {
+      status: "pending_setup",
+      period: demoPeriod(period),
+      solution: {
+        id: solutionId,
+        name: "Flux Visibilite & Acquisition - Site e-shop",
+        domain: "blog.a2-cm.fr"
+      }
+    };
+  }
+
+  return {
+    status: "ready",
+    generatedAt: new Date().toISOString(),
+    period: demoPeriod(period),
+    solution: {
+      id: solutionId,
+      name: "Flux Visibilite & Acquisition - Site web",
+      domain: "a2-cm.fr"
+    },
+    overview: {
+      visits: 2284,
+      uniqueVisitors: 1812,
+      averageVisitDurationSeconds: 104,
+      topEvents: [
+        { label: "Formulaire envoye", eventName: "generate_lead", count: 38, percentage: 44.2 },
+        { label: "Clic", eventName: "click", count: 24, percentage: 27.9 },
+        { label: "Telechargement", eventName: "file_download", count: 14, percentage: 16.3 },
+        { label: "Recherche interne", eventName: "search", count: 10, percentage: 11.6 }
+      ],
+      countries: [
+        { label: "France", value: 1700, percentage: 81.3 },
+        { label: "Belgique", value: 140, percentage: 6.7 },
+        { label: "Suisse", value: 96, percentage: 4.6 },
+        { label: "Canada", value: 84, percentage: 4 },
+        { label: "Espagne", value: 72, percentage: 3.4 }
+      ],
+      cities: [
+        { label: "Paris", value: 520, percentage: 36.4 },
+        { label: "Lyon", value: 260, percentage: 18.2 },
+        { label: "Marseille", value: 210, percentage: 14.7 },
+        { label: "Bordeaux", value: 160, percentage: 11.2 },
+        { label: "Lille", value: 132, percentage: 9.2 }
+      ],
+      topPages: [
+        { label: "/", views: 1420, percentage: 42.1, averageVisitDurationSeconds: 74 },
+        { label: "/contact", views: 520, percentage: 15.4, averageVisitDurationSeconds: 88 },
+        { label: "/services", views: 470, percentage: 13.9, averageVisitDurationSeconds: 112 },
+        { label: "/realisations", views: 310, percentage: 9.2, averageVisitDurationSeconds: 96 },
+        { label: "/blog", views: 220, percentage: 6.5, averageVisitDurationSeconds: 64 }
+      ]
+    },
+    acquisition: {
+      channels: [
+        { label: "SEO", sessions: 1240, activeUsers: 960, percentage: 54.3, averageVisitDurationSeconds: 118 },
+        { label: "Direct", sessions: 520, activeUsers: 430, percentage: 22.8, averageVisitDurationSeconds: 82 },
+        { label: "Sites referents", sessions: 270, activeUsers: 210, percentage: 11.8, averageVisitDurationSeconds: 96 },
+        { label: "Social", sessions: 190, activeUsers: 160, percentage: 8.3, averageVisitDurationSeconds: 54 },
+        { label: "IA GEO", sessions: 64, activeUsers: 52, percentage: 2.8, averageVisitDurationSeconds: 74 }
+      ],
+      sources: [
+        { label: "google / organic", sessions: 980, activeUsers: 760, percentage: 42.9, averageVisitDurationSeconds: 122 },
+        { label: "Acces direct", sessions: 520, activeUsers: 430, percentage: 22.8, averageVisitDurationSeconds: 82 },
+        { label: "bing / organic", sessions: 180, activeUsers: 140, percentage: 7.9, averageVisitDurationSeconds: 104 },
+        { label: "linkedin.com / referral", sessions: 120, activeUsers: 96, percentage: 5.3, averageVisitDurationSeconds: 68 }
+      ]
+    },
+    behavior: {
+      pages: [
+        { label: "/", views: 1420, percentage: 42.1, averageVisitDurationSeconds: 74 },
+        { label: "/contact", views: 520, percentage: 15.4, averageVisitDurationSeconds: 88 },
+        { label: "/services", views: 470, percentage: 13.9, averageVisitDurationSeconds: 112 },
+        { label: "/realisations", views: 310, percentage: 9.2, averageVisitDurationSeconds: 96 },
+        { label: "/blog", views: 220, percentage: 6.5, averageVisitDurationSeconds: 64 }
+      ],
+      events: [
+        { label: "Formulaire envoye", eventName: "generate_lead", count: 38, percentage: 44.2 },
+        { label: "Clic", eventName: "click", count: 24, percentage: 27.9 },
+        { label: "Telechargement", eventName: "file_download", count: 14, percentage: 16.3 },
+        { label: "Recherche interne", eventName: "search", count: 10, percentage: 11.6 }
+      ]
+    }
+  };
 }
 
 export async function submitInterventionRequest(
@@ -437,6 +628,52 @@ export async function submitAccessRequest(
         status: "received",
         requestId: buildAccessDemoRequestId()
       };
+    }
+
+    throw error;
+  }
+}
+
+export async function getStatistics(
+  solutionId: string,
+  period: StatisticsPeriodId
+): Promise<StatisticsResponse> {
+  try {
+    const accessToken = await getSupabaseAccessToken();
+    const headers: HeadersInit = {
+      Accept: "application/json"
+    };
+
+    if (accessToken) {
+      headers.Authorization = `Bearer ${accessToken}`;
+    }
+
+    const response = await fetch(
+      `/api/statistics/${encodeURIComponent(solutionId)}?period=${encodeURIComponent(period)}`,
+      {
+        headers
+      }
+    );
+    const contentType = response.headers.get("Content-Type") ?? "";
+
+    if (!contentType.includes("application/json")) {
+      throw new ApiError(response.status || 500, "INVALID_RESPONSE", "Reponse API invalide.");
+    }
+
+    const data = (await response.json()) as StatisticsResponse & ApiErrorResponse;
+
+    if (!response.ok) {
+      throw new ApiError(
+        response.status,
+        data.error?.code || "API_ERROR",
+        data.error?.message || "Une erreur est survenue."
+      );
+    }
+
+    return data;
+  } catch (error) {
+    if (shouldUseViteDemoFallback()) {
+      return buildDemoStatistics(solutionId, period);
     }
 
     throw error;

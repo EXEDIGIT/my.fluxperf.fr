@@ -42,6 +42,12 @@ export type ClientSolutionThumbnailDto = {
   placeholderKey: ClientImpactKey;
 };
 
+export type ClientStatisticsStatusDto = "available" | "pending_setup" | "not_applicable";
+
+export type ClientSolutionStatisticsDto = {
+  status: ClientStatisticsStatusDto;
+};
+
 export type ClientSolutionDto = {
   id: string;
   type: string;
@@ -52,6 +58,7 @@ export type ClientSolutionDto = {
   url: string;
   activatedAt: string;
   thumbnail: ClientSolutionThumbnailDto;
+  statistics: ClientSolutionStatisticsDto;
 };
 
 export type ThumbnailSourceDto = {

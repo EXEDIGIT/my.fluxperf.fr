@@ -57,6 +57,7 @@ type SolutionDraft = {
   id: string;
   name: string;
   urlOrIndication: string;
+  ga4PropertyId: string;
 };
 
 type SolutionDraftsByType = Record<AdminSolutionType, SolutionDraft[]>;
@@ -100,7 +101,8 @@ function createSolutionDraft(option: AdminSolutionOption): SolutionDraft {
   return {
     id: buildDraftId(option.type),
     name: option.defaultName,
-    urlOrIndication: ""
+    urlOrIndication: "",
+    ga4PropertyId: ""
   };
 }
 
@@ -284,6 +286,7 @@ export function AdminConsolePage() {
   const [clientSolutionType, setClientSolutionType] = useState<AdminSolutionType>("visibility_acquisition");
   const [clientSolutionName, setClientSolutionName] = useState(fallbackSolutionOptions[0].defaultName);
   const [clientSolutionValue, setClientSolutionValue] = useState("");
+  const [clientSolutionGa4PropertyId, setClientSolutionGa4PropertyId] = useState("");
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [success, setSuccess] = useState<AdminCreateClientResponse | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -460,9 +463,11 @@ export function AdminConsolePage() {
       await addAdminClientSolution(selectedClient.id, {
         type: clientSolutionType,
         name: clientSolutionName || selectedSolutionOption.defaultName,
-        urlOrIndication: clientSolutionValue
+        urlOrIndication: clientSolutionValue,
+        ga4PropertyId: clientSolutionType === "visibility_acquisition" ? clientSolutionGa4PropertyId : ""
       });
       setClientSolutionValue("");
+      setClientSolutionGa4PropertyId("");
       setClientMessage("Solution ajoutee.");
       await refreshAdminData(selectedClient.id);
     } catch (error) {
@@ -567,10 +572,11 @@ export function AdminConsolePage() {
     setSuccess(null);
 
     const selectedSolutions = solutionOptions.flatMap((option) =>
-      (solutions[option.type] ?? []).map(({ name, urlOrIndication }) => ({
+      (solutions[option.type] ?? []).map(({ name, urlOrIndication, ga4PropertyId }) => ({
         type: option.type,
         name,
-        urlOrIndication
+        urlOrIndication,
+        ga4PropertyId: option.type === "visibility_acquisition" ? ga4PropertyId : ""
       }))
     );
 
@@ -825,6 +831,7 @@ export function AdminConsolePage() {
 
                     setClientSolutionType(type);
                     setClientSolutionName(option.defaultName);
+                    setClientSolutionGa4PropertyId("");
                   }}
                 >
                   {solutionOptions.map((option) => (
@@ -837,6 +844,14 @@ export function AdminConsolePage() {
                   ))}
                 </select>
                 <input value={clientSolutionValue} placeholder="exemple.fr ou indication" onChange={(event) => setClientSolutionValue(event.target.value)} />
+                {clientSolutionType === "visibility_acquisition" ? (
+                  <input
+                    value={clientSolutionGa4PropertyId}
+                    inputMode="numeric"
+                    placeholder="ID propriete GA4"
+                    onChange={(event) => setClientSolutionGa4PropertyId(event.target.value)}
+                  />
+                ) : null}
                 <button type="submit" disabled={isClientActionPending}>
                   <Plus aria-hidden="true" />
                   Ajouter
@@ -851,7 +866,11 @@ export function AdminConsolePage() {
                     <article key={solution.id}>
                       <span>
                         <strong>{solution.name || solution.type}</strong>
-                        <small>{solution.domain || solution.urlOrIndication || "Sans indication"}</small>
+                        <small>
+                          {[solution.domain || solution.urlOrIndication || "Sans indication", solution.ga4PropertyId ? `GA4 ${solution.ga4PropertyId}` : ""]
+                            .filter(Boolean)
+                            .join(" - ")}
+                        </small>
                       </span>
                       <em className={`is-${statusKind}`}>{solution.status}</em>
                       {statusKind === "active" ? (
@@ -988,6 +1007,17 @@ export function AdminConsolePage() {
                           onChange={(event) => updateSolution(option.type, draft.id, { urlOrIndication: event.target.value })}
                         />
                       </label>
+                      {option.type === "visibility_acquisition" ? (
+                        <label>
+                          ID propriete GA4
+                          <input
+                            value={draft.ga4PropertyId}
+                            inputMode="numeric"
+                            placeholder="123456789"
+                            onChange={(event) => updateSolution(option.type, draft.id, { ga4PropertyId: event.target.value })}
+                          />
+                        </label>
+                      ) : null}
                     </div>
                   ))}
 

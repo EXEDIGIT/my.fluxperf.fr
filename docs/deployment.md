@@ -22,6 +22,7 @@ GOOGLE_SOLUTIONS_RANGE=Solutions!A1:Z1000
 GOOGLE_ACTIONS_RANGE=Actions!A1:J1000
 GOOGLE_CONNECTIONS_RANGE=Connexions!A1:H1000
 GOOGLE_PARAMETERS_RANGE=Parametres!A1:B1000
+GOOGLE_SOLUTIONS_WRITE_RANGE=Solutions!A:J
 GOOGLE_CONNECTIONS_WRITE_RANGE=Connexions!A:H
 GOOGLE_SERVICE_ACCOUNT_EMAIL=
 GOOGLE_PRIVATE_KEY=
@@ -47,11 +48,14 @@ comme secrets Cloudflare Pages. Ces cles doivent rester cote serveur.
 ## Checklist Google
 
 1. Google Sheets API activee.
-2. Service Account cree.
-3. Google Sheet partage en lecture avec le Service Account.
-4. `GOOGLE_SHEET_ID` recupere depuis l'URL du Sheet.
-5. Onglets `Clients`, `Contacts`, `Solutions` et `Actions` presents si le schema structure est utilise.
-6. Ancien onglet `Sites` archive/masque sous `Archive_Sites` si une migration a ete faite.
+2. Google Analytics Data API activee.
+3. Service Account cree.
+4. Google Sheet partage en lecture avec le Service Account.
+5. Proprietes GA4 partagees en lecture avec le Service Account pour les clients raccordes.
+6. `GOOGLE_SHEET_ID` recupere depuis l'URL du Sheet.
+7. Onglets `Clients`, `Contacts`, `Solutions` et `Actions` presents si le schema structure est utilise.
+8. Colonne `ga4_property_id` presente dans `Solutions` et `GOOGLE_SOLUTIONS_WRITE_RANGE=Solutions!A:J`.
+9. Ancien onglet `Sites` archive/masque sous `Archive_Sites` si une migration a ete faite.
 
 ## Checklist n8n / Brevo
 

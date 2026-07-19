@@ -17,6 +17,7 @@ export type AdminCreateClientInput = {
     type: AdminSolutionType;
     name: string;
     urlOrIndication: string;
+    ga4PropertyId: string;
   }>;
 };
 
@@ -66,6 +67,7 @@ export type AdminClientDetail = AdminClientSummary & {
     urlOrIndication: string;
     activatedAt: string;
     notes: string;
+    ga4PropertyId: string;
   }>;
   actions: Array<{
     id: string;

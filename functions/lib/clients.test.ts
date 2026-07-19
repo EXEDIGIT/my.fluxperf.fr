@@ -3,6 +3,7 @@ import {
   clientEmails,
   findClientForEmail,
   findClientForEmailInWorkbook,
+  getStatisticsSourceForClientSolution,
   getThumbnailSourcesFromWorkbook,
   parseClientRows
 } from "./clients";
@@ -261,6 +262,9 @@ describe("client sheet parsing", () => {
           domain: "hbint.com",
           url: "https://www.hbint.com",
           activatedAt: "2026-07-06",
+          statistics: {
+            status: "pending_setup"
+          },
           thumbnail: {
             kind: "website",
             endpoint: "/api/thumbnails/SOL-0001",
@@ -276,6 +280,9 @@ describe("client sheet parsing", () => {
           domain: "trial.hbint.com",
           url: "https://trial.hbint.com",
           activatedAt: "2026-07-06",
+          statistics: {
+            status: "pending_setup"
+          },
           thumbnail: {
             kind: "website",
             endpoint: "/api/thumbnails/SOL-0002",
@@ -357,6 +364,57 @@ describe("client sheet parsing", () => {
       expect(result.client.latestActions).toContainEqual({
         label: "Fiche client mise à jour",
         date: "17/07/2026"
+      });
+    }
+  });
+
+  it("keeps GA4 property ids server-side and exposes only the statistics status", () => {
+    const workbook = {
+      ...structuredWorkbook,
+      solutions: [
+        [
+          "solution_id",
+          "client_id",
+          "type_solution",
+          "statut_solution",
+          "nom_solution",
+          "domaine",
+          "url_ou_indication",
+          "date_activation",
+          "notes",
+          "ga4_property_id"
+        ],
+        [
+          "SOL-GA4",
+          "CLI-0001",
+          "visibility_acquisition",
+          "Actif",
+          "Visibilite GA4",
+          "hbint.com",
+          "https://www.hbint.com",
+          "2026-07-06",
+          "",
+          "123456789"
+        ]
+      ]
+    };
+    const result = findClientForEmailInWorkbook(workbook, "tdacunha@exedigit.fr");
+
+    expect(result.status).toBe("ok");
+    if (result.status === "ok") {
+      expect(result.client.solutions[0]).toMatchObject({
+        id: "SOL-GA4",
+        statistics: {
+          status: "available"
+        }
+      });
+      expect("ga4PropertyId" in result.client.solutions[0]).toBe(false);
+
+      const source = getStatisticsSourceForClientSolution(workbook, result.client, "SOL-GA4");
+
+      expect(source).toMatchObject({
+        status: "available",
+        ga4PropertyId: "123456789"
       });
     }
   });
@@ -633,6 +691,9 @@ describe("client sheet parsing", () => {
           domain: "",
           url: "",
           activatedAt: "2026-07-06",
+          statistics: {
+            status: "not_applicable"
+          },
           thumbnail: {
             kind: "placeholder",
             endpoint: null,

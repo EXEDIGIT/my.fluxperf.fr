@@ -2,6 +2,7 @@ import type {
   ClientDto,
   ClientImpactDto,
   ClientImpactKey,
+  ClientSolutionStatisticsDto,
   ClientSolutionDto,
   ClientSolutionThumbnailDto,
   RawClientRow,
@@ -69,7 +70,8 @@ export const demoSolutionsValues: string[][] = [
     "domaine",
     "url_ou_indication",
     "date_activation",
-    "notes"
+    "notes",
+    "ga4_property_id"
   ],
   [
     "SOL-DEMO-1",
@@ -80,7 +82,8 @@ export const demoSolutionsValues: string[][] = [
     "a2-cm.fr",
     "https://www.a2-cm.fr",
     "2026-07-06",
-    ""
+    "",
+    "123456789"
   ],
   [
     "SOL-DEMO-2",
@@ -91,6 +94,7 @@ export const demoSolutionsValues: string[][] = [
     "",
     "",
     "2026-07-06",
+    "",
     ""
   ],
   [
@@ -102,6 +106,7 @@ export const demoSolutionsValues: string[][] = [
     "",
     "",
     "2026-07-06",
+    "",
     ""
   ]
 ];
@@ -120,6 +125,17 @@ export type ClientWorkbookValues = {
 };
 
 type SheetRecord = Record<string, string>;
+
+export type ClientStatisticsSource =
+  | {
+      status: "available";
+      solution: ClientSolutionDto;
+      ga4PropertyId: string;
+    }
+  | {
+      status: "pending_setup" | "not_applicable";
+      solution: ClientSolutionDto;
+    };
 
 const impactRules: Record<ClientImpactKey, { label: string; weeklyHoursPerUnit: number }> = {
   visibility_acquisition: {
@@ -807,6 +823,38 @@ function thumbnailForSolution(
   };
 }
 
+function normalizeGa4PropertyId(value: string): string {
+  const trimmed = value.trim();
+  const fromResourceName = trimmed.match(/^properties\/(\d+)$/i)?.[1];
+  const candidate = fromResourceName || trimmed;
+
+  return /^\d+$/.test(candidate) ? candidate : "";
+}
+
+function statisticsForSolution(
+  type: ClientImpactKey | null,
+  domain: string,
+  solution: SheetRecord
+): ClientSolutionStatisticsDto {
+  if (type !== "visibility_acquisition" || !domain) {
+    return {
+      status: "not_applicable"
+    };
+  }
+
+  const ga4PropertyId = normalizeGa4PropertyId(
+    getValue(solution, "ga4_property_id", "ga4_property", "analytics_property_id")
+  );
+
+  return {
+    status: ga4PropertyId ? "available" : "pending_setup"
+  };
+}
+
+function solutionRecordId(solution: SheetRecord, name: string, domain: string, url: string): string {
+  return getValue(solution, "solution_id", "id") || name || domain || url;
+}
+
 function solutionRecordToDto(solution: SheetRecord): ClientSolutionDto {
   const url = getValue(solution, "url_ou_indication", "url");
   const domain = getValue(solution, "domaine", "domain") || domainFromUrl(url);
@@ -815,7 +863,7 @@ function solutionRecordToDto(solution: SheetRecord): ClientSolutionDto {
     getValue(solution, "nom_solution", "name", "nom", "solution") ||
     solutionTypeLabel(type, solution) ||
     "Solution Fluxperf";
-  const id = getValue(solution, "solution_id", "id") || name || domain || url;
+  const id = solutionRecordId(solution, name, domain, url);
 
   return {
     id,
@@ -826,7 +874,58 @@ function solutionRecordToDto(solution: SheetRecord): ClientSolutionDto {
     domain,
     url,
     activatedAt: getValue(solution, "date_activation", "activated_at", "date"),
-    thumbnail: thumbnailForSolution(id, type, url, domain)
+    thumbnail: thumbnailForSolution(id, type, url, domain),
+    statistics: statisticsForSolution(type, domain, solution)
+  };
+}
+
+export function getStatisticsSourceForClientSolution(
+  workbook: ClientWorkbookValues,
+  client: ClientDto,
+  solutionId: string
+): ClientStatisticsSource | null {
+  const solution = client.solutions.find((item) => item.id === solutionId);
+
+  if (!solution) {
+    return null;
+  }
+
+  if (solution.statistics.status !== "available") {
+    return {
+      status: solution.statistics.status,
+      solution
+    };
+  }
+
+  const rawSolution = activeSolutionsForClient(
+    { client_id: client.id },
+    parseRecords(workbook.solutions ?? [])
+  ).find((record) => {
+    const url = getValue(record, "url_ou_indication", "url");
+    const domain = getValue(record, "domaine", "domain") || domainFromUrl(url);
+    const type = solutionImpactKey(record);
+    const name =
+      getValue(record, "nom_solution", "name", "nom", "solution") ||
+      solutionTypeLabel(type, record) ||
+      "Solution Fluxperf";
+
+    return solutionRecordId(record, name, domain, url) === solutionId;
+  });
+  const ga4PropertyId = rawSolution
+    ? normalizeGa4PropertyId(getValue(rawSolution, "ga4_property_id", "ga4_property", "analytics_property_id"))
+    : "";
+
+  if (!ga4PropertyId) {
+    return {
+      status: "pending_setup",
+      solution
+    };
+  }
+
+  return {
+    status: "available",
+    solution,
+    ga4PropertyId
   };
 }
 

@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
-import { Bot, Globe2, Megaphone, MonitorSmartphone, Sparkles, Wrench, Zap, type LucideIcon } from "lucide-react";
+import { BarChart3, Bot, Globe2, Megaphone, MonitorSmartphone, Sparkles, Wrench, Zap, type LucideIcon } from "lucide-react";
 import { getSupabaseAccessToken } from "../lib/supabase";
-import type { Client } from "../types/client";
+import type { Client, ClientSolution } from "../types/client";
 
 type ServicesActiveProps = {
   services: Client["services"];
   solutions: Client["solutions"];
   onSupportRequest: () => void;
+  onOpenStatistics: (solution: ClientSolution) => void;
 };
 
 function iconForService(service: string) {
@@ -55,6 +56,10 @@ function solutionDetail(solution: Client["solutions"][number]): string {
 
 function descriptionForSolution(solution: Client["solutions"][number]) {
   return descriptionForService(`${solution.typeLabel} ${solution.name}`);
+}
+
+function shouldShowStatistics(solution: ClientSolution): boolean {
+  return solution.type === "visibility_acquisition" && Boolean(solution.domain);
 }
 
 function placeholderLabel(solution: Client["solutions"][number]): string {
@@ -172,7 +177,7 @@ function FallbackServiceThumbnail({ service, Icon }: { service: string; Icon: Lu
   );
 }
 
-export function ServicesActive({ services, solutions, onSupportRequest }: ServicesActiveProps) {
+export function ServicesActive({ services, solutions, onSupportRequest, onOpenStatistics }: ServicesActiveProps) {
   const activeSolutions = solutions.length > 0 ? solutions : null;
   const visibleServices = services.length > 0 ? services : ["Espace client Fluxperf"];
 
@@ -193,6 +198,16 @@ export function ServicesActive({ services, solutions, onSupportRequest }: Servic
               <strong>{solution.name || solution.typeLabel}</strong>
               <p>{detail}</p>
               <p>{descriptionForSolution(solution)}</p>
+              {shouldShowStatistics(solution) ? (
+                <button
+                  type="button"
+                  className="service-card-action"
+                  onClick={() => onOpenStatistics(solution)}
+                >
+                  <BarChart3 aria-hidden="true" />
+                  Statistiques
+                </button>
+              ) : null}
             </article>
           );
         }) : visibleServices.map((service, index) => {

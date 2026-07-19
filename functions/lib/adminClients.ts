@@ -22,6 +22,7 @@ export type AdminClientInput = {
     type: AdminSolutionType;
     name: string;
     urlOrIndication: string;
+    ga4PropertyId: string;
   }>;
 };
 
@@ -90,6 +91,17 @@ function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
+function normalizeGa4PropertyId(value: string): string {
+  const trimmed = value.trim();
+  const fromResourceName = trimmed.match(/^properties\/(\d+)$/i)?.[1];
+
+  return fromResourceName || trimmed;
+}
+
+function isValidGa4PropertyId(value: string): boolean {
+  return !value || /^\d+$/.test(value);
+}
+
 function compactName(firstName: string, lastName: string): string {
   return [firstName, lastName].filter(Boolean).join(" ").trim();
 }
@@ -153,15 +165,23 @@ export function validateAdminClientInput(
 
     const urlOrIndication = asText(item.urlOrIndication) || asText(item.url);
     const name = asText(item.name) || defaultNameForType(solutionOptions, type);
+    const ga4PropertyId = normalizeGa4PropertyId(
+      asText(item.ga4PropertyId) || asText(item.ga4_property_id) || asText(item.analyticsPropertyId)
+    );
 
     if (!optionAllowsSolution(solutionOptions, type, name)) {
       return "Le nom de solution sélectionné est invalide.";
     }
 
+    if (type === "visibility_acquisition" && !isValidGa4PropertyId(ga4PropertyId)) {
+      return "L'ID propriÃ©tÃ© GA4 doit contenir uniquement des chiffres.";
+    }
+
     return {
       type,
       name,
-      urlOrIndication
+      urlOrIndication,
+      ga4PropertyId: type === "visibility_acquisition" ? ga4PropertyId : ""
     };
   });
   const firstError = solutions.find((item): item is string => typeof item === "string");
@@ -264,7 +284,8 @@ export function buildAdminSolutionRow(
     domainFromUrlOrIndication(solution.urlOrIndication),
     solution.urlOrIndication,
     date,
-    ""
+    "",
+    solution.ga4PropertyId
   ];
 }
 

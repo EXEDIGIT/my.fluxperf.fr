@@ -34,7 +34,7 @@ SUPABASE_SERVICE_ROLE_KEY=
 APP_PUBLIC_URL=https://my.fluxperf.fr
 GOOGLE_CLIENTS_WRITE_RANGE=Clients!A:K
 GOOGLE_CONTACTS_WRITE_RANGE=Contacts!A:J
-GOOGLE_SOLUTIONS_WRITE_RANGE=Solutions!A:I
+GOOGLE_SOLUTIONS_WRITE_RANGE=Solutions!A:J
 GOOGLE_CONNECTIONS_RANGE=Connexions!A1:H1000
 GOOGLE_CONNECTIONS_WRITE_RANGE=Connexions!A:H
 GOOGLE_PARAMETERS_RANGE=Parametres!A1:B1000
@@ -101,12 +101,17 @@ domaine
 url_ou_indication
 date_activation
 notes
+ga4_property_id
 ```
 
 La console ne demande plus le champ `domaine` : elle le deduit uniquement quand
 `url_ou_indication` contient une URL. Une indication de service reste du texte
 et laisse `domaine` vide. La valeur `url_ou_indication` est ecrite telle que
 saisie, sans ajout automatique de protocole.
+
+Pour les solutions `Flux Visibilite & Acquisition`, la console peut aussi
+ecrire `ga4_property_id`. Cette valeur est l'identifiant numerique de propriete
+GA4 utilise par le module Statistiques cote serveur.
 
 `Connexions`
 
