@@ -280,10 +280,12 @@ export type StatisticsValueRow = {
   label: string;
   value: number;
   percentage: number;
+  countryCode?: string;
 };
 
 export type StatisticsTrafficRow = {
   label: string;
+  description?: string;
   sessions: number;
   activeUsers: number;
   percentage: number;
@@ -304,6 +306,13 @@ export type StatisticsEventRow = {
   percentage: number;
 };
 
+export type StatisticsTimelineGranularity = "day" | "week" | "month";
+
+export type StatisticsTimelinePoint = {
+  date: string;
+  visits: number;
+};
+
 export type StatisticsReadyResponse = {
   status: "ready";
   generatedAt: string;
@@ -321,6 +330,10 @@ export type StatisticsReadyResponse = {
     countries: StatisticsValueRow[];
     cities: StatisticsValueRow[];
     topPages: StatisticsPageRow[];
+  };
+  timeline: {
+    granularity: StatisticsTimelineGranularity;
+    points: StatisticsTimelinePoint[];
   };
   acquisition: {
     channels: StatisticsTrafficRow[];
@@ -387,6 +400,38 @@ function demoPeriod(period: StatisticsPeriodId): StatisticsPeriod {
   };
 }
 
+function buildDemoTimeline(period: StatisticsPeriodId, totalVisits: number): StatisticsReadyResponse["timeline"] {
+  const granularity: StatisticsTimelineGranularity = period === "365d" ? "month" : period === "90d" ? "week" : "day";
+  const pointCount = period === "7d" ? 7 : period === "30d" ? 30 : period === "90d" ? 13 : 12;
+  const weights = Array.from({ length: pointCount }, (_, index) => 0.72 + ((index * 7) % 11) / 20 + Math.sin(index / 2.4) * 0.18);
+  const weightTotal = weights.reduce((sum, value) => sum + value, 0);
+  const yesterday = new Date();
+
+  yesterday.setHours(0, 0, 0, 0);
+  yesterday.setDate(yesterday.getDate() - 1);
+
+  const points = weights.map((weight, index) => {
+    const date = new Date(yesterday);
+
+    if (granularity === "month") {
+      date.setDate(1);
+      date.setMonth(date.getMonth() - (pointCount - index - 1));
+    } else {
+      date.setDate(date.getDate() - (pointCount - index - 1) * (granularity === "week" ? 7 : 1));
+    }
+
+    return {
+      date: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`,
+      visits: Math.floor((totalVisits * weight) / weightTotal)
+    };
+  });
+  const assignedVisits = points.reduce((sum, point) => sum + point.visits, 0);
+
+  points[points.length - 1].visits += totalVisits - assignedVisits;
+
+  return { granularity, points };
+}
+
 function buildDemoStatistics(solutionId: string, period: StatisticsPeriodId): StatisticsResponse {
   if (solutionId === "SOL-0002") {
     return {
@@ -420,11 +465,11 @@ function buildDemoStatistics(solutionId: string, period: StatisticsPeriodId): St
         { label: "Recherche interne", eventName: "search", count: 10, percentage: 11.6 }
       ],
       countries: [
-        { label: "France", value: 1700, percentage: 81.3 },
-        { label: "Belgique", value: 140, percentage: 6.7 },
-        { label: "Suisse", value: 96, percentage: 4.6 },
-        { label: "Canada", value: 84, percentage: 4 },
-        { label: "Espagne", value: 72, percentage: 3.4 }
+        { label: "France", countryCode: "FR", value: 1700, percentage: 81.3 },
+        { label: "Belgique", countryCode: "BE", value: 140, percentage: 6.7 },
+        { label: "Suisse", countryCode: "CH", value: 96, percentage: 4.6 },
+        { label: "Canada", countryCode: "CA", value: 84, percentage: 4 },
+        { label: "Espagne", countryCode: "ES", value: 72, percentage: 3.4 }
       ],
       cities: [
         { label: "Paris", value: 520, percentage: 36.4 },
@@ -434,31 +479,32 @@ function buildDemoStatistics(solutionId: string, period: StatisticsPeriodId): St
         { label: "Lille", value: 132, percentage: 9.2 }
       ],
       topPages: [
-        { label: "/", views: 1420, percentage: 42.1, averageVisitDurationSeconds: 74 },
+        { label: "/ • Page d’accueil", views: 1420, percentage: 42.1, averageVisitDurationSeconds: 74 },
         { label: "/contact", views: 520, percentage: 15.4, averageVisitDurationSeconds: 88 },
         { label: "/services", views: 470, percentage: 13.9, averageVisitDurationSeconds: 112 },
         { label: "/realisations", views: 310, percentage: 9.2, averageVisitDurationSeconds: 96 },
         { label: "/blog", views: 220, percentage: 6.5, averageVisitDurationSeconds: 64 }
       ]
     },
+    timeline: buildDemoTimeline(period, 2284),
     acquisition: {
       channels: [
-        { label: "SEO", sessions: 1240, activeUsers: 960, percentage: 54.3, averageVisitDurationSeconds: 118 },
-        { label: "Direct", sessions: 520, activeUsers: 430, percentage: 22.8, averageVisitDurationSeconds: 82 },
-        { label: "Sites referents", sessions: 270, activeUsers: 210, percentage: 11.8, averageVisitDurationSeconds: 96 },
-        { label: "Social", sessions: 190, activeUsers: 160, percentage: 8.3, averageVisitDurationSeconds: 54 },
-        { label: "IA GEO", sessions: 64, activeUsers: 52, percentage: 2.8, averageVisitDurationSeconds: 74 }
+        { label: "SEO", description: "Moteurs de recherche", sessions: 1240, activeUsers: 960, percentage: 54.3, averageVisitDurationSeconds: 118 },
+        { label: "Direct", description: "Adresse saisie, favori ou origine non détectée", sessions: 520, activeUsers: 430, percentage: 22.8, averageVisitDurationSeconds: 82 },
+        { label: "Sites référents", description: "Liens depuis d’autres sites", sessions: 270, activeUsers: 210, percentage: 11.8, averageVisitDurationSeconds: 96 },
+        { label: "Social", description: "Réseaux sociaux", sessions: 190, activeUsers: 160, percentage: 8.3, averageVisitDurationSeconds: 54 },
+        { label: "IA GEO", description: "Assistants IA", sessions: 64, activeUsers: 52, percentage: 2.8, averageVisitDurationSeconds: 74 }
       ],
       sources: [
-        { label: "google / organic", sessions: 980, activeUsers: 760, percentage: 42.9, averageVisitDurationSeconds: 122 },
-        { label: "Acces direct", sessions: 520, activeUsers: 430, percentage: 22.8, averageVisitDurationSeconds: 82 },
-        { label: "bing / organic", sessions: 180, activeUsers: 140, percentage: 7.9, averageVisitDurationSeconds: 104 },
-        { label: "linkedin.com / referral", sessions: 120, activeUsers: 96, percentage: 5.3, averageVisitDurationSeconds: 68 }
+        { label: "Google", description: "Moteur de recherche", sessions: 980, activeUsers: 760, percentage: 42.9, averageVisitDurationSeconds: 122 },
+        { label: "Accès direct", description: "Origine non détectée", sessions: 520, activeUsers: 430, percentage: 22.8, averageVisitDurationSeconds: 82 },
+        { label: "Bing", description: "Moteur de recherche", sessions: 180, activeUsers: 140, percentage: 7.9, averageVisitDurationSeconds: 104 },
+        { label: "linkedin.com", description: "Site référent", sessions: 120, activeUsers: 96, percentage: 5.3, averageVisitDurationSeconds: 68 }
       ]
     },
     behavior: {
       pages: [
-        { label: "/", views: 1420, percentage: 42.1, averageVisitDurationSeconds: 74 },
+        { label: "/ • Page d’accueil", views: 1420, percentage: 42.1, averageVisitDurationSeconds: 74 },
         { label: "/contact", views: 520, percentage: 15.4, averageVisitDurationSeconds: 88 },
         { label: "/services", views: 470, percentage: 13.9, averageVisitDurationSeconds: 112 },
         { label: "/realisations", views: 310, percentage: 9.2, averageVisitDurationSeconds: 96 },

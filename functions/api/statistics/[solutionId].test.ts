@@ -131,6 +131,9 @@ describe("GET /api/statistics/:solutionId", () => {
     expect(response.status).toBe(200);
     expect(body).toMatchObject({
       status: "ready",
+      timeline: {
+        granularity: "day"
+      },
       solution: {
         id: "SOL-GA4",
         domain: "example.com"

@@ -188,8 +188,9 @@ solution active `Flux Visibilite & Acquisition` avec domaine :
 
 - periodes disponibles : 7 jours, 30 jours, 90 jours et 1 an ;
 - visites, visiteurs uniques et duree moyenne ;
+- evolution des visites par jour, semaine ou mois selon la periode ;
 - acquisition par canal et source ;
-- top pays, villes, pages et evenements utiles ;
+- top pays avec drapeaux, villes, pages et evenements utiles ;
 - etat "Statistiques en cours de raccordement" si `ga4_property_id` est vide.
 
 La Pages Function `/api/statistics/:solution_id` reverifie l'identite, controle

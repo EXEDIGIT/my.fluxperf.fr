@@ -1,5 +1,5 @@
 import { FilePenLine, LifeBuoy, MessageCircle, ShieldCheck, Sparkles, TimerReset } from "lucide-react";
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { ActionCard } from "./components/ActionCard";
 import { AdminConsolePage } from "./components/AdminConsolePage";
 import { AuthCallbackPage } from "./components/AuthCallbackPage";
@@ -15,11 +15,14 @@ import { Resources } from "./components/Resources";
 import { ServicesActive } from "./components/ServicesActive";
 import { Sidebar } from "./components/Sidebar";
 import { SolutionsModal } from "./components/SolutionsModal";
-import { StatisticsPage } from "./components/StatisticsPage";
 import { SupportRequestModal } from "./components/SupportRequestModal";
 import { ApiError, getMe } from "./lib/api";
 import { getSupabaseClient, hasSupabaseConfig } from "./lib/supabase";
 import type { MeResponse } from "./types/client";
+
+const StatisticsPage = lazy(() =>
+  import("./components/StatisticsPage").then((module) => ({ default: module.StatisticsPage }))
+);
 
 type LoadState =
   | { status: "loading" }
@@ -39,6 +42,7 @@ export function App() {
   const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [isSolutionsOpen, setIsSolutionsOpen] = useState(false);
   const [statisticsSolutionId, setStatisticsSolutionId] = useState<string | null>(null);
+  const [navigationTarget, setNavigationTarget] = useState<string | null>(null);
   const [supportPreset, setSupportPreset] = useState<SupportPreset>({
     key: 0,
     subject: "",
@@ -126,6 +130,23 @@ export function App() {
     }
   }, [state.status]);
 
+  useEffect(() => {
+    if (statisticsSolutionId || !navigationTarget || state.status !== "ready") {
+      return;
+    }
+
+    const target = document.querySelector<HTMLElement>(navigationTarget);
+
+    if (!target) {
+      setNavigationTarget(null);
+      return;
+    }
+
+    window.history.replaceState({}, "", navigationTarget);
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+    setNavigationTarget(null);
+  }, [navigationTarget, state.status, statisticsSolutionId]);
+
   async function handleLogout() {
     const supabase = getSupabaseClient();
 
@@ -159,6 +180,11 @@ export function App() {
     document.getElementById("impacts")?.scrollIntoView({ behavior: "smooth" });
   }
 
+  function navigateToSection(href: string) {
+    setStatisticsSolutionId(null);
+    setNavigationTarget(href);
+  }
+
   if (isAuthCallback) {
     return <AuthCallbackPage />;
   }
@@ -190,8 +216,8 @@ export function App() {
 
   return (
     <>
-      <Sidebar onLogout={handleLogout} />
-      <main className="app-shell">
+      <Sidebar onLogout={handleLogout} onNavigate={navigateToSection} />
+      <main className="app-shell" id="accueil">
         <Header client={client} email={user.email} />
 
         <section className="trust-strip" aria-label="Garanties Fluxperf">
@@ -207,10 +233,18 @@ export function App() {
         </section>
 
         {selectedStatisticsSolution ? (
-          <StatisticsPage
-            solution={selectedStatisticsSolution}
-            onBack={() => setStatisticsSolutionId(null)}
-          />
+          <Suspense
+            fallback={
+              <div className="statistics-loading">
+                <strong>Chargement des statistiques</strong>
+              </div>
+            }
+          >
+            <StatisticsPage
+              solution={selectedStatisticsSolution}
+              onBack={() => setStatisticsSolutionId(null)}
+            />
+          </Suspense>
         ) : (
           <>
         <section className="dashboard-section" id="demandes">

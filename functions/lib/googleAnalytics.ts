@@ -18,14 +18,23 @@ export type StatisticsValueRow = {
   label: string;
   value: number;
   percentage: number;
+  countryCode?: string;
 };
 
 export type StatisticsTrafficRow = {
   label: string;
+  description?: string;
   sessions: number;
   activeUsers: number;
   percentage: number;
   averageVisitDurationSeconds: number;
+};
+
+export type StatisticsTimelineGranularity = "day" | "week" | "month";
+
+export type StatisticsTimelinePoint = {
+  date: string;
+  visits: number;
 };
 
 export type StatisticsPageRow = {
@@ -59,6 +68,10 @@ export type StatisticsReadyResponse = {
     countries: StatisticsValueRow[];
     cities: StatisticsValueRow[];
     topPages: StatisticsPageRow[];
+  };
+  timeline: {
+    granularity: StatisticsTimelineGranularity;
+    points: StatisticsTimelinePoint[];
   };
   acquisition: {
     channels: StatisticsTrafficRow[];
@@ -97,12 +110,26 @@ type BatchReportRequest = {
   dimensions?: Array<{ name: string }>;
   metrics: Array<{ name: string }>;
   limit?: string;
-  orderBys?: Array<{
-    metric: {
-      metricName: string;
-    };
-    desc: boolean;
-  }>;
+  keepEmptyRows?: boolean;
+  orderBys?: Array<
+    | {
+        metric: {
+          metricName: string;
+        };
+        desc: boolean;
+      }
+    | {
+        dimension: {
+          dimensionName: string;
+        };
+        desc: boolean;
+      }
+  >;
+};
+
+type TrafficPresentation = {
+  label: string;
+  description?: string;
 };
 
 const periods: Record<StatisticsPeriodId, StatisticsPeriod> = {
@@ -133,6 +160,16 @@ const periods: Record<StatisticsPeriodId, StatisticsPeriod> = {
 };
 
 const hiddenEventNames = new Set(["page_view", "session_start", "first_visit", "user_engagement"]);
+const channelDescriptions: Record<string, string> = {
+  Autres: "Canaux non classés",
+  Direct: "Adresse saisie, favori ou origine non détectée",
+  "IA GEO": "Assistants IA",
+  Publicité: "Campagnes payantes",
+  SEO: "Moteurs de recherche",
+  Social: "Réseaux sociaux",
+  "Sites référents": "Liens depuis d’autres sites"
+};
+const frenchRegionNames = new Intl.DisplayNames(["fr"], { type: "region" });
 
 export function isStatisticsPeriod(value: string): value is StatisticsPeriodId {
   return value === "7d" || value === "30d" || value === "90d" || value === "365d";
@@ -197,6 +234,29 @@ function reportRequest(
   };
 }
 
+function timelineReportRequest(period: StatisticsPeriod): BatchReportRequest {
+  return {
+    dateRanges: [
+      {
+        startDate: period.startDate,
+        endDate: period.endDate
+      }
+    ],
+    dimensions: [{ name: "date" }],
+    metrics: [{ name: "sessions" }],
+    limit: "400",
+    keepEmptyRows: true,
+    orderBys: [
+      {
+        dimension: {
+          dimensionName: "date"
+        },
+        desc: false
+      }
+    ]
+  };
+}
+
 async function batchRunReports(
   env: AppEnv,
   propertyId: string,
@@ -233,22 +293,32 @@ export function channelLabel(value: string): string {
   if (normalized === "direct") return "Direct";
   if (normalized.includes("organic search")) return "SEO";
   if (normalized.includes("ai assistant")) return "IA GEO";
-  if (normalized.includes("paid search") || normalized.includes("paid shopping")) return "Publicite";
+  if (normalized.includes("paid search") || normalized.includes("paid shopping")) return "Publicité";
   if (normalized.includes("cross-network") || normalized.includes("display") || normalized.includes("paid video")) {
-    return "Publicite";
+    return "Publicité";
   }
   if (normalized.includes("organic social") || normalized.includes("paid social") || normalized.includes("social")) {
     return "Social";
   }
-  if (normalized.includes("referral") || normalized.includes("affiliate")) return "Sites referents";
+  if (normalized.includes("referral") || normalized.includes("affiliate")) return "Sites référents";
 
   return "Autres";
+}
+
+export function channelPresentation(value: string): TrafficPresentation {
+  const label = channelLabel(value);
+
+  return {
+    label,
+    description: channelDescriptions[label]
+  };
 }
 
 function mergeTrafficRows(rows: StatisticsTrafficRow[]): StatisticsTrafficRow[] {
   const totals = rows.reduce((map, row) => {
     const current = map.get(row.label) ?? {
       label: row.label,
+      description: row.description,
       sessions: 0,
       activeUsers: 0,
       weightedDuration: 0
@@ -260,12 +330,13 @@ function mergeTrafficRows(rows: StatisticsTrafficRow[]): StatisticsTrafficRow[] 
     map.set(row.label, current);
 
     return map;
-  }, new Map<string, { label: string; sessions: number; activeUsers: number; weightedDuration: number }>());
+  }, new Map<string, { label: string; description?: string; sessions: number; activeUsers: number; weightedDuration: number }>());
   const sessionTotal = Array.from(totals.values()).reduce((sum, row) => sum + row.sessions, 0);
 
   return Array.from(totals.values())
     .map((row) => ({
       label: row.label,
+      description: row.description,
       sessions: row.sessions,
       activeUsers: row.activeUsers,
       percentage: percentage(row.sessions, sessionTotal),
@@ -274,15 +345,97 @@ function mergeTrafficRows(rows: StatisticsTrafficRow[]): StatisticsTrafficRow[] 
     .sort((left, right) => right.sessions - left.sessions);
 }
 
-function sourceLabel(value: string): string {
+function sourceDisplayName(value: string): string {
+  const normalized = value.trim().replace(/_/g, " ");
+  const knownNames: Record<string, string> = {
+    bing: "Bing",
+    google: "Google",
+    yahoo: "Yahoo",
+    youtube: "YouTube"
+  };
+
+  return knownNames[normalized.toLowerCase()] || normalized;
+}
+
+export function sourcePresentation(value: string): TrafficPresentation {
   const normalized = value.trim();
 
-  if (!normalized || normalized === "(not set)") return "Source non identifiee";
-  if (normalized === "(direct) / (none)") return "Acces direct";
+  if (!normalized || normalized.toLowerCase() === "(not set)") {
+    return { label: "Source non identifiée" };
+  }
 
-  return normalized
-    .replace(/\s*\/\s*/g, " / ")
-    .replace(/_/g, " ");
+  const separatorIndex = normalized.indexOf("/");
+
+  if (separatorIndex < 0) {
+    return { label: sourceDisplayName(normalized) };
+  }
+
+  const source = normalized.slice(0, separatorIndex).trim();
+  const medium = normalized.slice(separatorIndex + 1).trim().toLowerCase();
+
+  if (source.toLowerCase() === "(direct)" && medium === "(none)") {
+    return {
+      label: "Accès direct",
+      description: "Origine non détectée"
+    };
+  }
+
+  const descriptions: Record<string, string> = {
+    affiliate: "Site partenaire",
+    cpc: "Publicité",
+    email: "E-mail",
+    organic: "Moteur de recherche",
+    paid: "Publicité",
+    ppc: "Publicité",
+    referral: "Site référent",
+    social: "Réseau social"
+  };
+  const description = descriptions[medium];
+
+  if (description) {
+    return {
+      label: sourceDisplayName(source),
+      description
+    };
+  }
+
+  return {
+    label: normalized.replace(/\s*\/\s*/g, " / ").replace(/_/g, " ")
+  };
+}
+
+export function sourceLabel(value: string): string {
+  return sourcePresentation(value).label;
+}
+
+export function pageLabel(value: string): string {
+  const normalized = value.trim();
+
+  if (!normalized) return "Page sans titre";
+  if (normalized === "/") return "/ • Page d’accueil";
+
+  return normalized;
+}
+
+function normalizedDimensionLabel(value: string): string {
+  const normalized = value.trim();
+
+  return !normalized || normalized.toLowerCase() === "(not set)" ? "Non identifié" : normalized;
+}
+
+export function countryPresentation(country: string, countryCode: string): Pick<StatisticsValueRow, "label" | "countryCode"> {
+  const normalizedCode = countryCode.trim().toUpperCase();
+
+  if (!/^[A-Z]{2}$/.test(normalizedCode)) {
+    return { label: normalizedDimensionLabel(country) };
+  }
+
+  const translated = frenchRegionNames.of(normalizedCode);
+
+  return {
+    label: translated && translated !== normalizedCode ? translated : normalizedDimensionLabel(country),
+    countryCode: normalizedCode
+  };
 }
 
 export function isHiddenGa4Event(eventName: string): boolean {
@@ -310,13 +463,14 @@ export function eventLabel(eventName: string): string {
 function rowsToTraffic(
   report: GaReportResponse | undefined,
   totalSessions: number,
-  labelFromValue: (value: string) => string
+  presentationFromValue: (value: string) => TrafficPresentation
 ): StatisticsTrafficRow[] {
   return (report?.rows ?? []).map((row) => {
     const sessions = numberValue(row, 0);
+    const presentation = presentationFromValue(textValue(row, 0));
 
     return {
-      label: labelFromValue(textValue(row, 0)),
+      ...presentation,
       sessions,
       activeUsers: numberValue(row, 1),
       percentage: percentage(sessions, totalSessions),
@@ -328,7 +482,24 @@ function rowsToTraffic(
 function rowsToValueRows(report: GaReportResponse | undefined, limit = 5): StatisticsValueRow[] {
   const rows = (report?.rows ?? [])
     .map((row) => ({
-      label: textValue(row, 0) || "Non identifie",
+      label: normalizedDimensionLabel(textValue(row, 0)),
+      value: numberValue(row, 0),
+      percentage: 0
+    }))
+    .filter((row) => row.value > 0)
+    .slice(0, limit);
+  const total = rows.reduce((sum, row) => sum + row.value, 0);
+
+  return rows.map((row) => ({
+    ...row,
+    percentage: percentage(row.value, total)
+  }));
+}
+
+function rowsToCountries(report: GaReportResponse | undefined, limit = 5): StatisticsValueRow[] {
+  const rows = (report?.rows ?? [])
+    .map((row) => ({
+      ...countryPresentation(textValue(row, 0), textValue(row, 1)),
       value: numberValue(row, 0),
       percentage: 0
     }))
@@ -345,7 +516,7 @@ function rowsToValueRows(report: GaReportResponse | undefined, limit = 5): Stati
 function rowsToPages(report: GaReportResponse | undefined, limit = 10): StatisticsPageRow[] {
   const rows = (report?.rows ?? [])
     .map((row) => ({
-      label: textValue(row, 0) || "Page sans titre",
+      label: pageLabel(textValue(row, 0)),
       views: numberValue(row, 0),
       percentage: 0,
       averageVisitDurationSeconds: roundSeconds(numberValue(row, 1))
@@ -358,6 +529,96 @@ function rowsToPages(report: GaReportResponse | undefined, limit = 10): Statisti
     ...row,
     percentage: percentage(row.views, total)
   }));
+}
+
+export function timelineGranularity(periodId: StatisticsPeriodId): StatisticsTimelineGranularity {
+  if (periodId === "365d") return "month";
+  if (periodId === "90d") return "week";
+
+  return "day";
+}
+
+function isoDateFromGaDate(value: string): string | null {
+  const match = value.match(/^(\d{4})(\d{2})(\d{2})$/);
+
+  return match ? `${match[1]}-${match[2]}-${match[3]}` : null;
+}
+
+function timelineBucket(date: string, granularity: StatisticsTimelineGranularity): string {
+  if (granularity === "day") return date;
+  if (granularity === "month") return `${date.slice(0, 7)}-01`;
+
+  const parsed = new Date(`${date}T00:00:00Z`);
+  const day = parsed.getUTCDay() || 7;
+
+  parsed.setUTCDate(parsed.getUTCDate() - day + 1);
+
+  return parsed.toISOString().slice(0, 10);
+}
+
+export function aggregateTimelinePoints(
+  points: StatisticsTimelinePoint[],
+  periodId: StatisticsPeriodId
+): StatisticsReadyResponse["timeline"] {
+  const granularity = timelineGranularity(periodId);
+  const buckets = points.reduce((map, point) => {
+    const bucket = timelineBucket(point.date, granularity);
+
+    map.set(bucket, (map.get(bucket) ?? 0) + Math.max(0, Math.round(point.visits)));
+    return map;
+  }, new Map<string, number>());
+
+  return {
+    granularity,
+    points: Array.from(buckets, ([date, visits]) => ({ date, visits })).sort((left, right) =>
+      left.date.localeCompare(right.date)
+    )
+  };
+}
+
+function rowsToTimeline(
+  report: GaReportResponse | undefined,
+  periodId: StatisticsPeriodId
+): StatisticsReadyResponse["timeline"] {
+  const points = (report?.rows ?? []).flatMap((row) => {
+    const date = isoDateFromGaDate(textValue(row, 0));
+
+    return date ? [{ date, visits: numberValue(row, 0) }] : [];
+  });
+
+  return aggregateTimelinePoints(points, periodId);
+}
+
+function demoTimeline(periodId: StatisticsPeriodId, totalVisits: number): StatisticsReadyResponse["timeline"] {
+  const granularity = timelineGranularity(periodId);
+  const pointCount = periodId === "7d" ? 7 : periodId === "30d" ? 30 : periodId === "90d" ? 13 : 12;
+  const weights = Array.from({ length: pointCount }, (_, index) => 0.72 + ((index * 7) % 11) / 20 + Math.sin(index / 2.4) * 0.18);
+  const weightTotal = weights.reduce((sum, value) => sum + value, 0);
+  const yesterday = new Date();
+
+  yesterday.setUTCHours(0, 0, 0, 0);
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+
+  const points = weights.map((weight, index) => {
+    const date = new Date(yesterday);
+
+    if (granularity === "month") {
+      date.setUTCDate(1);
+      date.setUTCMonth(date.getUTCMonth() - (pointCount - index - 1));
+    } else {
+      date.setUTCDate(date.getUTCDate() - (pointCount - index - 1) * (granularity === "week" ? 7 : 1));
+    }
+
+    return {
+      date: timelineBucket(date.toISOString().slice(0, 10), granularity),
+      visits: Math.floor((totalVisits * weight) / weightTotal)
+    };
+  });
+  const assignedVisits = points.reduce((sum, point) => sum + point.visits, 0);
+
+  points[points.length - 1].visits += totalVisits - assignedVisits;
+
+  return { granularity, points };
 }
 
 function rowsToEvents(report: GaReportResponse | undefined, limit = 10): StatisticsEventRow[] {
@@ -384,20 +645,20 @@ function rowsToEvents(report: GaReportResponse | undefined, limit = 10): Statist
 
 function demoStatistics(solution: ClientSolutionDto, period: StatisticsPeriod): StatisticsReadyResponse {
   const channels = mergeTrafficRows([
-    { label: "SEO", sessions: 1240, activeUsers: 960, percentage: 0, averageVisitDurationSeconds: 118 },
-    { label: "Direct", sessions: 520, activeUsers: 430, percentage: 0, averageVisitDurationSeconds: 82 },
-    { label: "Sites referents", sessions: 270, activeUsers: 210, percentage: 0, averageVisitDurationSeconds: 96 },
-    { label: "Social", sessions: 190, activeUsers: 160, percentage: 0, averageVisitDurationSeconds: 54 },
-    { label: "IA GEO", sessions: 64, activeUsers: 52, percentage: 0, averageVisitDurationSeconds: 74 }
+    { ...channelPresentation("Organic Search"), sessions: 1240, activeUsers: 960, percentage: 0, averageVisitDurationSeconds: 118 },
+    { ...channelPresentation("Direct"), sessions: 520, activeUsers: 430, percentage: 0, averageVisitDurationSeconds: 82 },
+    { ...channelPresentation("Referral"), sessions: 270, activeUsers: 210, percentage: 0, averageVisitDurationSeconds: 96 },
+    { ...channelPresentation("Organic Social"), sessions: 190, activeUsers: 160, percentage: 0, averageVisitDurationSeconds: 54 },
+    { ...channelPresentation("AI Assistants"), sessions: 64, activeUsers: 52, percentage: 0, averageVisitDurationSeconds: 74 }
   ]);
   const sources = mergeTrafficRows([
-    { label: "google / organic", sessions: 980, activeUsers: 760, percentage: 0, averageVisitDurationSeconds: 122 },
-    { label: "Acces direct", sessions: 520, activeUsers: 430, percentage: 0, averageVisitDurationSeconds: 82 },
-    { label: "bing / organic", sessions: 180, activeUsers: 140, percentage: 0, averageVisitDurationSeconds: 104 },
-    { label: "linkedin.com / referral", sessions: 120, activeUsers: 96, percentage: 0, averageVisitDurationSeconds: 68 }
+    { ...sourcePresentation("google / organic"), sessions: 980, activeUsers: 760, percentage: 0, averageVisitDurationSeconds: 122 },
+    { ...sourcePresentation("(direct) / (none)"), sessions: 520, activeUsers: 430, percentage: 0, averageVisitDurationSeconds: 82 },
+    { ...sourcePresentation("bing / organic"), sessions: 180, activeUsers: 140, percentage: 0, averageVisitDurationSeconds: 104 },
+    { ...sourcePresentation("linkedin.com / referral"), sessions: 120, activeUsers: 96, percentage: 0, averageVisitDurationSeconds: 68 }
   ]);
   const pages = [
-    { label: "/", views: 1420, percentage: 42.1, averageVisitDurationSeconds: 74 },
+    { label: pageLabel("/"), views: 1420, percentage: 42.1, averageVisitDurationSeconds: 74 },
     { label: "/contact", views: 520, percentage: 15.4, averageVisitDurationSeconds: 88 },
     { label: "/services", views: 470, percentage: 13.9, averageVisitDurationSeconds: 112 },
     { label: "/realisations", views: 310, percentage: 9.2, averageVisitDurationSeconds: 96 },
@@ -425,11 +686,11 @@ function demoStatistics(solution: ClientSolutionDto, period: StatisticsPeriod): 
       averageVisitDurationSeconds: 104,
       topEvents: events.slice(0, 5),
       countries: [
-        { label: "France", value: 1700, percentage: 81.3 },
-        { label: "Belgique", value: 140, percentage: 6.7 },
-        { label: "Suisse", value: 96, percentage: 4.6 },
-        { label: "Canada", value: 84, percentage: 4 },
-        { label: "Espagne", value: 72, percentage: 3.4 }
+        { label: "France", countryCode: "FR", value: 1700, percentage: 81.3 },
+        { label: "Belgique", countryCode: "BE", value: 140, percentage: 6.7 },
+        { label: "Suisse", countryCode: "CH", value: 96, percentage: 4.6 },
+        { label: "Canada", countryCode: "CA", value: 84, percentage: 4 },
+        { label: "Espagne", countryCode: "ES", value: 72, percentage: 3.4 }
       ],
       cities: [
         { label: "Paris", value: 520, percentage: 36.4 },
@@ -440,6 +701,7 @@ function demoStatistics(solution: ClientSolutionDto, period: StatisticsPeriod): 
       ],
       topPages: pages.slice(0, 5)
     },
+    timeline: demoTimeline(period.id, 2284),
     acquisition: {
       channels,
       sources
@@ -471,7 +733,7 @@ export async function fetchGa4Statistics(
       reportRequest(period, ["sessions", "activeUsers", "averageSessionDuration"], [], 1, "sessions"),
       reportRequest(period, ["sessions", "activeUsers", "averageSessionDuration"], ["sessionDefaultChannelGroup"], 20, "sessions"),
       reportRequest(period, ["sessions", "activeUsers", "averageSessionDuration"], ["sessionSourceMedium"], 20, "sessions"),
-      reportRequest(period, ["activeUsers"], ["country"], 5, "activeUsers"),
+      reportRequest(period, ["activeUsers"], ["country", "countryId"], 5, "activeUsers"),
       reportRequest(period, ["activeUsers"], ["city"], 5, "activeUsers")
     ],
     fetcher
@@ -480,15 +742,16 @@ export async function fetchGa4Statistics(
   const visits = Math.round(numberValue(overviewRow, 0));
   const uniqueVisitors = Math.round(numberValue(overviewRow, 1));
   const averageVisitDurationSeconds = roundSeconds(numberValue(overviewRow, 2));
-  const rawChannels = rowsToTraffic(batchOne[1], visits, channelLabel);
+  const rawChannels = rowsToTraffic(batchOne[1], visits, channelPresentation);
   const channels = mergeTrafficRows(rawChannels);
-  const sources = rowsToTraffic(batchOne[2], visits, sourceLabel).slice(0, 10);
+  const sources = rowsToTraffic(batchOne[2], visits, sourcePresentation).slice(0, 10);
   const batchTwo = await batchRunReports(
     env,
     propertyId,
     [
       reportRequest(period, ["screenPageViews", "averageSessionDuration"], ["pagePath"], 10, "screenPageViews"),
-      reportRequest(period, ["eventCount"], ["eventName"], 25, "eventCount")
+      reportRequest(period, ["eventCount"], ["eventName"], 25, "eventCount"),
+      timelineReportRequest(period)
     ],
     fetcher
   );
@@ -509,10 +772,11 @@ export async function fetchGa4Statistics(
       uniqueVisitors,
       averageVisitDurationSeconds,
       topEvents: events.slice(0, 5),
-      countries: rowsToValueRows(batchOne[3], 5),
+      countries: rowsToCountries(batchOne[3], 5),
       cities: rowsToValueRows(batchOne[4], 5),
       topPages: pages.slice(0, 5)
     },
+    timeline: rowsToTimeline(batchTwo[2], periodId),
     acquisition: {
       channels,
       sources
