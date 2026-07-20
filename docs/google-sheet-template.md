@@ -84,7 +84,7 @@ last_action_3_date: Il y a 2j
 ## Onglet `Solutions`
 
 Creer un onglet nomme `Solutions` pour declarer toutes les solutions Fluxperf
-rattachees aux clients. C'est la source des services actifs, des impacts, des
+rattachees aux clients. C'est la source des services actifs, du temps libere, des
 vignettes et du contexte des demandes d'intervention.
 
 ```text
@@ -137,7 +137,7 @@ notes:
 ga4_property_id:
 ```
 
-## Regles du module Impacts
+## Regles du module Temps libere
 
 - Les lignes `Solutions` actives apparaissent aussi dans la section `Services actifs`.
 - `type_solution` doit utiliser les valeurs de reference `Flux Visibilité & Acquisition`, `Flux Automatisation & IA` ou `Flux Assistant IA`.

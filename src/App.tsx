@@ -272,8 +272,8 @@ export function App() {
               onAction={() => openSupportRequest()}
             />
             <ActionCard
-              title="Mes impacts"
-              description="Visualisez le temps libéré par votre accompagnement Fluxperf."
+              title="Temps libéré"
+              description="Visualisez le temps que Fluxperf vous aide à récupérer chaque mois."
               icon={TimerReset}
               tone="yellow"
               actionLabel="Voir"
@@ -293,9 +293,11 @@ export function App() {
           <section className="dashboard-section compact-section" id="impacts">
             <div className="section-heading impact-heading">
               <div>
-                <span className="section-kicker">Impacts</span>
+                <span className="section-kicker">TEMPS LIBÉRÉ</span>
                 <h2>Votre temps libéré</h2>
-                <p className="section-subtitle">Pris en charge par votre solution Fluxperf®</p>
+                <p className="section-subtitle">
+                  Le temps récupéré grâce aux actions prises en charge par Fluxperf®.
+                </p>
               </div>
               <span className="impact-live-badge" aria-label="Suivi actif en ce moment">
                 <span className="impact-live-dot" aria-hidden="true"></span>

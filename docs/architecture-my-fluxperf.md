@@ -30,7 +30,7 @@ Imagine le portail comme une agence FluxPerf avec plusieurs personnes a l'accuei
 | Formulaire natif | Le comptoir demandes | Collecte les demandes d'intervention depuis MyFluxperf |
 | n8n | Le repartiteur | Recoit les demandes, cree les taches, declenche Brevo et journalise |
 | Jotform | Le comptoir support historique | Peut encore ouvrir un formulaire support quand l'URL est renseignee |
-| Looker Studio | Salle historique d'indicateurs | Peut rester reference via `report_url`, mais le dashboard V1 affiche le module Impacts |
+| Looker Studio | Salle historique d'indicateurs | Peut rester reference via `report_url`, mais le dashboard V1 affiche le module Temps libere |
 
 ## Chemin d'une connexion
 
@@ -167,5 +167,5 @@ pnpm run build
 4. Un email absent ou client inactif affiche un refus propre.
 5. La demande d'intervention s'envoie avec et sans piece jointe.
 6. Les solutions proposees correspondent uniquement au client connecte.
-7. Le module Impacts affiche le temps libere ou un etat vide si aucune donnee n'est active.
+7. Le module Temps libere affiche le temps libere ou un etat vide si aucune donnee n'est active.
 8. Desktop et mobile restent lisibles.

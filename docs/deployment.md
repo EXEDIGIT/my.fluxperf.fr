@@ -98,5 +98,5 @@ Procedure detaillee : `docs/cloudflare-thumbnail-service.md`.
 6. Verifier qu'un email configure dans le Sheet affiche le dashboard.
 7. Verifier qu'un email authentifie mais absent du Sheet retourne l'erreur client non configure.
 8. Tester la demande d'intervention native avec et sans piece jointe.
-9. Tester la carte Support, la popin Solutions, le module Impacts et les ressources.
+9. Tester la carte Support, la popin Solutions, le module Temps libere et les ressources.
 10. Verifier que les services actifs affichent une vignette site ou un placeholder Fluxperf.

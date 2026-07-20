@@ -40,7 +40,7 @@ export function ImpactPanel({ impact }: ImpactPanelProps) {
     return (
       <div className="empty-state impact-empty">
         <TimerReset aria-hidden="true" />
-        <p>Votre estimation d'impact sera bientôt disponible.</p>
+        <p>Votre estimation du temps libéré sera bientôt disponible.</p>
       </div>
     );
   }

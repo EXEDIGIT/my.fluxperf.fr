@@ -27,7 +27,7 @@ const navigation = [
     icon: FilePenLine
   },
   {
-    label: "Mes impacts",
+    label: "Temps libéré",
     href: "#impacts",
     icon: TimerReset
   },

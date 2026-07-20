@@ -102,12 +102,12 @@ const faqItems = [
   {
     question: "Comment signaler une urgence ?",
     answer:
-      "Indiquez clairement ce qui bloque votre activité, la date limite et l'impact concret. Réservez l'urgence aux sujets réellement bloquants."
+      "Indiquez clairement ce qui bloque votre activité, la date limite et la conséquence concrète. Réservez l'urgence aux sujets réellement bloquants."
   },
   {
     question: "Où retrouver mes indicateurs ?",
     answer:
-      "Les indicateurs principaux sont visibles dans les sections Impacts et dernières actions. Les rapports détaillés peuvent être ajoutés via les accès utiles de votre espace."
+      "Les indicateurs principaux sont visibles dans les sections Temps libéré et dernières actions. Les rapports détaillés peuvent être ajoutés via les accès utiles de votre espace."
   },
   {
     question: "Que faire si une donnée semble incorrecte ?",
