@@ -1,4 +1,5 @@
 import { isProduction } from "../lib/auth";
+import { hasBrevoApiKey, sendBrevoSupportEmail, type BrevoSupportEmail } from "../lib/brevo";
 import { formatCompactFrenchDate } from "../lib/dateFormats";
 import { json, jsonError } from "../lib/response";
 import type { PagesContext } from "../lib/types";
@@ -141,7 +142,7 @@ function requesterName(payload: ValidatedPayload): string {
   return [payload.firstName, payload.lastName].filter(Boolean).join(" ");
 }
 
-function buildBrevoBody(requestId: string, payload: ValidatedPayload) {
+function buildBrevoBody(requestId: string, payload: ValidatedPayload): BrevoSupportEmail {
   const name = requesterName(payload);
   const escapedMessage = escapeHtml(payload.message).replace(/\n/g, "<br>");
   const referrerLine = payload.referrer ? `Référent : ${payload.referrer}` : "Référent : non renseigné";
@@ -158,16 +159,6 @@ function buildBrevoBody(requestId: string, payload: ValidatedPayload) {
   ].join("\n");
 
   return {
-    sender: {
-      name: "Fluxperf",
-      email: "notifications@fluxperf.fr"
-    },
-    to: [
-      {
-        email: "support@fluxperf.fr",
-        name: "Support Fluxperf"
-      }
-    ],
     replyTo: {
       email: payload.email,
       name
@@ -192,29 +183,21 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
       return validated;
     }
 
-    const brevoApiKey = context.env.BREVO_API_KEY?.trim();
+    const hasBrevoConfiguration = hasBrevoApiKey(context.env);
 
-    if (!brevoApiKey && isProduction(context.env)) {
+    if (!hasBrevoConfiguration && isProduction(context.env)) {
       return jsonError(503, "BREVO_NOT_CONFIGURED", "La demande d'accès est indisponible pour le moment.");
     }
 
     const requestId = buildRequestId();
 
-    if (!brevoApiKey) {
+    if (!hasBrevoConfiguration) {
       return json({ status: "received", requestId }, { status: 202 });
     }
 
-    const brevoResponse = await fetch("https://api.brevo.com/v3/smtp/email", {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        "api-key": brevoApiKey
-      },
-      body: JSON.stringify(buildBrevoBody(requestId, validated))
-    });
+    const sent = await sendBrevoSupportEmail(context.env, buildBrevoBody(requestId, validated));
 
-    if (!brevoResponse.ok) {
+    if (!sent) {
       return jsonError(502, "BREVO_FAILED", "La demande n'a pas pu être transmise au support.");
     }
 

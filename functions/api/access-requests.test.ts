@@ -186,4 +186,18 @@ describe("POST /api/access-requests", () => {
     expect(response.status).toBe(502);
     expect(body.error).toMatchObject({ code: "BREVO_FAILED" });
   });
+
+  it("returns 502 when Brevo cannot be reached", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => Promise.reject(new Error("Network unavailable"))));
+
+    const response = await onRequestPost(
+      context(validPayload, {
+        BREVO_API_KEY: "brevo-api-key"
+      })
+    );
+    const body = await responseBody(response);
+
+    expect(response.status).toBe(502);
+    expect(body.error).toMatchObject({ code: "BREVO_FAILED" });
+  });
 });

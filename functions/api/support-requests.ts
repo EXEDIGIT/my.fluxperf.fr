@@ -1,4 +1,5 @@
 import { getAuthenticatedEmail, isProduction } from "../lib/auth";
+import { hasBrevoApiKey, sendBrevoSupportEmail, type BrevoSupportEmail } from "../lib/brevo";
 import { findClientForEmailInWorkbook } from "../lib/clients";
 import { formatCompactFrenchDate } from "../lib/dateFormats";
 import { readGoogleWorkbookValues } from "../lib/googleSheets";
@@ -86,7 +87,7 @@ function buildBrevoBody(
   email: string,
   client: ClientDto,
   payload: ValidatedPayload
-) {
+): BrevoSupportEmail {
   const name = requesterName(client, email);
   const escapedMessage = escapeHtml(payload.message).replace(/\n/g, "<br>");
   const textContent = [
@@ -99,16 +100,6 @@ function buildBrevoBody(
   ].join("\n");
 
   return {
-    sender: {
-      name: "Fluxperf",
-      email: "notifications@fluxperf.fr"
-    },
-    to: [
-      {
-        email: "support@fluxperf.fr",
-        name: "Support Fluxperf"
-      }
-    ],
     replyTo: {
       email,
       name
@@ -139,9 +130,9 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
       return validated;
     }
 
-    const brevoApiKey = context.env.BREVO_API_KEY?.trim();
+    const hasBrevoConfiguration = hasBrevoApiKey(context.env);
 
-    if (!brevoApiKey && isProduction(context.env)) {
+    if (!hasBrevoConfiguration && isProduction(context.env)) {
       return jsonError(503, "BREVO_NOT_CONFIGURED", "Le support est indisponible pour le moment.");
     }
 
@@ -158,21 +149,16 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
 
     const requestId = buildRequestId();
 
-    if (!brevoApiKey) {
+    if (!hasBrevoConfiguration) {
       return json({ status: "received", requestId }, { status: 202 });
     }
 
-    const brevoResponse = await fetch("https://api.brevo.com/v3/smtp/email", {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-        "api-key": brevoApiKey
-      },
-      body: JSON.stringify(buildBrevoBody(requestId, email, result.client, validated))
-    });
+    const sent = await sendBrevoSupportEmail(
+      context.env,
+      buildBrevoBody(requestId, email, result.client, validated)
+    );
 
-    if (!brevoResponse.ok) {
+    if (!sent) {
       return jsonError(502, "BREVO_FAILED", "La demande n'a pas pu être transmise au support.");
     }
 
