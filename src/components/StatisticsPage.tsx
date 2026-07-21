@@ -6,17 +6,21 @@ import {
   Globe2,
   Loader2,
   MapPin,
+  Megaphone,
   MousePointerClick,
   Search,
+  Target,
   TrendingUp,
   Users
 } from "lucide-react";
 import "flag-icons/css/flag-icons.min.css";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   Area,
   AreaChart,
   CartesianGrid,
+  Line,
+  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -26,6 +30,8 @@ import {
   ApiError,
   getStatistics,
   type StatisticsEventRow,
+  type StatisticsGoogleAdsBreakdownRow,
+  type StatisticsGoogleAdsTimelinePoint,
   type StatisticsPageRow,
   type StatisticsPeriodId,
   type StatisticsResponse,
@@ -233,6 +239,30 @@ function StatisticsColumn({ title, children }: { title: string; children: ReactN
   );
 }
 
+function usePrefersReducedMotion(): boolean {
+  const getPreference = () =>
+    typeof window !== "undefined" &&
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(getPreference);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const updatePreference = () => setPrefersReducedMotion(mediaQuery.matches);
+
+    updatePreference();
+    mediaQuery.addEventListener("change", updatePreference);
+
+    return () => mediaQuery.removeEventListener("change", updatePreference);
+  }, []);
+
+  return prefersReducedMotion;
+}
+
 function TimelineChart({
   points,
   granularity
@@ -240,12 +270,51 @@ function TimelineChart({
   points: StatisticsTimelinePoint[];
   granularity: StatisticsTimelineGranularity;
 }) {
+  const chartRef = useRef<HTMLDivElement>(null);
+  const prefersReducedMotion = usePrefersReducedMotion();
+  const [hasEnteredViewport, setHasEnteredViewport] = useState(prefersReducedMotion);
+
+  useEffect(() => {
+    if (prefersReducedMotion) {
+      setHasEnteredViewport(true);
+      return;
+    }
+
+    const chart = chartRef.current;
+
+    if (!chart || typeof IntersectionObserver === "undefined") {
+      setHasEnteredViewport(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+
+        if (entry?.isIntersecting && entry.intersectionRatio >= 0.35) {
+          setHasEnteredViewport(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.35 }
+    );
+
+    observer.observe(chart);
+
+    return () => observer.disconnect();
+  }, [prefersReducedMotion]);
+
   if (points.length === 0) {
     return <EmptyList label="Aucune visite enregistrée sur cette période." />;
   }
 
   return (
-    <div className="statistics-timeline" role="img" aria-label="Évolution des visites sur la période sélectionnée">
+    <div
+      ref={chartRef}
+      className="statistics-timeline"
+      role="img"
+      aria-label="Évolution des visites sur la période sélectionnée"
+    >
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={points} margin={{ top: 12, right: 8, left: -14, bottom: 0 }} accessibilityLayer>
           <CartesianGrid vertical={false} stroke="rgba(8, 45, 66, 0.1)" strokeDasharray="4 4" />
@@ -277,17 +346,22 @@ function TimelineChart({
               fontSize: "12px"
             }}
           />
-          <Area
-            type="monotone"
-            dataKey="visits"
-            name="Visites"
-            stroke="#006f78"
-            strokeWidth={2.5}
-            fill="#e7f4f3"
-            fillOpacity={0.72}
-            dot={false}
-            activeDot={{ r: 5, fill: "#f9b900", stroke: "#ffffff", strokeWidth: 2 }}
-          />
+          {hasEnteredViewport ? (
+            <Area
+              type="monotone"
+              dataKey="visits"
+              name="Visites"
+              stroke="#006f78"
+              strokeWidth={2.5}
+              fill="#e7f4f3"
+              fillOpacity={0.72}
+              dot={false}
+              activeDot={{ r: 5, fill: "#f9b900", stroke: "#ffffff", strokeWidth: 2 }}
+              isAnimationActive={!prefersReducedMotion}
+              animationDuration={900}
+              animationEasing="ease-out"
+            />
+          ) : null}
         </AreaChart>
       </ResponsiveContainer>
     </div>
@@ -308,6 +382,94 @@ function EventList({ rows }: { rows: StatisticsEventRow[] }) {
           value={formatNumber(row.count)}
           percentage={row.percentage}
           detail={percentageLabel(row.percentage)}
+        />
+      ))}
+    </div>
+  );
+}
+
+function GoogleAdsTimelineChart({
+  points,
+  granularity
+}: {
+  points: StatisticsGoogleAdsTimelinePoint[];
+  granularity: StatisticsTimelineGranularity;
+}) {
+  if (points.length === 0) {
+    return <EmptyList label="Aucune activité Google Ads enregistrée sur cette période." />;
+  }
+
+  return (
+    <div className="statistics-timeline" role="img" aria-label="Évolution des visites et actions utiles issues de Google Ads">
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={points} margin={{ top: 12, right: 8, left: -14, bottom: 0 }} accessibilityLayer>
+          <CartesianGrid vertical={false} stroke="rgba(8, 45, 66, 0.1)" strokeDasharray="4 4" />
+          <XAxis
+            dataKey="date"
+            tickFormatter={(value) => timelineDateLabel(String(value), granularity)}
+            axisLine={{ stroke: "rgba(8, 45, 66, 0.14)" }}
+            tickLine={false}
+            tick={{ fill: "#425964", fontSize: 11 }}
+            minTickGap={28}
+          />
+          <YAxis
+            allowDecimals={false}
+            axisLine={false}
+            tickLine={false}
+            tick={{ fill: "#425964", fontSize: 11 }}
+            width={48}
+          />
+          <Tooltip
+            cursor={{ stroke: "rgba(0, 111, 120, 0.28)", strokeWidth: 1 }}
+            labelFormatter={(value) => timelineDateLabel(String(value), granularity, true)}
+            formatter={(value, name) => [formatNumber(Number(value)), name === "conversions" ? "Actions utiles" : "Visites via vos annonces"]}
+            contentStyle={{
+              border: "1px solid rgba(8, 45, 66, 0.14)",
+              borderRadius: "8px",
+              boxShadow: "0 10px 24px rgba(8, 45, 66, 0.12)",
+              color: "#082d42",
+              fontFamily: "Comfortaa, Segoe UI, Arial, sans-serif",
+              fontSize: "12px"
+            }}
+          />
+          <Line
+            type="monotone"
+            dataKey="clicks"
+            name="Visites via vos annonces"
+            stroke="#006f78"
+            strokeWidth={2.5}
+            dot={false}
+            activeDot={{ r: 5, fill: "#f9b900", stroke: "#ffffff", strokeWidth: 2 }}
+          />
+          <Line
+            type="monotone"
+            dataKey="conversions"
+            name="Actions utiles"
+            stroke="#f9b900"
+            strokeWidth={2.5}
+            dot={false}
+            activeDot={{ r: 5, fill: "#006f78", stroke: "#ffffff", strokeWidth: 2 }}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+function GoogleAdsBreakdownList({ rows }: { rows: StatisticsGoogleAdsBreakdownRow[] }) {
+  if (rows.length === 0) {
+    return <EmptyList label="Aucune donnée disponible sur cette période." />;
+  }
+
+  return (
+    <div className="statistics-list">
+      {rows.map((row) => (
+        <BarRow
+          key={row.label}
+          label={row.label}
+          value={formatNumber(row.clicks)}
+          percentage={row.percentage}
+          detail={`${formatNumber(row.impressions)} apparitions - ${formatNumber(row.conversions)} actions utiles - ${percentageLabel(row.clickThroughRate)} clics`}
         />
       ))}
     </div>
@@ -462,6 +624,7 @@ export function StatisticsPage({ solution, onBack }: StatisticsPageProps) {
               </div>
             </div>
             <TimelineChart
+              key={period}
               points={readyData.timeline?.points ?? []}
               granularity={readyData.timeline?.granularity ?? (period === "365d" ? "month" : period === "90d" ? "week" : "day")}
             />
