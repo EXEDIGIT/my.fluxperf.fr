@@ -1,10 +1,12 @@
 import { requireAdmin } from "../../lib/adminAuth";
 import {
   buildAdminClientRows,
+  getAdminClientQualityWarnings,
   hasExistingClientEmail,
   sendClientWelcomeEmail,
   validateAdminClientInput
 } from "../../lib/adminClients";
+import { logAdminAction } from "../../lib/adminActions";
 import { buildAdminSolutionOptions } from "../../lib/adminOptions";
 import { buildAdminClientList } from "../../lib/adminWorkbook";
 import {
@@ -16,6 +18,15 @@ import {
 import { json, jsonError } from "../../lib/response";
 import { createSupabaseUserForClient } from "../../lib/supabaseAdmin";
 import type { PagesContext } from "../../lib/types";
+
+function warningsConfirmed(payload: unknown): boolean {
+  return Boolean(
+    payload &&
+      typeof payload === "object" &&
+      !Array.isArray(payload) &&
+      (payload as Record<string, unknown>).confirmWarnings === true
+  );
+}
 
 export async function onRequestGet(context: PagesContext): Promise<Response> {
   const admin = await requireAdmin(context.request, context.env);
@@ -64,6 +75,21 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
       return jsonError(409, "CLIENT_EMAIL_EXISTS", "Cette adresse email existe déjà dans la base client.");
     }
 
+    const warnings = getAdminClientQualityWarnings(workbook, input);
+
+    if (warnings.length > 0 && !warningsConfirmed(payload)) {
+      return json(
+        {
+          error: {
+            code: "CLIENT_CREATION_WARNINGS",
+            message: "Des avertissements doivent etre confirmes avant la creation du client."
+          },
+          warnings
+        },
+        { status: 409 }
+      );
+    }
+
     const supabaseUser = await createSupabaseUserForClient(context.env, input.email);
     const ranges = getGoogleWriteRanges(context.env);
     const rows = buildAdminClientRows(input);
@@ -91,6 +117,26 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
         email: input.email,
         reason: "Email d'ouverture non envoyé. Vérifiez Brevo."
       };
+    }
+
+    await logAdminAction(context.env, {
+      clientId: rows.clientId,
+      type: "admin_client_created",
+      label: "Client cree depuis la console interne",
+      actorEmail: admin.email,
+      status: "realisee",
+      details: `${rows.solutionRows.length} solution(s) creee(s)`
+    });
+
+    if (input.notifyClient) {
+      await logAdminAction(context.env, {
+        clientId: rows.clientId,
+        type: notification.status === "sent" ? "admin_welcome_email_sent" : "admin_welcome_email_failed",
+        label: notification.status === "sent" ? "Email d'ouverture envoye" : "Email d'ouverture non envoye",
+        actorEmail: admin.email,
+        status: notification.status,
+        details: notification.status === "sent" ? "Email transmis à Brevo." : notification.reason
+      });
     }
 
     return json(

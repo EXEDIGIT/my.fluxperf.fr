@@ -18,10 +18,23 @@ export type AdminClientSummary = {
   contactName: string;
   activeSolutions: number;
   totalSolutions: number;
+  activeSolutionTypes: string[];
   createdAt: string;
   updatedAt: string;
   lastActivityAt: string;
   lastActivityLabel: string;
+  lastConnectionAt: string;
+};
+
+export type AdminTimelineEvent = {
+  id: string;
+  kind: "action" | "connection";
+  date: string;
+  label: string;
+  reference: string;
+  status: string;
+  source: string;
+  details: string;
 };
 
 export type AdminClientDetail = AdminClientSummary & {
@@ -45,6 +58,7 @@ export type AdminClientDetail = AdminClientSummary & {
     activatedAt: string;
     notes: string;
     ga4PropertyId: string;
+    googleAdsCustomerId: string;
   }>;
   actions: Array<{
     id: string;
@@ -55,6 +69,7 @@ export type AdminClientDetail = AdminClientSummary & {
     requesterEmail: string;
     status: string;
   }>;
+  timeline: AdminTimelineEvent[];
 };
 
 export type AdminDashboard = {
@@ -84,6 +99,25 @@ export type AdminDashboard = {
     companyName: string;
     count: number;
   }>;
+  toProcess: {
+    recentInterventionRequests: Array<{
+      id: string;
+      clientId: string;
+      companyName: string;
+      date: string;
+      label: string;
+      reference: string;
+      requesterEmail: string;
+    }>;
+    clientsWithoutRecentConnection: Array<{
+      clientId: string;
+      companyName: string;
+      email: string;
+      lastConnectionAt: string;
+      createdAt: string;
+      reason: string;
+    }>;
+  };
 };
 
 function normalizeColumn(value: string): string {
@@ -147,6 +181,14 @@ function isInterventionAction(action: SheetRecord): boolean {
 function timestamp(value: string): number {
   if (!value) {
     return 0;
+  }
+
+  const frenchDate = value.trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+
+  if (frenchDate) {
+    const [, day, month, year] = frenchDate;
+
+    return Date.UTC(Number(year), Number(month) - 1, Number(day));
   }
 
   const parsed = Date.parse(value);
@@ -237,6 +279,28 @@ function rowsByClient(rows: RowRecord[], id: string): RowRecord[] {
   return rows.filter(({ record }) => getValue(record, "client_id") === id);
 }
 
+function latestConnection(connections: RowRecord[], id: string): RowRecord | null {
+  return (
+    rowsByClient(connections, id)
+      .sort(
+        (left, right) =>
+          timestamp(getValue(right.record, "date_connexion", "jour")) -
+          timestamp(getValue(left.record, "date_connexion", "jour"))
+      )[0] ?? null
+  );
+}
+
+function activeSolutionTypes(solutions: RowRecord[]): string[] {
+  return Array.from(
+    new Set(
+      solutions
+        .filter(({ record }) => solutionIsActive(record))
+        .map(({ record }) => getValue(record, "type_solution", "type"))
+        .filter(Boolean)
+    )
+  );
+}
+
 function latestActivity(actions: RowRecord[], client: SheetRecord): { label: string; date: string } {
   const latestAction = actions
     .filter(({ record }) => getValue(record, "client_id") === clientId(client))
@@ -259,7 +323,8 @@ export function buildClientSummary(
   client: RowRecord,
   contacts: RowRecord[],
   solutions: RowRecord[],
-  actions: RowRecord[]
+  actions: RowRecord[],
+  connections: RowRecord[] = []
 ): AdminClientSummary {
   const id = clientId(client.record);
   const clientContacts = rowsByClient(contacts, id);
@@ -270,6 +335,7 @@ export function buildClientSummary(
     clientContacts[0];
   const clientSolutions = rowsByClient(solutions, id);
   const activity = latestActivity(actions, client.record);
+  const connection = latestConnection(connections, id);
 
   return {
     id,
@@ -280,10 +346,12 @@ export function buildClientSummary(
     contactName: primaryContact ? contactName(primaryContact.record) : getValue(client.record, "nom_compte"),
     activeSolutions: clientSolutions.filter(({ record }) => solutionIsActive(record)).length,
     totalSolutions: clientSolutions.length,
+    activeSolutionTypes: activeSolutionTypes(clientSolutions),
     createdAt: getValue(client.record, "date_creation"),
     updatedAt: getValue(client.record, "date_mise_a_jour"),
     lastActivityAt: activity.date,
-    lastActivityLabel: activity.label
+    lastActivityLabel: activity.label,
+    lastConnectionAt: connection ? getValue(connection.record, "date_connexion", "jour") : ""
   };
 }
 
@@ -319,9 +387,10 @@ export function buildAdminClientList(workbook: ClientWorkbookValues): AdminClien
   const contacts = parseRows(workbook.contacts);
   const solutions = parseRows(workbook.solutions);
   const actions = parseRows(workbook.actions);
+  const connections = parseRows(workbook.connections);
 
   return adminClientRows(workbook)
-    .map((client) => buildClientSummary(client, contacts, solutions, actions))
+    .map((client) => buildClientSummary(client, contacts, solutions, actions, connections))
     .filter((client) => client.id)
     .sort((left, right) => left.companyName.localeCompare(right.companyName, "fr"));
 }
@@ -336,12 +405,37 @@ export function buildAdminClientDetail(workbook: ClientWorkbookValues, id: strin
   const contacts = parseRows(workbook.contacts);
   const solutions = parseRows(workbook.solutions);
   const actions = parseRows(workbook.actions);
-  const summary = buildClientSummary(client, contacts, solutions, actions);
+  const connections = parseRows(workbook.connections);
+  const summary = buildClientSummary(client, contacts, solutions, actions, connections);
   const clientContacts = rowsByClient(contacts, id);
   const clientSolutions = rowsByClient(solutions, id);
   const clientActions = rowsByClient(actions, id)
     .sort((left, right) => timestamp(getValue(right.record, "date_action")) - timestamp(getValue(left.record, "date_action")))
     .slice(0, 10);
+  const timeline = [
+    ...rowsByClient(actions, id).map(({ record }) => ({
+      id: getValue(record, "action_id", "id"),
+      kind: "action" as const,
+      date: getValue(record, "date_action"),
+      label: actionLabel(record),
+      reference: getValue(record, "reference"),
+      status: getValue(record, "statut", "status"),
+      source: getValue(record, "source") || "myfluxperf",
+      details: getValue(record, "details")
+    })),
+    ...rowsByClient(connections, id).map(({ record }) => ({
+      id: getValue(record, "connexion_id", "id"),
+      kind: "connection" as const,
+      date: getValue(record, "date_connexion", "jour"),
+      label: "Connexion a MyFluxperf",
+      reference: "",
+      status: "connectee",
+      source: getValue(record, "source") || "myfluxperf",
+      details: ""
+    }))
+  ]
+    .sort((left, right) => timestamp(right.date) - timestamp(left.date))
+    .slice(0, 25);
 
   return {
     ...summary,
@@ -364,7 +458,8 @@ export function buildAdminClientDetail(workbook: ClientWorkbookValues, id: strin
       urlOrIndication: getValue(record, "url_ou_indication", "url"),
       activatedAt: getValue(record, "date_activation"),
       notes: getValue(record, "notes"),
-      ga4PropertyId: getValue(record, "ga4_property_id", "ga4_property", "analytics_property_id")
+      ga4PropertyId: getValue(record, "ga4_property_id", "ga4_property", "analytics_property_id"),
+      googleAdsCustomerId: getValue(record, "google_ads_customer_id", "google_ads_id", "ads_customer_id")
     })),
     actions: clientActions.map(({ record }) => ({
       id: getValue(record, "action_id", "id"),
@@ -374,7 +469,8 @@ export function buildAdminClientDetail(workbook: ClientWorkbookValues, id: strin
       reference: getValue(record, "reference"),
       requesterEmail: normalizeEmail(getValue(record, "email_demandeur")),
       status: getValue(record, "statut", "status")
-    }))
+    })),
+    timeline
   };
 }
 
@@ -384,7 +480,7 @@ export function buildAdminDashboard(workbook: ClientWorkbookValues, now = new Da
   const solutions = adminSolutionRows(workbook);
   const actions = parseRows(workbook.actions);
   const connections = parseRows(workbook.connections);
-  const clientSummaries = clients.map((client) => buildClientSummary(client, contacts, solutions, actions));
+  const clientSummaries = clients.map((client) => buildClientSummary(client, contacts, solutions, actions, connections));
   const activeClientIds = new Set(
     clients.filter(({ record }) => clientIsActive(record)).map(({ record }) => clientId(record)).filter(Boolean)
   );
@@ -424,6 +520,54 @@ export function buildAdminDashboard(workbook: ClientWorkbookValues, now = new Da
 
   const interventionTotal = interventionActions.length;
   const connectionTotal = connectionRows.length;
+  const clientSummaryById = new Map(clientSummaries.map((client) => [client.id, client]));
+  const nowTimestamp = now.getTime();
+  const recentRequestCutoff = nowTimestamp - 7 * 24 * 60 * 60 * 1000;
+  const inactiveConnectionCutoff = nowTimestamp - 60 * 24 * 60 * 60 * 1000;
+  const recentInterventionRequests = actions
+    .filter(({ record }) => isInterventionAction(record) && timestamp(getValue(record, "date_action")) >= recentRequestCutoff)
+    .sort((left, right) => timestamp(getValue(right.record, "date_action")) - timestamp(getValue(left.record, "date_action")))
+    .flatMap(({ record }) => {
+      const id = getValue(record, "client_id");
+      const client = clientSummaryById.get(id);
+
+      return client
+        ? [{
+            id: getValue(record, "action_id", "id"),
+            clientId: id,
+            companyName: client.companyName,
+            date: getValue(record, "date_action"),
+            label: actionLabel(record),
+            reference: getValue(record, "reference"),
+            requesterEmail: normalizeEmail(getValue(record, "email_demandeur"))
+          }]
+        : [];
+    });
+  const clientsWithoutRecentConnection = clientSummaries
+    .filter((client) => clientIsActive(clients.find(({ record }) => clientId(record) === client.id)?.record ?? {}))
+    .filter((client) => {
+      const lastConnectionTimestamp = timestamp(client.lastConnectionAt);
+
+      if (lastConnectionTimestamp > 0) {
+        return lastConnectionTimestamp <= inactiveConnectionCutoff;
+      }
+
+      return timestamp(client.createdAt) > 0 && timestamp(client.createdAt) <= inactiveConnectionCutoff;
+    })
+    .sort((left, right) => {
+      const leftDate = timestamp(left.lastConnectionAt || left.createdAt);
+      const rightDate = timestamp(right.lastConnectionAt || right.createdAt);
+
+      return leftDate - rightDate;
+    })
+    .map((client) => ({
+      clientId: client.id,
+      companyName: client.companyName,
+      email: client.email,
+      lastConnectionAt: client.lastConnectionAt,
+      createdAt: client.createdAt,
+      reason: client.lastConnectionAt ? "Derniere connexion il y a plus de 60 jours" : "Aucune connexion enregistree"
+    }));
 
   return {
     generatedAt: now.toISOString(),
@@ -443,7 +587,11 @@ export function buildAdminDashboard(workbook: ClientWorkbookValues, now = new Da
       count: requestsByMonth.get(month) ?? 0
     })),
     topInterventionClients: topFromMap(requestsByClient),
-    topConnectionClients: topFromMap(connectionsByClient)
+    topConnectionClients: topFromMap(connectionsByClient),
+    toProcess: {
+      recentInterventionRequests,
+      clientsWithoutRecentConnection
+    }
   };
 }
 

@@ -9,7 +9,9 @@ import type { PagesContext } from "../../../../../../lib/types";
 
 vi.mock("../../../../../../lib/googleSheets", () => ({
   readGoogleWorkbookValues: vi.fn(),
-  updateGoogleSheetValues: vi.fn(async () => ({ updatedRows: 1 }))
+  updateGoogleSheetValues: vi.fn(async () => ({ updatedRows: 1 })),
+  appendGoogleSheetValues: vi.fn(async () => ({ updatedRows: 1 })),
+  getGoogleWriteRanges: vi.fn(() => ({ actions: "Actions!A:J" }))
 }));
 
 const workbook: ClientWorkbookValues = {

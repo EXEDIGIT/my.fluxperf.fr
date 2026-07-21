@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BarChart3, Bot, Globe2, Megaphone, MonitorSmartphone, Sparkles, Wrench, Zap, type LucideIcon } from "lucide-react";
+import { BarChart3, Bot, Globe2, Megaphone, MonitorSmartphone, Share2, Sparkles, Wrench, Zap, type LucideIcon } from "lucide-react";
 import { getSupabaseAccessToken } from "../lib/supabase";
 import type { Client, ClientSolution } from "../types/client";
 
@@ -13,9 +13,10 @@ type ServicesActiveProps = {
 function iconForService(service: string) {
   const normalized = normalizeService(service);
 
+  if (normalized.includes("ads") || normalized.includes("sea")) return Megaphone;
+  if (normalized.includes("reseaux sociaux") || normalized.includes("reseau social")) return Share2;
   if (normalized.includes("site")) return MonitorSmartphone;
   if (normalized.includes("visibil")) return Globe2;
-  if (normalized.includes("ads") || normalized.includes("sea")) return Megaphone;
   if (normalized.includes("automatisation")) return Zap;
   if (normalized.includes("ia")) return Bot;
   return Wrench;
@@ -25,11 +26,20 @@ function normalizeService(service: string) {
   return service
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[_-]+/g, " ");
 }
 
 function descriptionForService(service: string) {
   const normalized = normalizeService(service);
+
+  if (normalized.includes("ads") || normalized.includes("sea")) {
+    return "Campagnes Google Ads pilotées par nos équipes et rattachées à votre compte.";
+  }
+
+  if (normalized.includes("reseaux sociaux") || normalized.includes("reseau social")) {
+    return "Réseaux sociaux pilotés par nos équipes et rattachés à votre compte.";
+  }
 
   if (normalized.includes("assistant")) {
     return "Assistant IA actif, suivi avec son contexte métier et ses évolutions utiles.";
@@ -39,7 +49,7 @@ function descriptionForService(service: string) {
     return "Automatisations, intégrations et workflows IA rattachés à votre compte.";
   }
 
-  if (normalized.includes("visibil") || normalized.includes("ads") || normalized.includes("sea")) {
+  if (normalized.includes("visibil")) {
     return "Visibilité & Acquisition pilotées par nos équipes et rattachées à votre compte.";
   }
 
@@ -59,10 +69,18 @@ function descriptionForSolution(solution: Client["solutions"][number]) {
 }
 
 function shouldShowStatistics(solution: ClientSolution): boolean {
-  return solution.type === "visibility_acquisition" && Boolean(solution.domain);
+  return solution.statistics.provider !== null;
 }
 
 function placeholderLabel(solution: Client["solutions"][number]): string {
+  if (solution.thumbnail.placeholderKey === "google_ads") {
+    return "Publicité Google Ads";
+  }
+
+  if (solution.thumbnail.placeholderKey === "social_media") {
+    return "Réseaux sociaux";
+  }
+
   if (solution.thumbnail.placeholderKey === "assistant_ai") {
     return "Assistant IA";
   }

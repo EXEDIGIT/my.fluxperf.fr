@@ -6,6 +6,7 @@ import {
   statisticsPeriod,
   type StatisticsReadyResponse
 } from "../../lib/googleAnalytics";
+import { fetchGoogleAdsStatistics, type GoogleAdsStatisticsReadyResponse } from "../../lib/googleAds";
 import { readGoogleWorkbookValues } from "../../lib/googleSheets";
 import { json, jsonError } from "../../lib/response";
 import type { PagesContext } from "../../lib/types";
@@ -13,6 +14,8 @@ import type { PagesContext } from "../../lib/types";
 type CacheStorageWithDefault = CacheStorage & {
   default?: Cache;
 };
+
+type StatisticsApiReadyResponse = StatisticsReadyResponse | GoogleAdsStatisticsReadyResponse;
 
 function paramValue(context: PagesContext, name: string): string {
   const value = context.params?.[name];
@@ -103,6 +106,7 @@ export async function onRequestGet(context: PagesContext): Promise<Response> {
     if (source.status === "pending_setup") {
       return json({
         status: "pending_setup",
+        provider: source.provider,
         period: statisticsPeriod(periodId),
         solution: {
           id: source.solution.id,
@@ -124,13 +128,16 @@ export async function onRequestGet(context: PagesContext): Promise<Response> {
       return cached;
     }
 
-    const statistics = await fetchGa4Statistics(
-      context.env,
-      source.ga4PropertyId,
-      source.solution,
-      periodId
-    );
-    const response = cachedJson(statistics satisfies StatisticsReadyResponse);
+    const statistics =
+      source.provider === "google_ads"
+        ? await fetchGoogleAdsStatistics(
+            context.env,
+            source.googleAdsCustomerId,
+            source.solution,
+            periodId
+          )
+        : await fetchGa4Statistics(context.env, source.ga4PropertyId, source.solution, periodId);
+    const response = cachedJson(statistics satisfies StatisticsApiReadyResponse);
 
     await cache?.put(key, response.clone());
 

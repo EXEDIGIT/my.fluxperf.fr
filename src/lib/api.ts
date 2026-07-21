@@ -44,7 +44,8 @@ const demoResponse: MeResponse = {
           placeholderKey: "visibility_acquisition"
         },
         statistics: {
-          status: "available"
+          status: "available",
+          provider: "ga4"
         }
       },
       {
@@ -62,7 +63,8 @@ const demoResponse: MeResponse = {
           placeholderKey: "visibility_acquisition"
         },
         statistics: {
-          status: "pending_setup"
+          status: "pending_setup",
+          provider: "ga4"
         }
       },
       {
@@ -80,7 +82,8 @@ const demoResponse: MeResponse = {
           placeholderKey: "automation_ai"
         },
         statistics: {
-          status: "not_applicable"
+          status: "not_applicable",
+          provider: null
         }
       },
       {
@@ -98,7 +101,8 @@ const demoResponse: MeResponse = {
           placeholderKey: "assistant_ai"
         },
         statistics: {
-          status: "not_applicable"
+          status: "not_applicable",
+          provider: null
         }
       }
     ],
@@ -313,8 +317,9 @@ export type StatisticsTimelinePoint = {
   visits: number;
 };
 
-export type StatisticsReadyResponse = {
+export type StatisticsGa4ReadyResponse = {
   status: "ready";
+  provider: "ga4";
   generatedAt: string;
   period: StatisticsPeriod;
   solution: {
@@ -345,8 +350,48 @@ export type StatisticsReadyResponse = {
   };
 };
 
+export type StatisticsGoogleAdsBreakdownRow = {
+  label: string;
+  impressions: number;
+  clicks: number;
+  conversions: number;
+  clickThroughRate: number;
+  percentage: number;
+};
+
+export type StatisticsGoogleAdsTimelinePoint = {
+  date: string;
+  clicks: number;
+  conversions: number;
+};
+
+export type StatisticsGoogleAdsReadyResponse = {
+  status: "ready";
+  provider: "google_ads";
+  generatedAt: string;
+  period: StatisticsPeriod;
+  solution: {
+    id: string;
+    name: string;
+    domain: string;
+  };
+  overview: {
+    impressions: number;
+    clicks: number;
+    conversions: number;
+    clickThroughRate: number;
+  };
+  timeline: {
+    granularity: StatisticsTimelineGranularity;
+    points: StatisticsGoogleAdsTimelinePoint[];
+  };
+  campaigns: StatisticsGoogleAdsBreakdownRow[];
+  devices: StatisticsGoogleAdsBreakdownRow[];
+};
+
 export type StatisticsPendingResponse = {
   status: "pending_setup";
+  provider: "ga4" | "google_ads";
   period: StatisticsPeriod;
   solution: {
     id: string;
@@ -355,6 +400,7 @@ export type StatisticsPendingResponse = {
   };
 };
 
+export type StatisticsReadyResponse = StatisticsGa4ReadyResponse | StatisticsGoogleAdsReadyResponse;
 export type StatisticsResponse = StatisticsReadyResponse | StatisticsPendingResponse;
 export type StatisticsPeriodId = StatisticsPeriod["id"];
 
@@ -400,7 +446,7 @@ function demoPeriod(period: StatisticsPeriodId): StatisticsPeriod {
   };
 }
 
-function buildDemoTimeline(period: StatisticsPeriodId, totalVisits: number): StatisticsReadyResponse["timeline"] {
+function buildDemoTimeline(period: StatisticsPeriodId, totalVisits: number): StatisticsGa4ReadyResponse["timeline"] {
   const granularity: StatisticsTimelineGranularity = period === "365d" ? "month" : period === "90d" ? "week" : "day";
   const pointCount = period === "7d" ? 7 : period === "30d" ? 30 : period === "90d" ? 13 : 12;
   const weights = Array.from({ length: pointCount }, (_, index) => 0.72 + ((index * 7) % 11) / 20 + Math.sin(index / 2.4) * 0.18);
@@ -436,6 +482,7 @@ function buildDemoStatistics(solutionId: string, period: StatisticsPeriodId): St
   if (solutionId === "SOL-0002") {
     return {
       status: "pending_setup",
+      provider: "ga4",
       period: demoPeriod(period),
       solution: {
         id: solutionId,
@@ -447,6 +494,7 @@ function buildDemoStatistics(solutionId: string, period: StatisticsPeriodId): St
 
   return {
     status: "ready",
+    provider: "ga4",
     generatedAt: new Date().toISOString(),
     period: demoPeriod(period),
     solution: {

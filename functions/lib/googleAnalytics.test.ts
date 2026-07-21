@@ -193,7 +193,7 @@ describe("google analytics statistics helpers", () => {
         url: "https://example.com",
         activatedAt: "",
         thumbnail: { kind: "website", endpoint: null, placeholderKey: "visibility_acquisition" },
-        statistics: { status: "available" }
+        statistics: { status: "available", provider: "ga4" }
       },
       "30d",
       fetcher

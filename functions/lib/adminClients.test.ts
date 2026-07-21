@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { buildAdminClientRows, hasExistingClientEmail, validateAdminClientInput } from "./adminClients";
+import {
+  buildAdminClientRows,
+  getAdminClientQualityWarnings,
+  hasExistingClientEmail,
+  validateAdminClientInput
+} from "./adminClients";
 import { fallbackAdminSolutionOptions } from "./adminOptions";
 
 describe("admin client helpers", () => {
@@ -26,7 +31,8 @@ describe("admin client helpers", () => {
         type: "visibility_acquisition",
         name: fallbackAdminSolutionOptions[0].defaultName,
         urlOrIndication: "a2-cm.fr",
-        ga4PropertyId: ""
+        ga4PropertyId: "",
+        googleAdsCustomerId: ""
       });
     }
   });
@@ -61,6 +67,43 @@ describe("admin client helpers", () => {
       expect(input.solutions[1].ga4PropertyId).toBe("");
       expect(rows.solutionRows[0][9]).toBe("123456789");
       expect(rows.solutionRows[1][9]).toBe("");
+      expect(rows.solutionRows[0][10]).toBe("");
+      expect(rows.solutionRows[1][10]).toBe("");
+    }
+  });
+
+  it("normalizes a Google Ads customer id and writes it in column K only", () => {
+    const input = validateAdminClientInput({
+      companyName: "Ads Client",
+      contactFirstName: "Camille",
+      contactLastName: "Martin",
+      email: "contact@ads-client.fr",
+      solutions: [
+        {
+          type: "visibility_acquisition",
+          name: "Publicité Google Ads",
+          urlOrIndication: "Campagnes Search",
+          ga4PropertyId: "123456789",
+          googleAdsCustomerId: "123-456-7890"
+        },
+        {
+          type: "visibility_acquisition",
+          name: "Réseaux sociaux",
+          urlOrIndication: "LinkedIn",
+          googleAdsCustomerId: "9876543210"
+        }
+      ]
+    });
+
+    expect(typeof input).toBe("object");
+    if (typeof input !== "string") {
+      const rows = buildAdminClientRows(input, new Date("2026-07-17T10:00:00.000Z"));
+
+      expect(input.solutions[0]).toMatchObject({ ga4PropertyId: "", googleAdsCustomerId: "1234567890" });
+      expect(input.solutions[1]).toMatchObject({ ga4PropertyId: "", googleAdsCustomerId: "" });
+      expect(rows.solutionRows[0][9]).toBe("");
+      expect(rows.solutionRows[0][10]).toBe("1234567890");
+      expect(rows.solutionRows[1][10]).toBe("");
     }
   });
 
@@ -225,5 +268,55 @@ describe("admin client helpers", () => {
         "CLIENT@EXAMPLE.COM"
       )
     ).toBe(true);
+  });
+
+  it("warns about an existing organization and active domain without treating text indications as domains", () => {
+    const input = validateAdminClientInput({
+      companyName: "Alpha Conseil",
+      contactFirstName: "Camille",
+      contactLastName: "Martin",
+      email: "camille@new-client.fr",
+      solutions: [
+        {
+          type: "visibility_acquisition",
+          name: fallbackAdminSolutionOptions[0].defaultName,
+          urlOrIndication: "www.alpha.fr"
+        },
+        {
+          type: "automation_ai",
+          name: fallbackAdminSolutionOptions[1].defaultName,
+          urlOrIndication: "Centralisation donnees"
+        }
+      ]
+    });
+
+    expect(typeof input).toBe("object");
+    if (typeof input === "string") {
+      return;
+    }
+
+    const warnings = getAdminClientQualityWarnings(
+      {
+        clients: [
+          ["client_id", "organisation", "statut_client"],
+          ["CLI-1", "Alpha conseil", "Actif"]
+        ],
+        contacts: [],
+        solutions: [
+          ["solution_id", "client_id", "statut_solution", "domaine", "url_ou_indication"],
+          ["SOL-1", "CLI-1", "Actif", "alpha.fr", "https://www.alpha.fr"],
+          ["SOL-2", "CLI-1", "Actif", "", "Centralisation donnees"]
+        ]
+      },
+      input
+    );
+
+    expect(warnings).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "COMPANY_EXISTS", matches: [expect.objectContaining({ clientId: "CLI-1" })] }),
+        expect.objectContaining({ code: "ACTIVE_DOMAIN_EXISTS", matches: [expect.objectContaining({ value: "alpha.fr" })] })
+      ])
+    );
+    expect(warnings).toHaveLength(2);
   });
 });

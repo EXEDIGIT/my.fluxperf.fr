@@ -2,6 +2,7 @@ import type {
   ClientDto,
   ClientImpactDto,
   ClientImpactKey,
+  ClientSolutionPlaceholderKey,
   ClientSolutionStatisticsDto,
   ClientSolutionDto,
   ClientSolutionThumbnailDto,
@@ -71,7 +72,8 @@ export const demoSolutionsValues: string[][] = [
     "url_ou_indication",
     "date_activation",
     "notes",
-    "ga4_property_id"
+    "ga4_property_id",
+    "google_ads_customer_id"
   ],
   [
     "SOL-DEMO-1",
@@ -83,7 +85,8 @@ export const demoSolutionsValues: string[][] = [
     "https://www.a2-cm.fr",
     "2026-07-06",
     "",
-    "123456789"
+    "123456789",
+    ""
   ],
   [
     "SOL-DEMO-2",
@@ -94,6 +97,7 @@ export const demoSolutionsValues: string[][] = [
     "",
     "",
     "2026-07-06",
+    "",
     "",
     ""
   ],
@@ -106,6 +110,7 @@ export const demoSolutionsValues: string[][] = [
     "",
     "",
     "2026-07-06",
+    "",
     "",
     ""
   ]
@@ -129,26 +134,34 @@ type SheetRecord = Record<string, string>;
 export type ClientStatisticsSource =
   | {
       status: "available";
+      provider: "ga4";
       solution: ClientSolutionDto;
       ga4PropertyId: string;
     }
   | {
+      status: "available";
+      provider: "google_ads";
+      solution: ClientSolutionDto;
+      googleAdsCustomerId: string;
+    }
+  | {
       status: "pending_setup" | "not_applicable";
+      provider: "ga4" | "google_ads" | null;
       solution: ClientSolutionDto;
     };
 
-const impactRules: Record<ClientImpactKey, { label: string; weeklyHoursPerUnit: number }> = {
+const impactRules: Record<ClientImpactKey, { label: string; defaultWeeklyHoursPerUnit: number }> = {
   visibility_acquisition: {
     label: "Visibilité & Acquisition",
-    weeklyHoursPerUnit: 1.5
+    defaultWeeklyHoursPerUnit: 1.5
   },
   automation_ai: {
     label: "Automatisation & IA",
-    weeklyHoursPerUnit: 1
+    defaultWeeklyHoursPerUnit: 1
   },
   assistant_ai: {
     label: "Assistant IA",
-    weeklyHoursPerUnit: 2
+    defaultWeeklyHoursPerUnit: 2
   }
 };
 
@@ -508,6 +521,40 @@ function solutionImpactKey(solution: SheetRecord): ClientImpactKey | null {
   return solutionImpactKeys.find((key) => solutionTypeAliases[key].includes(type)) ?? null;
 }
 
+function solutionName(solution: SheetRecord): string {
+  return getValue(solution, "nom_solution", "name", "nom", "solution");
+}
+
+function isGoogleAdsSolution(solution: SheetRecord): boolean {
+  const normalized = normalizeToken(solutionName(solution)).replace(/[_-]+/g, " ");
+
+  return normalized.includes("google ads") || normalized.includes("publicite google") || normalized === "ads";
+}
+
+function isSocialMediaSolution(solution: SheetRecord): boolean {
+  const normalized = normalizeToken(solutionName(solution)).replace(/[_-]+/g, " ");
+
+  return normalized.includes("reseaux sociaux") || normalized.includes("reseau social");
+}
+
+function isWebsiteVisibilitySolution(type: ClientImpactKey | null, solution: SheetRecord): boolean {
+  return type === "visibility_acquisition" && !isGoogleAdsSolution(solution) && !isSocialMediaSolution(solution);
+}
+
+function weeklyHoursForSolution(solution: SheetRecord): number {
+  const type = solutionImpactKey(solution);
+
+  if (!type) {
+    return 0;
+  }
+
+  if (type === "visibility_acquisition" && (isGoogleAdsSolution(solution) || isSocialMediaSolution(solution))) {
+    return 2;
+  }
+
+  return impactRules[type].defaultWeeklyHoursPerUnit;
+}
+
 function emptyImpact(): ClientImpactDto {
   return {
     weeklyHours: 0,
@@ -523,12 +570,18 @@ function buildImpact(activeSolutions: SheetRecord[] = []): ClientImpactDto {
     automation_ai: 0,
     assistant_ai: 0
   };
+  const weeklyHoursByType: Record<ClientImpactKey, number> = {
+    visibility_acquisition: 0,
+    automation_ai: 0,
+    assistant_ai: 0
+  };
 
   activeSolutions.forEach((solution) => {
     const type = solutionImpactKey(solution);
 
     if (type) {
       quantities[type] += 1;
+      weeklyHoursByType[type] += weeklyHoursForSolution(solution);
     }
   });
 
@@ -536,7 +589,7 @@ function buildImpact(activeSolutions: SheetRecord[] = []): ClientImpactDto {
     .map((key) => {
       const quantity = quantities[key];
       const rule = impactRules[key];
-      const weeklyHours = roundToHalfHour(quantity * rule.weeklyHoursPerUnit);
+      const weeklyHours = roundToHalfHour(weeklyHoursByType[key]);
 
       return {
         key,
@@ -749,7 +802,7 @@ function activeClientIdsFromWorkbook(workbook: ClientWorkbookValues): Set<string
 function thumbnailSourceFromSolution(solution: SheetRecord): ThumbnailSourceDto | null {
   const type = solutionImpactKey(solution);
 
-  if (type !== "visibility_acquisition") {
+  if (type !== "visibility_acquisition" || !isWebsiteVisibilitySolution(type, solution)) {
     return null;
   }
 
@@ -803,23 +856,35 @@ function solutionTypeLabel(type: ClientImpactKey | null, solution: SheetRecord):
   return type ? officialLabels[type] : getValue(solution, "type_solution", "type", "solution_type");
 }
 
-function thumbnailPlaceholderKey(type: ClientImpactKey | null): ClientImpactKey {
+function thumbnailPlaceholderKey(
+  type: ClientImpactKey | null,
+  solution: SheetRecord
+): ClientSolutionPlaceholderKey {
+  if (isGoogleAdsSolution(solution)) {
+    return "google_ads";
+  }
+
+  if (isSocialMediaSolution(solution)) {
+    return "social_media";
+  }
+
   return type ?? "automation_ai";
 }
 
 function thumbnailForSolution(
   id: string,
   type: ClientImpactKey | null,
+  solution: SheetRecord,
   url: string,
   domain: string
 ): ClientSolutionThumbnailDto {
   const sourceUrl = thumbnailSourceUrl(url, domain);
-  const hasWebsiteThumbnail = type === "visibility_acquisition" && Boolean(sourceUrl);
+  const hasWebsiteThumbnail = isWebsiteVisibilitySolution(type, solution) && Boolean(sourceUrl);
 
   return {
     kind: hasWebsiteThumbnail ? "website" : "placeholder",
     endpoint: hasWebsiteThumbnail ? `/api/thumbnails/${encodeURIComponent(id)}` : null,
-    placeholderKey: thumbnailPlaceholderKey(type)
+    placeholderKey: thumbnailPlaceholderKey(type, solution)
   };
 }
 
@@ -831,14 +896,39 @@ function normalizeGa4PropertyId(value: string): string {
   return /^\d+$/.test(candidate) ? candidate : "";
 }
 
+function normalizeGoogleAdsCustomerId(value: string): string {
+  const candidate = value.replace(/\D/g, "");
+
+  return /^\d{10}$/.test(candidate) ? candidate : "";
+}
+
 function statisticsForSolution(
   type: ClientImpactKey | null,
   domain: string,
   solution: SheetRecord
 ): ClientSolutionStatisticsDto {
-  if (type !== "visibility_acquisition" || !domain) {
+  if (type !== "visibility_acquisition") {
     return {
-      status: "not_applicable"
+      status: "not_applicable",
+      provider: null
+    };
+  }
+
+  if (isGoogleAdsSolution(solution)) {
+    const googleAdsCustomerId = normalizeGoogleAdsCustomerId(
+      getValue(solution, "google_ads_customer_id", "google_ads_id", "ads_customer_id")
+    );
+
+    return {
+      status: googleAdsCustomerId ? "available" : "pending_setup",
+      provider: "google_ads"
+    };
+  }
+
+  if (!isWebsiteVisibilitySolution(type, solution) || !domain) {
+    return {
+      status: "not_applicable",
+      provider: null
     };
   }
 
@@ -847,7 +937,8 @@ function statisticsForSolution(
   );
 
   return {
-    status: ga4PropertyId ? "available" : "pending_setup"
+    status: ga4PropertyId ? "available" : "pending_setup",
+    provider: "ga4"
   };
 }
 
@@ -874,7 +965,7 @@ function solutionRecordToDto(solution: SheetRecord): ClientSolutionDto {
     domain,
     url,
     activatedAt: getValue(solution, "date_activation", "activated_at", "date"),
-    thumbnail: thumbnailForSolution(id, type, url, domain),
+    thumbnail: thumbnailForSolution(id, type, solution, url, domain),
     statistics: statisticsForSolution(type, domain, solution)
   };
 }
@@ -893,6 +984,7 @@ export function getStatisticsSourceForClientSolution(
   if (solution.statistics.status !== "available") {
     return {
       status: solution.statistics.status,
+      provider: solution.statistics.provider,
       solution
     };
   }
@@ -911,6 +1003,29 @@ export function getStatisticsSourceForClientSolution(
 
     return solutionRecordId(record, name, domain, url) === solutionId;
   });
+  if (solution.statistics.provider === "google_ads") {
+    const googleAdsCustomerId = rawSolution
+      ? normalizeGoogleAdsCustomerId(
+          getValue(rawSolution, "google_ads_customer_id", "google_ads_id", "ads_customer_id")
+        )
+      : "";
+
+    if (!googleAdsCustomerId) {
+      return {
+        status: "pending_setup",
+        provider: "google_ads",
+        solution
+      };
+    }
+
+    return {
+      status: "available",
+      provider: "google_ads",
+      solution,
+      googleAdsCustomerId
+    };
+  }
+
   const ga4PropertyId = rawSolution
     ? normalizeGa4PropertyId(getValue(rawSolution, "ga4_property_id", "ga4_property", "analytics_property_id"))
     : "";
@@ -918,12 +1033,14 @@ export function getStatisticsSourceForClientSolution(
   if (!ga4PropertyId) {
     return {
       status: "pending_setup",
+      provider: "ga4",
       solution
     };
   }
 
   return {
     status: "available",
+    provider: "ga4",
     solution,
     ga4PropertyId
   };

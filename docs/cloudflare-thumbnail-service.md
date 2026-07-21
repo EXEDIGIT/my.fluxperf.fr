@@ -90,7 +90,7 @@ encore disponible.
 - `https://<worker-url>/health` retourne `status: ok`.
 - `/api/me` retourne `client.solutions[].thumbnail`.
 - `/api/thumbnails/:solution_id` retourne `image/jpeg` pour une solution site active deja capturee.
-- Les solutions Automatisation & IA et Assistant IA affichent un placeholder sans appel Worker.
+- Les solutions Publicité Google Ads, Réseaux sociaux, Automatisation & IA et Assistant IA affichent un placeholder sans appel Worker.
 
 References Cloudflare :
 

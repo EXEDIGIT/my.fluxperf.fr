@@ -69,10 +69,12 @@ GOOGLE_CONNECTIONS_RANGE=Connexions!A1:H1000
 GOOGLE_PARAMETERS_RANGE=Parametres!A1:B1000
 GOOGLE_CLIENTS_WRITE_RANGE=Clients!A:K
 GOOGLE_CONTACTS_WRITE_RANGE=Contacts!A:J
-GOOGLE_SOLUTIONS_WRITE_RANGE=Solutions!A:J
+GOOGLE_SOLUTIONS_WRITE_RANGE=Solutions!A:K
 GOOGLE_CONNECTIONS_WRITE_RANGE=Connexions!A:H
 GOOGLE_SERVICE_ACCOUNT_EMAIL=
 GOOGLE_PRIVATE_KEY=
+GOOGLE_ADS_DEVELOPER_TOKEN=
+GOOGLE_ADS_LOGIN_CUSTOMER_ID=
 THUMBNAIL_WORKER_URL=
 THUMBNAIL_INTERNAL_SECRET=
 N8N_INTERVENTION_WEBHOOK_URL=
@@ -166,6 +168,7 @@ url_ou_indication
 date_activation
 notes
 ga4_property_id
+google_ads_customer_id
 ```
 
 Valeurs V1 attendues pour `type_solution` : `Flux Visibilité & Acquisition`,
@@ -178,13 +181,13 @@ service. Elle est conservee telle que saisie ; si la valeur n'est pas une URL,
 `domaine` reste vide.
 
 La colonne `ga4_property_id` est renseignee uniquement pour les lignes actives
-`Flux Visibilite & Acquisition` raccordees a GA4. Elle contient l'identifiant
+`Site web` ou `Site e-shop` raccordees a GA4. Elle contient l'identifiant
 numerique de propriete GA4 et reste uniquement lue cote serveur.
 
-## Module Statistiques GA4
+## Modules Statistiques
 
 Le module "Statistiques" affiche les donnees GA4 principales pour chaque
-solution active `Flux Visibilite & Acquisition` avec domaine :
+solution active `Site web` ou `Site e-shop` avec domaine :
 
 - periodes disponibles : 7 jours, 30 jours, 90 jours et 1 an ;
 - visites, visiteurs uniques et duree moyenne ;
@@ -203,12 +206,27 @@ Configuration Google a prevoir :
 2. Ajouter le Service Account Fluxperf en lecture sur les proprietes GA4.
 3. Renseigner `ga4_property_id` dans `Solutions` pour les solutions eligibles.
 
+Les solutions actives `Publicité Google Ads` affichent aussi un CTA Statistiques.
+L'ecran presente les apparitions, visites via les annonces, actions utiles et
+taux de clic, ainsi que les repartitions par campagne et appareil. Aucun cout,
+budget, CPC ou indicateur financier n'est demande a l'API ni affiche.
+
+Configuration Google Ads a prevoir :
+
+1. Utiliser un compte administrateur Google Ads (MCC) Fluxperf et obtenir un developer token dans API Center.
+2. Donner au Service Account Fluxperf un acces lecture au MCC ou aux comptes clients concernes.
+3. Ajouter `GOOGLE_ADS_DEVELOPER_TOKEN` et `GOOGLE_ADS_LOGIN_CUSTOMER_ID` (MCC sans tirets) dans Cloudflare Pages.
+4. Renseigner `google_ads_customer_id` sur chaque ligne `Publicité Google Ads`, au format 10 chiffres.
+
+La procedure complete est detaillee dans [docs/google-ads-statistics.md](docs/google-ads-statistics.md).
+
 ## Vignettes des services actifs
 
 Les cartes "Services actifs" utilisent toujours `Solutions` comme source unique.
 Pour chaque solution active, `/api/me` ajoute une propriete `thumbnail` :
 
-- `Flux Visibilite & Acquisition` avec URL capturable : vignette privee via `/api/thumbnails/:solution_id` ;
+- `Site web` et `Site e-shop` avec URL capturable : vignette privee via `/api/thumbnails/:solution_id` ;
+- `Publicité Google Ads` et `Réseaux sociaux` : placeholder local dedie, sans appel Worker ;
 - `Flux Automatisation & IA` et `Flux Assistant IA` : placeholder local standardise ;
 - aucune URL libre n'est acceptee depuis le frontend.
 

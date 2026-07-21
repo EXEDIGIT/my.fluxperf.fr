@@ -1,15 +1,23 @@
 export type ClientImpactKey = "visibility_acquisition" | "automation_ai" | "assistant_ai";
 
+export type ClientSolutionPlaceholderKey =
+  | ClientImpactKey
+  | "google_ads"
+  | "social_media";
+
 export type ClientSolutionThumbnail = {
   kind: "website" | "placeholder";
   endpoint: string | null;
-  placeholderKey: ClientImpactKey;
+  placeholderKey: ClientSolutionPlaceholderKey;
 };
 
 export type ClientStatisticsStatus = "available" | "pending_setup" | "not_applicable";
 
+export type ClientStatisticsProvider = "ga4" | "google_ads" | null;
+
 export type ClientSolutionStatistics = {
   status: ClientStatisticsStatus;
+  provider: ClientStatisticsProvider;
 };
 
 export type ClientSolution = {

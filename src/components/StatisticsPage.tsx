@@ -6,8 +6,10 @@ import {
   Globe2,
   Loader2,
   MapPin,
+  Megaphone,
   MousePointerClick,
   Search,
+  Target,
   TrendingUp,
   Users
 } from "lucide-react";
@@ -17,6 +19,8 @@ import {
   Area,
   AreaChart,
   CartesianGrid,
+  Line,
+  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -26,6 +30,8 @@ import {
   ApiError,
   getStatistics,
   type StatisticsEventRow,
+  type StatisticsGoogleAdsBreakdownRow,
+  type StatisticsGoogleAdsTimelinePoint,
   type StatisticsPageRow,
   type StatisticsPeriodId,
   type StatisticsResponse,
@@ -382,6 +388,102 @@ function EventList({ rows }: { rows: StatisticsEventRow[] }) {
   );
 }
 
+function GoogleAdsTimelineChart({
+  points,
+  granularity
+}: {
+  points: StatisticsGoogleAdsTimelinePoint[];
+  granularity: StatisticsTimelineGranularity;
+}) {
+  const prefersReducedMotion = usePrefersReducedMotion();
+
+  if (points.length === 0) {
+    return <EmptyList label="Aucune activité Google Ads enregistrée sur cette période." />;
+  }
+
+  return (
+    <div className="statistics-timeline" role="img" aria-label="Évolution des visites et actions utiles issues de Google Ads">
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={points} margin={{ top: 12, right: 8, left: -14, bottom: 0 }} accessibilityLayer>
+          <CartesianGrid vertical={false} stroke="rgba(8, 45, 66, 0.1)" strokeDasharray="4 4" />
+          <XAxis
+            dataKey="date"
+            tickFormatter={(value) => timelineDateLabel(String(value), granularity)}
+            axisLine={{ stroke: "rgba(8, 45, 66, 0.14)" }}
+            tickLine={false}
+            tick={{ fill: "#425964", fontSize: 11 }}
+            minTickGap={28}
+          />
+          <YAxis
+            allowDecimals={false}
+            axisLine={false}
+            tickLine={false}
+            tick={{ fill: "#425964", fontSize: 11 }}
+            width={48}
+          />
+          <Tooltip
+            cursor={{ stroke: "rgba(0, 111, 120, 0.28)", strokeWidth: 1 }}
+            labelFormatter={(value) => timelineDateLabel(String(value), granularity, true)}
+            formatter={(value, name) => [formatNumber(Number(value)), name === "conversions" ? "Actions utiles" : "Visites via vos annonces"]}
+            contentStyle={{
+              border: "1px solid rgba(8, 45, 66, 0.14)",
+              borderRadius: "8px",
+              boxShadow: "0 10px 24px rgba(8, 45, 66, 0.12)",
+              color: "#082d42",
+              fontFamily: "Comfortaa, Segoe UI, Arial, sans-serif",
+              fontSize: "12px"
+            }}
+          />
+          <Line
+            type="monotone"
+            dataKey="clicks"
+            name="Visites via vos annonces"
+            stroke="#006f78"
+            strokeWidth={2.5}
+            dot={false}
+            activeDot={{ r: 5, fill: "#f9b900", stroke: "#ffffff", strokeWidth: 2 }}
+            isAnimationActive={!prefersReducedMotion}
+            animationDuration={900}
+            animationEasing="ease-out"
+          />
+          <Line
+            type="monotone"
+            dataKey="conversions"
+            name="Actions utiles"
+            stroke="#f9b900"
+            strokeWidth={2.5}
+            dot={false}
+            activeDot={{ r: 5, fill: "#006f78", stroke: "#ffffff", strokeWidth: 2 }}
+            isAnimationActive={!prefersReducedMotion}
+            animationDuration={900}
+            animationEasing="ease-out"
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+function GoogleAdsBreakdownList({ rows }: { rows: StatisticsGoogleAdsBreakdownRow[] }) {
+  if (rows.length === 0) {
+    return <EmptyList label="Aucune donnée disponible sur cette période." />;
+  }
+
+  return (
+    <div className="statistics-list">
+      {rows.map((row) => (
+        <BarRow
+          key={row.label}
+          label={row.label}
+          value={formatNumber(row.clicks)}
+          percentage={row.percentage}
+          detail={`${formatNumber(row.impressions)} apparitions - ${formatNumber(row.conversions)} actions utiles - ${percentageLabel(row.clickThroughRate)} clics`}
+        />
+      ))}
+    </div>
+  );
+}
+
 export function StatisticsPage({ solution, onBack }: StatisticsPageProps) {
   const [period, setPeriod] = useState<StatisticsPeriodId>("30d");
   const [state, setState] = useState<LoadState>({ status: "idle" });
@@ -389,6 +491,7 @@ export function StatisticsPage({ solution, onBack }: StatisticsPageProps) {
   const pendingResponse = useMemo<StatisticsResponse>(
     () => ({
       status: "pending_setup",
+      provider: solution.statistics.provider === "google_ads" ? "google_ads" : "ga4",
       period: {
         id: period,
         label: periodOptions.find((item) => item.id === period)?.label ?? "30 jours",
@@ -491,12 +594,12 @@ export function StatisticsPage({ solution, onBack }: StatisticsPageProps) {
           <BarChart3 aria-hidden="true" />
           <h3>Statistiques en cours de raccordement</h3>
           <p>
-            Notre equipe termine le lien avec GA4 pour {readyData.solution.domain || "cette solution"}.
+            Notre équipe termine le lien avec {readyData.provider === "google_ads" ? "Google Ads" : "GA4"} pour {readyData.solution.domain || readyData.solution.name || "cette solution"}.
           </p>
         </div>
       ) : null}
 
-      {readyData?.status === "ready" ? (
+      {readyData?.status === "ready" && readyData.provider === "ga4" ? (
         <>
           <div className="statistics-meta">
             <span>{readyData.period.label}</span>
@@ -602,6 +705,76 @@ export function StatisticsPage({ solution, onBack }: StatisticsPageProps) {
               </StatisticsColumn>
             </div>
           </section>
+        </>
+      ) : null}
+
+      {readyData?.status === "ready" && readyData.provider === "google_ads" ? (
+        <>
+          <div className="statistics-meta">
+            <span>{readyData.period.label}</span>
+            <span>{displayDate(readyData.generatedAt) ? `Mis à jour le ${displayDate(readyData.generatedAt)}` : "Données Google Ads"}</span>
+          </div>
+
+          <div className="statistics-kpi-grid is-google-ads">
+            <article>
+              <Globe2 aria-hidden="true" />
+              <span>Apparitions</span>
+              <strong>{formatNumber(readyData.overview.impressions)}</strong>
+            </article>
+            <article>
+              <MousePointerClick aria-hidden="true" />
+              <span>Visites via vos annonces</span>
+              <strong>{formatNumber(readyData.overview.clicks)}</strong>
+            </article>
+            <article>
+              <Target aria-hidden="true" />
+              <span>Actions utiles</span>
+              <strong>{formatNumber(readyData.overview.conversions)}</strong>
+            </article>
+            <article>
+              <BarChart3 aria-hidden="true" />
+              <span>Taux de clic</span>
+              <strong>{percentageLabel(readyData.overview.clickThroughRate)}</strong>
+            </article>
+          </div>
+
+          <section className="statistics-panel statistics-timeline-panel">
+            <div className="statistics-panel-heading">
+              <TrendingUp aria-hidden="true" />
+              <div>
+                <h3>Évolution des résultats</h3>
+                <p>Visites issues de vos annonces et actions utiles sur la période sélectionnée.</p>
+              </div>
+            </div>
+            <GoogleAdsTimelineChart
+              points={readyData.timeline.points}
+              granularity={readyData.timeline.granularity}
+            />
+          </section>
+
+          <div className="statistics-grid">
+            <section className="statistics-panel">
+              <div className="statistics-panel-heading">
+                <Megaphone aria-hidden="true" />
+                <div>
+                  <h3>Campagnes actives</h3>
+                  <p>Les campagnes qui génèrent le plus de visites via vos annonces.</p>
+                </div>
+              </div>
+              <GoogleAdsBreakdownList rows={readyData.campaigns} />
+            </section>
+
+            <section className="statistics-panel">
+              <div className="statistics-panel-heading">
+                <MousePointerClick aria-hidden="true" />
+                <div>
+                  <h3>Répartition par appareil</h3>
+                  <p>Comment vos annonces sont consultées selon le type d’écran.</p>
+                </div>
+              </div>
+              <GoogleAdsBreakdownList rows={readyData.devices} />
+            </section>
+          </div>
         </>
       ) : null}
     </section>

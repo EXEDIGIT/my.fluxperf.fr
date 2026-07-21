@@ -17,7 +17,7 @@ vi.mock("../../lib/googleSheets", () => ({
   getGoogleWriteRanges: vi.fn(() => ({
     clients: "Clients!A:K",
     contacts: "Contacts!A:J",
-    solutions: "Solutions!A:J"
+    solutions: "Solutions!A:K"
   })),
   appendGoogleSheetValues: vi.fn(async () => ({ updatedRows: 1 }))
 }));
@@ -104,7 +104,7 @@ describe("POST /api/admin/clients", () => {
       email: "client@example.com"
     });
     expect(vi.mocked(createSupabaseUserForClient)).toHaveBeenCalledOnce();
-    expect(vi.mocked(appendGoogleSheetValues)).toHaveBeenCalledTimes(3);
+    expect(vi.mocked(appendGoogleSheetValues)).toHaveBeenCalledTimes(5);
 
     const solutionRows = vi.mocked(appendGoogleSheetValues).mock.calls[2][2] as string[][];
 
@@ -198,6 +198,35 @@ describe("POST /api/admin/clients", () => {
     expect(body.error).toMatchObject({ code: "CLIENT_EMAIL_EXISTS" });
     expect(vi.mocked(createSupabaseUserForClient)).not.toHaveBeenCalled();
     expect(vi.mocked(appendGoogleSheetValues)).not.toHaveBeenCalled();
+  });
+
+  it("requires explicit confirmation before creating despite duplicate organization or domain warnings", async () => {
+    vi.mocked(readGoogleWorkbookValues).mockResolvedValue({
+      clients: [
+        ["client_id", "organisation", "statut_client", "espace_client_actif", "email_principal"],
+        ["CLI-1", "Client Test", "Actif", "Oui", "existing@example.com"]
+      ],
+      contacts: [],
+      solutions: [
+        ["solution_id", "client_id", "statut_solution", "domaine", "url_ou_indication"],
+        ["SOL-1", "CLI-1", "Actif", "example.com", "https://example.com"]
+      ],
+      actions: [],
+      connections: []
+    });
+
+    const warningResponse = await onRequestPost(context(validPayload));
+    const warningBody = await responseBody(warningResponse);
+
+    expect(warningResponse.status).toBe(409);
+    expect(warningBody.error).toMatchObject({ code: "CLIENT_CREATION_WARNINGS" });
+    expect(warningBody.warnings).toEqual(expect.arrayContaining([expect.objectContaining({ code: "COMPANY_EXISTS" })]));
+    expect(vi.mocked(appendGoogleSheetValues)).not.toHaveBeenCalled();
+
+    const confirmedResponse = await onRequestPost(context({ ...validPayload, confirmWarnings: true }));
+
+    expect(confirmedResponse.status).toBe(201);
+    expect(vi.mocked(appendGoogleSheetValues)).toHaveBeenCalled();
   });
 
   it("rejects a solution name that is not allowed by admin options", async () => {

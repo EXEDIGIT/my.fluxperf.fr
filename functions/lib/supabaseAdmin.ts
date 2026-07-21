@@ -31,6 +31,12 @@ type SupabaseBanResult =
   | { status: "skipped"; email: string; reason: string }
   | { status: "failed"; email: string; reason: string };
 
+type SupabaseUnbanResult =
+  | { status: "unbanned"; email: string }
+  | { status: "not_found"; email: string; reason: string }
+  | { status: "skipped"; email: string; reason: string }
+  | { status: "failed"; email: string; reason: string };
+
 function getSupabaseAdminConfig(env: AppEnv) {
   const url = env.SUPABASE_URL?.trim().replace(/\/+$/, "");
   const serviceRoleKey = env.SUPABASE_SERVICE_ROLE_KEY?.trim();
@@ -198,6 +204,67 @@ export async function banSupabaseUserForClient(
       status: "failed",
       email: normalizedEmail,
       reason: error instanceof Error ? error.message : "Bannissement Auth impossible."
+    };
+  }
+}
+
+export async function unbanSupabaseUserForClient(
+  env: AppEnv,
+  email: string,
+  fetcher: Fetcher = fetch
+): Promise<SupabaseUnbanResult> {
+  const normalizedEmail = normalizeEmail(email);
+  const config = getSupabaseAdminConfig(env);
+
+  if (!config) {
+    return {
+      status: "skipped",
+      email: normalizedEmail,
+      reason: "Configuration Auth admin absente."
+    };
+  }
+
+  try {
+    const userId = await findSupabaseUserIdByEmail(config, normalizedEmail, fetcher);
+
+    if (!userId) {
+      return {
+        status: "not_found",
+        email: normalizedEmail,
+        reason: "Utilisateur Auth introuvable."
+      };
+    }
+
+    const response = await fetcher(`${config.url}/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
+      method: "PUT",
+      headers: {
+        apikey: config.serviceRoleKey,
+        Authorization: `Bearer ${config.serviceRoleKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        ban_duration: "none"
+      })
+    });
+    const data = (await response.json().catch(() => ({}))) as SupabaseAdminError;
+
+    if (!response.ok) {
+      return {
+        status: "failed",
+        email: normalizedEmail,
+        reason: data.message || data.error || data.msg || "Reactivation Auth impossible."
+      };
+    }
+
+    return {
+      status: "unbanned",
+      email: normalizedEmail
+    };
+  } catch (error) {
+    return {
+      status: "failed",
+      email: normalizedEmail,
+      reason: error instanceof Error ? error.message : "Reactivation Auth impossible."
     };
   }
 }

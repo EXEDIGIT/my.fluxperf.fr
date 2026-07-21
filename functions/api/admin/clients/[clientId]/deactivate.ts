@@ -1,4 +1,5 @@
 import { requireAdmin } from "../../../../lib/adminAuth";
+import { logAdminAction } from "../../../../lib/adminActions";
 import { findAdminClientRow } from "../../../../lib/adminWorkbook";
 import {
   readGoogleWorkbookValues,
@@ -38,6 +39,15 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
     await updateGoogleSheetValues(context.env, `Clients!J${client.rowNumber}:J${client.rowNumber}`, [[formatFrenchDate()]]);
 
     const auth = await banSupabaseUserForClient(context.env, emailFromClient(client.record));
+
+    await logAdminAction(context.env, {
+      clientId: decodeURIComponent(clientIdFromContext(context)),
+      type: "admin_client_deactivated",
+      label: "Acces client desactive",
+      actorEmail: admin.email,
+      status: auth.status === "failed" ? "partiel" : "realisee",
+      details: auth.status === "failed" ? auth.reason : ""
+    });
 
     return json({
       status: "deactivated",

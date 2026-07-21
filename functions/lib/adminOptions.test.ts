@@ -34,4 +34,26 @@ describe("admin solution options", () => {
   it("falls back when Parametres is empty", () => {
     expect(buildAdminSolutionOptions([])).toEqual(fallbackAdminSolutionOptions);
   });
+
+  it("maps the short solution labels used by the live Parametres sheet", () => {
+    const options = buildAdminSolutionOptions([
+      ["categorie", "valeur"],
+      ["type_solution", "Flux Visibilité & Acquisition"],
+      ["type_solution", "Flux Automatisation & IA"],
+      ["type_solution", "Flux Assistant IA"],
+      ["nom_solution", "Site web"],
+      ["nom_solution", "Site e-shop"],
+      ["nom_solution", "Publicité Google Ads"],
+      ["nom_solution", "Réseaux sociaux"],
+      ["nom_solution", "Tableau de bord"],
+      ["nom_solution", "Copilote entreprise"]
+    ]);
+
+    expect(options.find((option) => option.type === "visibility_acquisition")?.nameOptions).toEqual([
+      "Site web",
+      "Site e-shop",
+      "Publicité Google Ads",
+      "Réseaux sociaux"
+    ]);
+  });
 });

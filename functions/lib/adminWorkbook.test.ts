@@ -60,6 +60,13 @@ describe("admin workbook helpers", () => {
     expect(detail?.contacts[0].email).toBe("alpha@example.com");
     expect(detail?.solutions).toHaveLength(2);
     expect(detail?.actions[0]).toMatchObject({ id: "ACT-1", type: "intervention_request" });
+    expect(detail?.lastConnectionAt).toBe("2026-07-10T10:00:00.000Z");
+    expect(detail?.timeline).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: "ACT-1", kind: "action" }),
+        expect.objectContaining({ id: "CNX-1", kind: "connection" })
+      ])
+    );
   });
 
   it("builds dashboard metrics for the last 12 months", () => {
@@ -92,6 +99,30 @@ describe("admin workbook helpers", () => {
       "2026-07-10",
       "2026-07",
       "myfluxperf"
+    ]);
+  });
+
+  it("lists recent requests and only flags active clients without a connection for 60 days", () => {
+    const attentionWorkbook = {
+      ...workbook,
+      clients: [
+        workbook.clients[0],
+        workbook.clients[1],
+        ["CLI-2", "Client Deux", "Beta", "Actif", "Oui", "CON-2", "beta@example.com", "0", "01/01/2026", "11/07/2026", ""],
+        ["CLI-3", "Client Trois", "Gamma", "Actif", "Oui", "CON-3", "gamma@example.com", "0", "10/07/2026", "10/07/2026", ""]
+      ],
+      actions: [
+        ...workbook.actions,
+        ["ACT-RECENT", "CLI-1", "2026-07-16T10:00:00.000Z", "intervention_request", "Demande recente", "FP-2", "alpha@example.com", "myfluxperf", "envoyee", ""]
+      ]
+    };
+    const dashboard = buildAdminDashboard(attentionWorkbook, new Date("2026-07-18T10:00:00.000Z"));
+
+    expect(dashboard.toProcess.recentInterventionRequests).toEqual([
+      expect.objectContaining({ id: "ACT-RECENT", clientId: "CLI-1" })
+    ]);
+    expect(dashboard.toProcess.clientsWithoutRecentConnection).toEqual([
+      expect.objectContaining({ clientId: "CLI-2", lastConnectionAt: "" })
     ]);
   });
 });

@@ -13,12 +13,28 @@ export type AdminCreateClientInput = {
   email: string;
   notes: string;
   notifyClient: boolean;
+  confirmWarnings?: boolean;
   solutions: Array<{
     type: AdminSolutionType;
     name: string;
     urlOrIndication: string;
     ga4PropertyId: string;
+    googleAdsCustomerId: string;
   }>;
+};
+
+export type AdminClientQualityWarning = {
+  code: "COMPANY_EXISTS" | "ACTIVE_DOMAIN_EXISTS";
+  message: string;
+  matches: Array<{
+    clientId: string;
+    companyName: string;
+    value: string;
+  }>;
+};
+
+export type AdminClientQualityResponse = {
+  warnings: AdminClientQualityWarning[];
 };
 
 export type AdminSolutionOption = {
@@ -41,10 +57,12 @@ export type AdminClientSummary = {
   contactName: string;
   activeSolutions: number;
   totalSolutions: number;
+  activeSolutionTypes: string[];
   createdAt: string;
   updatedAt: string;
   lastActivityAt: string;
   lastActivityLabel: string;
+  lastConnectionAt: string;
 };
 
 export type AdminClientDetail = AdminClientSummary & {
@@ -68,6 +86,7 @@ export type AdminClientDetail = AdminClientSummary & {
     activatedAt: string;
     notes: string;
     ga4PropertyId: string;
+    googleAdsCustomerId: string;
   }>;
   actions: Array<{
     id: string;
@@ -77,6 +96,16 @@ export type AdminClientDetail = AdminClientSummary & {
     reference: string;
     requesterEmail: string;
     status: string;
+  }>;
+  timeline: Array<{
+    id: string;
+    kind: "action" | "connection";
+    date: string;
+    label: string;
+    reference: string;
+    status: string;
+    source: string;
+    details: string;
   }>;
 };
 
@@ -115,6 +144,25 @@ export type AdminDashboard = {
     companyName: string;
     count: number;
   }>;
+  toProcess: {
+    recentInterventionRequests: Array<{
+      id: string;
+      clientId: string;
+      companyName: string;
+      date: string;
+      label: string;
+      reference: string;
+      requesterEmail: string;
+    }>;
+    clientsWithoutRecentConnection: Array<{
+      clientId: string;
+      companyName: string;
+      email: string;
+      lastConnectionAt: string;
+      createdAt: string;
+      reason: string;
+    }>;
+  };
 };
 
 export type AdminDashboardResponse = {
@@ -127,10 +175,17 @@ export type AdminClientActionResponse = {
   solutionId?: string;
   activeSolutions?: number;
   auth?: {
-    status: "banned" | "not_found" | "skipped" | "failed";
+    status: "banned" | "unbanned" | "not_found" | "skipped" | "failed";
     email: string;
     reason?: string;
   };
+};
+
+export type AdminWelcomeEmailResponse = {
+  status: "sent" | "skipped";
+  clientId: string;
+  notification: AdminCreateClientResponse["notification"];
+  sentBy: string;
 };
 
 export type AdminCreateClientResponse = {

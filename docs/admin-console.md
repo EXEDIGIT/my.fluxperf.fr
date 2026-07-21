@@ -34,7 +34,7 @@ SUPABASE_SERVICE_ROLE_KEY=
 APP_PUBLIC_URL=https://my.fluxperf.fr
 GOOGLE_CLIENTS_WRITE_RANGE=Clients!A:K
 GOOGLE_CONTACTS_WRITE_RANGE=Contacts!A:J
-GOOGLE_SOLUTIONS_WRITE_RANGE=Solutions!A:J
+GOOGLE_SOLUTIONS_WRITE_RANGE=Solutions!A:K
 GOOGLE_CONNECTIONS_RANGE=Connexions!A1:H1000
 GOOGLE_CONNECTIONS_WRITE_RANGE=Connexions!A:H
 GOOGLE_PARAMETERS_RANGE=Parametres!A1:B1000
@@ -102,6 +102,7 @@ url_ou_indication
 date_activation
 notes
 ga4_property_id
+google_ads_customer_id
 ```
 
 La console ne demande plus le champ `domaine` : elle le deduit uniquement quand
@@ -109,9 +110,10 @@ La console ne demande plus le champ `domaine` : elle le deduit uniquement quand
 et laisse `domaine` vide. La valeur `url_ou_indication` est ecrite telle que
 saisie, sans ajout automatique de protocole.
 
-Pour les solutions `Flux Visibilite & Acquisition`, la console peut aussi
-ecrire `ga4_property_id`. Cette valeur est l'identifiant numerique de propriete
-GA4 utilise par le module Statistiques cote serveur.
+La console affiche le champ `ga4_property_id` uniquement pour `Site web` et
+`Site e-shop`. Elle affiche le champ `google_ads_customer_id` uniquement pour
+`Publicité Google Ads` et normalise `123-456-7890` en 10 chiffres. Ces deux
+identifiants restent uniquement lus cote serveur.
 
 `Connexions`
 

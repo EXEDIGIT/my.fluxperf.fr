@@ -263,7 +263,8 @@ describe("client sheet parsing", () => {
           url: "https://www.hbint.com",
           activatedAt: "2026-07-06",
           statistics: {
-            status: "pending_setup"
+            status: "pending_setup",
+            provider: "ga4"
           },
           thumbnail: {
             kind: "website",
@@ -281,7 +282,8 @@ describe("client sheet parsing", () => {
           url: "https://trial.hbint.com",
           activatedAt: "2026-07-06",
           statistics: {
-            status: "pending_setup"
+            status: "pending_setup",
+            provider: "ga4"
           },
           thumbnail: {
             kind: "website",
@@ -405,7 +407,8 @@ describe("client sheet parsing", () => {
       expect(result.client.solutions[0]).toMatchObject({
         id: "SOL-GA4",
         statistics: {
-          status: "available"
+          status: "available",
+          provider: "ga4"
         }
       });
       expect("ga4PropertyId" in result.client.solutions[0]).toBe(false);
@@ -415,6 +418,80 @@ describe("client sheet parsing", () => {
       expect(source).toMatchObject({
         status: "available",
         ga4PropertyId: "123456789"
+      });
+    }
+  });
+
+  it("treats Google Ads and social media as dedicated visibility services", () => {
+    const workbook = {
+      ...structuredWorkbook,
+      solutions: [
+        [
+          "solution_id",
+          "client_id",
+          "type_solution",
+          "statut_solution",
+          "nom_solution",
+          "domaine",
+          "url_ou_indication",
+          "date_activation",
+          "notes",
+          "ga4_property_id",
+          "google_ads_customer_id"
+        ],
+        [
+          "SOL-ADS",
+          "CLI-0001",
+          "visibility_acquisition",
+          "Actif",
+          "Publicité Google Ads",
+          "",
+          "Campagnes nationales",
+          "2026-07-06",
+          "",
+          "",
+          "123-456-7890"
+        ],
+        [
+          "SOL-SOCIAL",
+          "CLI-0001",
+          "visibility_acquisition",
+          "Actif",
+          "Réseaux sociaux",
+          "",
+          "Animation LinkedIn",
+          "2026-07-06",
+          "",
+          "",
+          ""
+        ]
+      ]
+    };
+    const result = findClientForEmailInWorkbook(workbook, "tdacunha@exedigit.fr");
+
+    expect(result.status).toBe("ok");
+    if (result.status === "ok") {
+      expect(result.client.solutions).toMatchObject([
+        {
+          id: "SOL-ADS",
+          thumbnail: { kind: "placeholder", endpoint: null, placeholderKey: "google_ads" },
+          statistics: { status: "available", provider: "google_ads" }
+        },
+        {
+          id: "SOL-SOCIAL",
+          thumbnail: { kind: "placeholder", endpoint: null, placeholderKey: "social_media" },
+          statistics: { status: "not_applicable", provider: null }
+        }
+      ]);
+      expect(result.client.impact).toMatchObject({ weeklyHours: 4 });
+      expect(result.client.impact.items).toEqual([
+        expect.objectContaining({ key: "visibility_acquisition", quantity: 2, weeklyHours: 4 })
+      ]);
+      expect(getThumbnailSourcesFromWorkbook(workbook)).toEqual([]);
+      expect(getStatisticsSourceForClientSolution(workbook, result.client, "SOL-ADS")).toMatchObject({
+        status: "available",
+        provider: "google_ads",
+        googleAdsCustomerId: "1234567890"
       });
     }
   });
@@ -692,7 +769,8 @@ describe("client sheet parsing", () => {
           url: "",
           activatedAt: "2026-07-06",
           statistics: {
-            status: "not_applicable"
+            status: "not_applicable",
+            provider: null
           },
           thumbnail: {
             kind: "placeholder",

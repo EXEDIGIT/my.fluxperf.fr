@@ -5,9 +5,11 @@ import type {
   AdminClientActionResponse,
   AdminClientDetailResponse,
   AdminClientsResponse,
+  AdminClientQualityResponse,
   AdminDashboardResponse,
   AdminOptionsResponse,
-  AdminSessionResponse
+  AdminSessionResponse,
+  AdminWelcomeEmailResponse
 } from "../types/admin";
 import { ApiError } from "./api";
 import { getSupabaseAccessToken } from "./supabase";
@@ -76,8 +78,27 @@ export function createAdminClient(input: AdminCreateClientInput): Promise<AdminC
   });
 }
 
+export function checkAdminClientQuality(input: AdminCreateClientInput): Promise<AdminClientQualityResponse> {
+  return adminFetch<AdminClientQualityResponse>("/api/admin/clients/quality-check", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
 export function deactivateAdminClient(clientId: string): Promise<AdminClientActionResponse> {
   return adminFetch<AdminClientActionResponse>(`/api/admin/clients/${encodeURIComponent(clientId)}/deactivate`, {
+    method: "POST"
+  });
+}
+
+export function reactivateAdminClient(clientId: string): Promise<AdminClientActionResponse> {
+  return adminFetch<AdminClientActionResponse>(`/api/admin/clients/${encodeURIComponent(clientId)}/reactivate`, {
+    method: "POST"
+  });
+}
+
+export function sendAdminClientWelcomeEmail(clientId: string): Promise<AdminWelcomeEmailResponse> {
+  return adminFetch<AdminWelcomeEmailResponse>(`/api/admin/clients/${encodeURIComponent(clientId)}/welcome-email`, {
     method: "POST"
   });
 }

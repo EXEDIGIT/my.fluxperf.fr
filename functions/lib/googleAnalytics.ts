@@ -53,6 +53,7 @@ export type StatisticsEventRow = {
 
 export type StatisticsReadyResponse = {
   status: "ready";
+  provider: "ga4";
   generatedAt: string;
   period: StatisticsPeriod;
   solution: {
@@ -673,6 +674,7 @@ function demoStatistics(solution: ClientSolutionDto, period: StatisticsPeriod): 
 
   return {
     status: "ready",
+    provider: "ga4",
     generatedAt: new Date().toISOString(),
     period,
     solution: {
@@ -760,6 +762,7 @@ export async function fetchGa4Statistics(
 
   return {
     status: "ready",
+    provider: "ga4",
     generatedAt: new Date().toISOString(),
     period,
     solution: {

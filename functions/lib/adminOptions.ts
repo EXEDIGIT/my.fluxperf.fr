@@ -9,30 +9,30 @@ export type AdminSolutionOption = {
 
 type SheetRecord = Record<string, string>;
 
+const solutionNamesByType: Record<AdminSolutionType, string[]> = {
+  visibility_acquisition: ["Site web", "Site e-shop", "Publicité Google Ads", "Réseaux sociaux"],
+  automation_ai: ["Tableau de bord", "Synchronisation de données"],
+  assistant_ai: ["Copilote entreprise"]
+};
+
 export const fallbackAdminSolutionOptions: AdminSolutionOption[] = [
   {
     type: "visibility_acquisition",
     label: "Flux Visibilité & Acquisition",
-    defaultName: "Flux Visibilité & Acquisition • Site web",
-    nameOptions: [
-      "Flux Visibilité & Acquisition • Site web",
-      "Flux Visibilité & Acquisition • Site e-shop"
-    ]
+    defaultName: "Site web",
+    nameOptions: solutionNamesByType.visibility_acquisition
   },
   {
     type: "automation_ai",
     label: "Flux Automatisation & IA",
-    defaultName: "Flux Automatisation & IA • Tableau de bord",
-    nameOptions: [
-      "Flux Automatisation & IA • Tableau de bord",
-      "Flux Automatisation & IA • Synchronisation de données"
-    ]
+    defaultName: "Tableau de bord",
+    nameOptions: solutionNamesByType.automation_ai
   },
   {
     type: "assistant_ai",
     label: "Flux Assistant IA",
-    defaultName: "Flux Assistant IA • Copilote entreprise",
-    nameOptions: ["Flux Assistant IA • Copilote entreprise"]
+    defaultName: "Copilote entreprise",
+    nameOptions: solutionNamesByType.assistant_ai
   }
 ];
 
@@ -48,12 +48,14 @@ function normalizeColumn(value: string): string {
   return value.trim().toLowerCase();
 }
 
-function normalizeToken(value: string): string {
+export function normalizeSolutionName(value: string): string {
   return value
     .trim()
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ");
 }
 
 function unique(values: string[]): string[] {
@@ -82,22 +84,58 @@ function parseRecords(values: string[][]): SheetRecord[] {
 }
 
 function optionTypeFromLabel(label: string): AdminSolutionType | null {
-  const normalizedLabel = normalizeToken(label);
+  const normalizedLabel = normalizeSolutionName(label);
 
   return (
-    fallbackAdminSolutionOptions.find((option) => normalizeToken(option.label) === normalizedLabel)?.type ??
+    fallbackAdminSolutionOptions.find((option) => normalizeSolutionName(option.label) === normalizedLabel)?.type ??
     null
   );
 }
 
 function valuesForCategory(records: SheetRecord[], category: string): string[] {
-  const normalizedCategory = normalizeToken(category);
+  const normalizedCategory = normalizeSolutionName(category);
 
   return unique(
     records
-      .filter((record) => normalizeToken(record.categorie || record.category) === normalizedCategory)
+      .filter((record) => normalizeSolutionName(record.categorie || record.category) === normalizedCategory)
       .map((record) => record.valeur || record.value)
   );
+}
+
+function nameMatchesType(name: string, type: AdminSolutionType, label: string): boolean {
+  const normalizedName = normalizeSolutionName(name);
+  const normalizedLabel = normalizeSolutionName(label);
+
+  return (
+    normalizedName.startsWith(normalizedLabel) ||
+    solutionNamesByType[type].some((candidate) => normalizedName === normalizeSolutionName(candidate))
+  );
+}
+
+function optionOrder(type: AdminSolutionType, name: string): number {
+  const canonicalIndex = solutionNamesByType[type].findIndex(
+    (candidate) => normalizeSolutionName(candidate) === normalizeSolutionName(name)
+  );
+
+  return canonicalIndex === -1 ? Number.MAX_SAFE_INTEGER : canonicalIndex;
+}
+
+export function isWebsiteSolutionName(name: string): boolean {
+  const normalized = normalizeSolutionName(name);
+
+  return normalized.includes("site web") || normalized.includes("site e-shop") || normalized.includes("site eshop");
+}
+
+export function isGoogleAdsSolutionName(name: string): boolean {
+  const normalized = normalizeSolutionName(name);
+
+  return normalized.includes("google ads") || normalized.includes("publicite google") || normalized === "ads";
+}
+
+export function isSocialMediaSolutionName(name: string): boolean {
+  const normalized = normalizeSolutionName(name);
+
+  return normalized.includes("reseaux sociaux") || normalized.includes("reseau social");
 }
 
 export function buildAdminSolutionOptions(parameterValues: string[][]): AdminSolutionOption[] {
@@ -117,7 +155,9 @@ export function buildAdminSolutionOptions(parameterValues: string[][]): AdminSol
         return null;
       }
 
-      const nameOptions = solutionNames.filter((name) => normalizeToken(name).startsWith(normalizeToken(label)));
+      const nameOptions = solutionNames
+        .filter((name) => nameMatchesType(name, type, label))
+        .sort((left, right) => optionOrder(type, left) - optionOrder(type, right));
 
       if (nameOptions.length === 0) {
         return null;
@@ -140,7 +180,13 @@ export function optionAllowsSolution(
   type: AdminSolutionType,
   name: string
 ): boolean {
-  return Boolean(options.find((option) => option.type === type)?.nameOptions.includes(name));
+  const normalizedName = normalizeSolutionName(name);
+  const option = options.find((item) => item.type === type);
+
+  return Boolean(
+    option?.nameOptions.some((candidate) => normalizeSolutionName(candidate) === normalizedName) ||
+      solutionNamesByType[type].some((candidate) => normalizedName === normalizeSolutionName(candidate))
+  );
 }
 
 export function defaultNameForType(options: AdminSolutionOption[], type: AdminSolutionType): string {

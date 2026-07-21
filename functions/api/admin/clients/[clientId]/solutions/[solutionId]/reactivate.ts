@@ -1,4 +1,5 @@
 import { requireAdmin } from "../../../../../../lib/adminAuth";
+import { logAdminAction } from "../../../../../../lib/adminActions";
 import {
   activeSolutionCountForClient,
   findAdminClientRow,
@@ -63,6 +64,15 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
     await updateGoogleSheetValues(context.env, `Solutions!D${solution.rowNumber}:D${solution.rowNumber}`, [["Actif"]]);
     await updateGoogleSheetValues(context.env, `Clients!H${client.rowNumber}:H${client.rowNumber}`, [[String(nextActiveCount)]]);
     await updateGoogleSheetValues(context.env, `Clients!J${client.rowNumber}:J${client.rowNumber}`, [[formatFrenchDate()]]);
+
+    await logAdminAction(context.env, {
+      clientId,
+      type: "admin_solution_reactivated",
+      label: "Solution reactivee",
+      actorEmail: admin.email,
+      reference: solutionId,
+      details: solution.record.nom_solution || solutionId
+    });
 
     return json({
       status: "reactivated",

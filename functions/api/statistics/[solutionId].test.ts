@@ -40,7 +40,8 @@ const baseWorkbook = {
       "url_ou_indication",
       "date_activation",
       "notes",
-      "ga4_property_id"
+      "ga4_property_id",
+      "google_ads_customer_id"
     ],
     [
       "SOL-GA4",
@@ -65,6 +66,19 @@ const baseWorkbook = {
       "17/07/2026",
       "",
       ""
+    ],
+    [
+      "SOL-ADS",
+      "CLI-1",
+      "visibility_acquisition",
+      "Actif",
+      "Publicité Google Ads",
+      "",
+      "Campagnes nationales",
+      "17/07/2026",
+      "",
+      "",
+      "1234567890"
     ]
   ],
   actions: []
@@ -140,5 +154,22 @@ describe("GET /api/statistics/:solutionId", () => {
       }
     });
     expect(JSON.stringify(body)).not.toContain("123456789");
+  });
+
+  it("returns Google Ads statistics without exposing the customer id", async () => {
+    const response = await onRequestGet(context("SOL-ADS"));
+    const body = await bodyOf(response);
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      status: "ready",
+      provider: "google_ads",
+      overview: {
+        impressions: expect.any(Number),
+        clicks: expect.any(Number),
+        conversions: expect.any(Number)
+      }
+    });
+    expect(JSON.stringify(body)).not.toContain("1234567890");
   });
 });

@@ -98,6 +98,7 @@ url_ou_indication
 date_activation
 notes
 ga4_property_id
+google_ads_customer_id
 ```
 
 ## Exemple de lignes `Solutions`
@@ -107,34 +108,37 @@ solution_id: SOL-0001
 client_id: CLI-0001
 type_solution: Flux Visibilité & Acquisition
 statut_solution: Actif
-nom_solution: Flux Visibilité & Acquisition • Site web
+nom_solution: Site web
 domaine: hbint.com
 url_ou_indication: https://www.hbint.com
 date_activation: 17/07/2026
 notes:
 ga4_property_id: 123456789
+google_ads_customer_id:
 
 solution_id: SOL-0002
 client_id: CLI-0001
 type_solution: Flux Visibilité & Acquisition
 statut_solution: Actif
-nom_solution: Flux Visibilité & Acquisition • Site e-shop
+nom_solution: Site e-shop
 domaine: trial.hbint.com
 url_ou_indication: https://trial.hbint.com
 date_activation: 17/07/2026
 notes:
 ga4_property_id:
+google_ads_customer_id:
 
 solution_id: SOL-0003
 client_id: CLI-0001
 type_solution: Flux Automatisation & IA
 statut_solution: Actif
-nom_solution: Flux Automatisation & IA • Tableau de bord
+nom_solution: Tableau de bord
 domaine:
 url_ou_indication: Centralisation donnees
 date_activation: 17/07/2026
 notes:
 ga4_property_id:
+google_ads_customer_id:
 ```
 
 ## Regles du module Temps libere
@@ -143,31 +147,33 @@ ga4_property_id:
 - `type_solution` doit utiliser les valeurs de reference `Flux Visibilité & Acquisition`, `Flux Automatisation & IA` ou `Flux Assistant IA`.
 - Les anciens codes `visibility_acquisition`, `automation_ai` et `assistant_ai` restent acceptes par compatibilite.
 - Une ligne `Solutions` compte uniquement si `statut_solution` vaut `Actif`.
-- `Flux Visibilité & Acquisition` ajoute 1,5 h / semaine.
+- `Site web` et `Site e-shop` ajoutent 1,5 h / semaine.
+- `Publicité Google Ads` et `Réseaux sociaux` ajoutent 2 h / semaine.
 - `Flux Automatisation & IA` ajoute 1 h / semaine.
 - `Flux Assistant IA` ajoute 2 h / semaine.
 
 ## Regles des vignettes Services actifs
 
 - Aucune source n'est lue depuis un onglet `Sites` : `solution_id` reste l'identifiant unique.
-- Une ligne active `Flux Visibilite & Acquisition` devient capturable si `url_ou_indication` contient une URL ou un domaine exploitable.
+- Une ligne active `Site web` ou `Site e-shop` devient capturable si `url_ou_indication` contient une URL ou un domaine exploitable.
 - `domaine` sert de garde-fou : l'URL capturee doit correspondre a ce domaine ou a l'un de ses sous-domaines.
-- Les lignes `Flux Automatisation & IA` et `Flux Assistant IA` affichent un placeholder standardise, sans capture Browser Run.
+- Les lignes `Publicité Google Ads`, `Réseaux sociaux`, `Flux Automatisation & IA` et `Flux Assistant IA` affichent un placeholder standardise, sans capture Browser Run.
 - Les URL localhost, IP privees/locales, protocoles non HTTP(S) et URL avec identifiants sont refusees.
 
 ## Regles du module Statistiques
 
-- Une ligne active `Flux Visibilite & Acquisition` avec `domaine` affiche un CTA `Statistiques`.
-- Si `ga4_property_id` est vide, le client voit `Statistiques en cours de raccordement`.
-- Si `ga4_property_id` est renseigne, il doit contenir l'identifiant numerique de la propriete GA4.
-- Le navigateur ne recoit jamais l'ID GA4 ; l'API le relit cote serveur avant d'appeler Google Analytics Data API.
+- `Site web` et `Site e-shop` avec domaine affichent un CTA `Statistiques` GA4.
+- `Publicité Google Ads` affiche un CTA `Statistiques`, y compris avant raccordement.
+- Si `ga4_property_id` ou `google_ads_customer_id` est vide, le client voit `Statistiques en cours de raccordement`.
+- `ga4_property_id` est numerique ; `google_ads_customer_id` contient 10 chiffres, sans tirets une fois enregistre.
+- Le navigateur ne recoit jamais ces identifiants ; l'API les relit cote serveur avant d'appeler Google.
 
 ## Onglet `Parametres`
 
 Ajouter les listes suivantes pour alimenter les listes deroulantes de `Solutions`.
 Dans le Google Sheet de production, `Solutions!C2:C1000` pointe vers
 `Parametres!B20:B22`, `Solutions!D2:D1000` pointe vers `Parametres!B23:B27` et
-`Solutions!E2:E1000` pointe vers `Parametres!B28:B32`.
+`Solutions!E2:E1000` pointe vers `Parametres!B28:B34`.
 
 ```text
 categorie: type_solution
@@ -195,19 +201,25 @@ categorie: statut_solution
 valeur: Résilié
 
 categorie: nom_solution
-valeur: Flux Visibilité & Acquisition • Site web
+valeur: Site web
 
 categorie: nom_solution
-valeur: Flux Visibilité & Acquisition • Site e-shop
+valeur: Site e-shop
 
 categorie: nom_solution
-valeur: Flux Automatisation & IA • Tableau de bord
+valeur: Tableau de bord
 
 categorie: nom_solution
-valeur: Flux Automatisation & IA • Synchronisation de données
+valeur: Synchronisation de données
 
 categorie: nom_solution
-valeur: Flux Assistant IA • Copilote entreprise
+valeur: Copilote entreprise
+
+categorie: nom_solution
+valeur: Publicité Google Ads
+
+categorie: nom_solution
+valeur: Réseaux sociaux
 ```
 
 ## Onglet `Actions`

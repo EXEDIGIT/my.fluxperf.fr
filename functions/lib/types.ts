@@ -20,9 +20,12 @@ export type AppEnv = {
   GOOGLE_CLIENTS_WRITE_RANGE?: string;
   GOOGLE_CONTACTS_WRITE_RANGE?: string;
   GOOGLE_SOLUTIONS_WRITE_RANGE?: string;
+  GOOGLE_ACTIONS_WRITE_RANGE?: string;
   GOOGLE_CONNECTIONS_WRITE_RANGE?: string;
   THUMBNAIL_WORKER_URL?: string;
   THUMBNAIL_INTERNAL_SECRET?: string;
+  GOOGLE_ADS_DEVELOPER_TOKEN?: string;
+  GOOGLE_ADS_LOGIN_CUSTOMER_ID?: string;
   N8N_INTERVENTION_WEBHOOK_URL?: string;
   N8N_INTERVENTION_WEBHOOK_SECRET?: string;
   BREVO_API_KEY?: string;
@@ -36,16 +39,24 @@ export type PagesContext = {
 
 export type ClientImpactKey = "visibility_acquisition" | "automation_ai" | "assistant_ai";
 
+export type ClientSolutionPlaceholderKey =
+  | ClientImpactKey
+  | "google_ads"
+  | "social_media";
+
 export type ClientSolutionThumbnailDto = {
   kind: "website" | "placeholder";
   endpoint: string | null;
-  placeholderKey: ClientImpactKey;
+  placeholderKey: ClientSolutionPlaceholderKey;
 };
 
 export type ClientStatisticsStatusDto = "available" | "pending_setup" | "not_applicable";
 
+export type ClientStatisticsProviderDto = "ga4" | "google_ads" | null;
+
 export type ClientSolutionStatisticsDto = {
   status: ClientStatisticsStatusDto;
+  provider: ClientStatisticsProviderDto;
 };
 
 export type ClientSolutionDto = {

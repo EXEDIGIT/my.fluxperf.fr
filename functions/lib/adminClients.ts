@@ -2,11 +2,14 @@ import { isProduction, normalizeEmail } from "./auth";
 import {
   defaultNameForType,
   fallbackAdminSolutionOptions,
+  isGoogleAdsSolutionName,
+  isWebsiteSolutionName,
   optionAllowsSolution,
   solutionLabelForType,
   type AdminSolutionOption,
   type AdminSolutionType
 } from "./adminOptions";
+import { parseRows } from "./adminWorkbook";
 import { findClientForEmailInWorkbook, type ClientWorkbookValues } from "./clients";
 import { formatCompactFrenchDate, formatFrenchDate } from "./dateFormats";
 import type { AppEnv } from "./types";
@@ -23,6 +26,7 @@ export type AdminClientInput = {
     name: string;
     urlOrIndication: string;
     ga4PropertyId: string;
+    googleAdsCustomerId: string;
   }>;
 };
 
@@ -34,6 +38,16 @@ export type BuiltAdminClientRows = {
   clientRow: string[];
   contactRow: string[];
   solutionRows: string[][];
+};
+
+export type AdminClientQualityWarning = {
+  code: "COMPANY_EXISTS" | "ACTIVE_DOMAIN_EXISTS";
+  message: string;
+  matches: Array<{
+    clientId: string;
+    companyName: string;
+    value: string;
+  }>;
 };
 
 type Fetcher = typeof fetch;
@@ -67,7 +81,7 @@ function isLikelyUrl(value: string): boolean {
   return /^www\./i.test(host) || /^[a-z0-9-]+(\.[a-z0-9-]+)+(:\d+)?$/i.test(host);
 }
 
-function domainFromUrlOrIndication(value: string): string {
+export function domainFromUrlOrIndication(value: string): string {
   const text = value.trim();
 
   if (!text) {
@@ -87,6 +101,34 @@ function domainFromUrlOrIndication(value: string): string {
   }
 }
 
+function normalizeForComparison(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function recordValue(record: Record<string, string>, ...keys: string[]): string {
+  for (const key of keys) {
+    const value = record[key.toLowerCase()];
+
+    if (value) {
+      return value;
+    }
+  }
+
+  return "";
+}
+
+function isActiveSolutionStatus(value: string): boolean {
+  const normalized = normalizeForComparison(value);
+
+  return normalized === "actif" || normalized === "active";
+}
+
 function isValidEmail(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
@@ -100,6 +142,14 @@ function normalizeGa4PropertyId(value: string): string {
 
 function isValidGa4PropertyId(value: string): boolean {
   return !value || /^\d+$/.test(value);
+}
+
+function normalizeGoogleAdsCustomerId(value: string): string {
+  return value.replace(/\D/g, "");
+}
+
+function isValidGoogleAdsCustomerId(value: string): boolean {
+  return !value || /^\d{10}$/.test(value);
 }
 
 function compactName(firstName: string, lastName: string): string {
@@ -168,20 +218,31 @@ export function validateAdminClientInput(
     const ga4PropertyId = normalizeGa4PropertyId(
       asText(item.ga4PropertyId) || asText(item.ga4_property_id) || asText(item.analyticsPropertyId)
     );
+    const googleAdsCustomerId = normalizeGoogleAdsCustomerId(
+      asText(item.googleAdsCustomerId) ||
+        asText(item.google_ads_customer_id) ||
+        asText(item.googleAdsId) ||
+        asText(item.adsCustomerId)
+    );
 
     if (!optionAllowsSolution(solutionOptions, type, name)) {
       return "Le nom de solution sélectionné est invalide.";
     }
 
-    if (type === "visibility_acquisition" && !isValidGa4PropertyId(ga4PropertyId)) {
-      return "L'ID propriÃ©tÃ© GA4 doit contenir uniquement des chiffres.";
+    if (isWebsiteSolutionName(name) && !isValidGa4PropertyId(ga4PropertyId)) {
+      return "L'ID propriété GA4 doit contenir uniquement des chiffres.";
+    }
+
+    if (isGoogleAdsSolutionName(name) && !isValidGoogleAdsCustomerId(googleAdsCustomerId)) {
+      return "L'ID client Google Ads doit contenir 10 chiffres.";
     }
 
     return {
       type,
       name,
       urlOrIndication,
-      ga4PropertyId: type === "visibility_acquisition" ? ga4PropertyId : ""
+      ga4PropertyId: isWebsiteSolutionName(name) ? ga4PropertyId : "",
+      googleAdsCustomerId: isGoogleAdsSolutionName(name) ? googleAdsCustomerId : ""
     };
   });
   const firstError = solutions.find((item): item is string => typeof item === "string");
@@ -225,6 +286,79 @@ export function validateAdminSolutionInput(
 
 export function hasExistingClientEmail(workbook: ClientWorkbookValues, email: string): boolean {
   return findClientForEmailInWorkbook(workbook, email).status !== "not_found";
+}
+
+export function getAdminClientQualityWarnings(
+  workbook: ClientWorkbookValues,
+  input: AdminClientInput
+): AdminClientQualityWarning[] {
+  const clients = parseRows(workbook.clients);
+  const solutions = parseRows(workbook.solutions);
+  const clientNames = new Map(
+    clients.map(({ record }) => [
+      recordValue(record, "client_id", "id"),
+      recordValue(record, "organisation", "company_name", "nom_compte") || "Client Fluxperf"
+    ])
+  );
+  const warnings: AdminClientQualityWarning[] = [];
+  const normalizedCompanyName = normalizeForComparison(input.companyName);
+  const companyMatches = clients
+    .filter(({ record }) => {
+      const existingName = recordValue(record, "organisation", "company_name", "nom_compte");
+
+      return existingName && normalizeForComparison(existingName) === normalizedCompanyName;
+    })
+    .map(({ record }) => ({
+      clientId: recordValue(record, "client_id", "id"),
+      companyName: recordValue(record, "organisation", "company_name", "nom_compte") || "Client Fluxperf",
+      value: recordValue(record, "statut_client", "status") || "Inconnu"
+    }));
+
+  if (companyMatches.length > 0) {
+    warnings.push({
+      code: "COMPANY_EXISTS",
+      message: "Une organisation portant ce nom existe deja dans la base client.",
+      matches: companyMatches
+    });
+  }
+
+  const domains = Array.from(
+    new Set(input.solutions.map((solution) => domainFromUrlOrIndication(solution.urlOrIndication)).filter(Boolean))
+  );
+
+  domains.forEach((domain) => {
+    const matches = solutions
+      .filter(({ record }) => {
+        if (!isActiveSolutionStatus(recordValue(record, "statut_solution", "status", "statut"))) {
+          return false;
+        }
+
+        const existingDomain =
+          recordValue(record, "domaine", "domain") ||
+          domainFromUrlOrIndication(recordValue(record, "url_ou_indication", "url"));
+
+        return existingDomain.toLowerCase() === domain.toLowerCase();
+      })
+      .map(({ record }) => {
+        const clientId = recordValue(record, "client_id");
+
+        return {
+          clientId,
+          companyName: clientNames.get(clientId) || clientId || "Client Fluxperf",
+          value: domain
+        };
+      });
+
+    if (matches.length > 0) {
+      warnings.push({
+        code: "ACTIVE_DOMAIN_EXISTS",
+        message: `Le domaine ${domain} est deja associe a une solution active.`,
+        matches
+      });
+    }
+  });
+
+  return warnings;
 }
 
 export function buildAdminClientRows(input: AdminClientInput, now = new Date()): BuiltAdminClientRows {
@@ -285,7 +419,8 @@ export function buildAdminSolutionRow(
     solution.urlOrIndication,
     date,
     "",
-    solution.ga4PropertyId
+    solution.ga4PropertyId,
+    solution.googleAdsCustomerId
   ];
 }
 

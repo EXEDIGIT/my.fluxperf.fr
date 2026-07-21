@@ -22,10 +22,12 @@ GOOGLE_SOLUTIONS_RANGE=Solutions!A1:Z1000
 GOOGLE_ACTIONS_RANGE=Actions!A1:J1000
 GOOGLE_CONNECTIONS_RANGE=Connexions!A1:H1000
 GOOGLE_PARAMETERS_RANGE=Parametres!A1:B1000
-GOOGLE_SOLUTIONS_WRITE_RANGE=Solutions!A:J
+GOOGLE_SOLUTIONS_WRITE_RANGE=Solutions!A:K
 GOOGLE_CONNECTIONS_WRITE_RANGE=Connexions!A:H
 GOOGLE_SERVICE_ACCOUNT_EMAIL=
 GOOGLE_PRIVATE_KEY=
+GOOGLE_ADS_DEVELOPER_TOKEN=
+GOOGLE_ADS_LOGIN_CUSTOMER_ID=
 THUMBNAIL_WORKER_URL=
 THUMBNAIL_INTERNAL_SECRET=
 N8N_INTERVENTION_WEBHOOK_URL=
@@ -33,7 +35,7 @@ N8N_INTERVENTION_WEBHOOK_SECRET=
 BREVO_API_KEY=
 ```
 
-Configurer `GOOGLE_PRIVATE_KEY`, `BREVO_API_KEY` et `THUMBNAIL_INTERNAL_SECRET`
+Configurer `GOOGLE_PRIVATE_KEY`, `GOOGLE_ADS_DEVELOPER_TOKEN`, `BREVO_API_KEY` et `THUMBNAIL_INTERNAL_SECRET`
 comme secrets Cloudflare Pages. Ces cles doivent rester cote serveur.
 
 ## Checklist Supabase
@@ -54,8 +56,9 @@ comme secrets Cloudflare Pages. Ces cles doivent rester cote serveur.
 5. Proprietes GA4 partagees en lecture avec le Service Account pour les clients raccordes.
 6. `GOOGLE_SHEET_ID` recupere depuis l'URL du Sheet.
 7. Onglets `Clients`, `Contacts`, `Solutions` et `Actions` presents si le schema structure est utilise.
-8. Colonne `ga4_property_id` presente dans `Solutions` et `GOOGLE_SOLUTIONS_WRITE_RANGE=Solutions!A:J`.
+8. Colonnes `ga4_property_id` et `google_ads_customer_id` presentes dans `Solutions` et `GOOGLE_SOLUTIONS_WRITE_RANGE=Solutions!A:K`.
 9. Ancien onglet `Sites` archive/masque sous `Archive_Sites` si une migration a ete faite.
+10. Pour Google Ads : developer token actif, Service Account en lecture sur le MCC, `GOOGLE_ADS_DEVELOPER_TOKEN` et `GOOGLE_ADS_LOGIN_CUSTOMER_ID` renseignes dans Pages.
 
 ## Checklist n8n / Brevo
 
