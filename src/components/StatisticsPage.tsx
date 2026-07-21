@@ -6,10 +6,8 @@ import {
   Globe2,
   Loader2,
   MapPin,
-  Megaphone,
   MousePointerClick,
   Search,
-  Target,
   TrendingUp,
   Users
 } from "lucide-react";
@@ -19,8 +17,6 @@ import {
   Area,
   AreaChart,
   CartesianGrid,
-  Line,
-  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -30,8 +26,6 @@ import {
   ApiError,
   getStatistics,
   type StatisticsEventRow,
-  type StatisticsGoogleAdsBreakdownRow,
-  type StatisticsGoogleAdsTimelinePoint,
   type StatisticsPageRow,
   type StatisticsPeriodId,
   type StatisticsResponse,
@@ -382,94 +376,6 @@ function EventList({ rows }: { rows: StatisticsEventRow[] }) {
           value={formatNumber(row.count)}
           percentage={row.percentage}
           detail={percentageLabel(row.percentage)}
-        />
-      ))}
-    </div>
-  );
-}
-
-function GoogleAdsTimelineChart({
-  points,
-  granularity
-}: {
-  points: StatisticsGoogleAdsTimelinePoint[];
-  granularity: StatisticsTimelineGranularity;
-}) {
-  if (points.length === 0) {
-    return <EmptyList label="Aucune activité Google Ads enregistrée sur cette période." />;
-  }
-
-  return (
-    <div className="statistics-timeline" role="img" aria-label="Évolution des visites et actions utiles issues de Google Ads">
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={points} margin={{ top: 12, right: 8, left: -14, bottom: 0 }} accessibilityLayer>
-          <CartesianGrid vertical={false} stroke="rgba(8, 45, 66, 0.1)" strokeDasharray="4 4" />
-          <XAxis
-            dataKey="date"
-            tickFormatter={(value) => timelineDateLabel(String(value), granularity)}
-            axisLine={{ stroke: "rgba(8, 45, 66, 0.14)" }}
-            tickLine={false}
-            tick={{ fill: "#425964", fontSize: 11 }}
-            minTickGap={28}
-          />
-          <YAxis
-            allowDecimals={false}
-            axisLine={false}
-            tickLine={false}
-            tick={{ fill: "#425964", fontSize: 11 }}
-            width={48}
-          />
-          <Tooltip
-            cursor={{ stroke: "rgba(0, 111, 120, 0.28)", strokeWidth: 1 }}
-            labelFormatter={(value) => timelineDateLabel(String(value), granularity, true)}
-            formatter={(value, name) => [formatNumber(Number(value)), name === "conversions" ? "Actions utiles" : "Visites via vos annonces"]}
-            contentStyle={{
-              border: "1px solid rgba(8, 45, 66, 0.14)",
-              borderRadius: "8px",
-              boxShadow: "0 10px 24px rgba(8, 45, 66, 0.12)",
-              color: "#082d42",
-              fontFamily: "Comfortaa, Segoe UI, Arial, sans-serif",
-              fontSize: "12px"
-            }}
-          />
-          <Line
-            type="monotone"
-            dataKey="clicks"
-            name="Visites via vos annonces"
-            stroke="#006f78"
-            strokeWidth={2.5}
-            dot={false}
-            activeDot={{ r: 5, fill: "#f9b900", stroke: "#ffffff", strokeWidth: 2 }}
-          />
-          <Line
-            type="monotone"
-            dataKey="conversions"
-            name="Actions utiles"
-            stroke="#f9b900"
-            strokeWidth={2.5}
-            dot={false}
-            activeDot={{ r: 5, fill: "#006f78", stroke: "#ffffff", strokeWidth: 2 }}
-          />
-        </LineChart>
-      </ResponsiveContainer>
-    </div>
-  );
-}
-
-function GoogleAdsBreakdownList({ rows }: { rows: StatisticsGoogleAdsBreakdownRow[] }) {
-  if (rows.length === 0) {
-    return <EmptyList label="Aucune donnée disponible sur cette période." />;
-  }
-
-  return (
-    <div className="statistics-list">
-      {rows.map((row) => (
-        <BarRow
-          key={row.label}
-          label={row.label}
-          value={formatNumber(row.clicks)}
-          percentage={row.percentage}
-          detail={`${formatNumber(row.impressions)} apparitions - ${formatNumber(row.conversions)} actions utiles - ${percentageLabel(row.clickThroughRate)} clics`}
         />
       ))}
     </div>
