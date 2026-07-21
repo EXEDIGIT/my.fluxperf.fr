@@ -2,6 +2,7 @@ import {
   FilePenLine,
   FolderOpen,
   LayoutDashboard,
+  Layers3,
   LifeBuoy,
   LogOut,
   Menu,
@@ -30,6 +31,11 @@ const navigation = [
     label: "Temps libéré",
     href: "#impacts",
     icon: TimerReset
+  },
+  {
+    label: "Services actifs",
+    href: "#services-actifs",
+    icon: Layers3
   },
   {
     label: "Ressources",

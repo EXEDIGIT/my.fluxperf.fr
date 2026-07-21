@@ -1,4 +1,4 @@
-import { FilePenLine, LifeBuoy, MessageCircle, ShieldCheck, Sparkles, TimerReset } from "lucide-react";
+import { FilePenLine, Layers3, MessageCircle, ShieldCheck, Sparkles, TimerReset } from "lucide-react";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { ActionCard } from "./components/ActionCard";
 import { AdminConsolePage } from "./components/AdminConsolePage";
@@ -265,19 +265,19 @@ export function App() {
               onAction={() => setIsRequestOpen(true)}
             />
             <ActionCard
-              title="Support"
-              description="Écrivez à nos équipes Fluxperf."
-              icon={LifeBuoy}
-              actionLabel="Écrire"
-              onAction={() => openSupportRequest()}
-            />
-            <ActionCard
               title="Temps libéré"
               description="Visualisez le temps que Fluxperf vous aide à récupérer chaque mois."
               icon={TimerReset}
               tone="yellow"
               actionLabel="Voir"
               onAction={scrollToImpacts}
+            />
+            <ActionCard
+              title="Services actifs"
+              description="Retrouvez les services Fluxperf® actuellement actifs sur votre espace client."
+              icon={Layers3}
+              actionLabel="Voir mes services"
+              onAction={() => navigateToSection("#services-actifs")}
             />
             <ActionCard
               title="Solutions Fluxperf"

@@ -878,7 +878,7 @@ svg {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  margin-top: auto;
+  margin-top: 20px;
   padding: 0 14px;
   border: 1px solid rgba(0, 111, 120, 0.2);
   border-radius: 999px;

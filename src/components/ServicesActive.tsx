@@ -182,7 +182,7 @@ export function ServicesActive({ services, solutions, onSupportRequest, onOpenSt
   const visibleServices = services.length > 0 ? services : ["Espace client Fluxperf"];
 
   return (
-    <section className="dashboard-section">
+    <section className="dashboard-section" id="services-actifs">
       <div className="section-heading">
         <span className="section-kicker">Services actifs</span>
         <h2>Ce que notre équipe pilote avec vous.</h2>
