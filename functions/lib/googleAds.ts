@@ -106,11 +106,16 @@ function clickThroughRate(value: string | undefined, clicks: number, impressions
   return impressions > 0 ? Math.round((clicks / impressions) * 10000) / 100 : 0;
 }
 
+function normalizeDeveloperToken(value: string | undefined): string {
+  // Copying a token from a browser can prepend an invisible zero-width character.
+  return value?.replace(/[\u200B-\u200D\uFEFF]/g, "").trim() ?? "";
+}
+
 function configured(env: AppEnv): boolean {
   return Boolean(
     env.GOOGLE_SERVICE_ACCOUNT_EMAIL?.trim() &&
       env.GOOGLE_PRIVATE_KEY?.trim() &&
-      env.GOOGLE_ADS_DEVELOPER_TOKEN?.trim()
+      normalizeDeveloperToken(env.GOOGLE_ADS_DEVELOPER_TOKEN)
   );
 }
 
@@ -173,7 +178,7 @@ async function searchStream(
   const headers: Record<string, string> = {
     Authorization: `Bearer ${accessToken}`,
     "Content-Type": "application/json",
-    "developer-token": env.GOOGLE_ADS_DEVELOPER_TOKEN?.trim() ?? ""
+    "developer-token": normalizeDeveloperToken(env.GOOGLE_ADS_DEVELOPER_TOKEN)
   };
   const loginCustomerId = env.GOOGLE_ADS_LOGIN_CUSTOMER_ID?.replace(/\D/g, "");
 

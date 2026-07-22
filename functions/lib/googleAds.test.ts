@@ -45,7 +45,7 @@ describe("Google Ads statistics", () => {
         APP_ENV: "production",
         GOOGLE_SERVICE_ACCOUNT_EMAIL: "service@example.com",
         GOOGLE_PRIVATE_KEY: "private-key",
-        GOOGLE_ADS_DEVELOPER_TOKEN: "developer-token",
+        GOOGLE_ADS_DEVELOPER_TOKEN: "\u200Bdeveloper-token",
         GOOGLE_ADS_LOGIN_CUSTOMER_ID: "111-222-3333"
       },
       "123-456-7890",
