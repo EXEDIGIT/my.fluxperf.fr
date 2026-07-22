@@ -79,4 +79,40 @@ describe("Google Ads statistics", () => {
       "login-customer-id": "1112223333"
     });
   });
+
+  it("reports the Google Ads HTTP status without logging credentials", async () => {
+    const fetcher = vi.fn<typeof fetch>().mockImplementation(async () =>
+      new Response("Access denied", {
+        status: 403,
+        statusText: "Forbidden",
+        headers: { "request-id": "google-request-id" }
+      })
+    );
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    await expect(
+      fetchGoogleAdsStatistics(
+        {
+          APP_ENV: "production",
+          GOOGLE_SERVICE_ACCOUNT_EMAIL: "service@example.com",
+          GOOGLE_PRIVATE_KEY: "private-key",
+          GOOGLE_ADS_DEVELOPER_TOKEN: "developer-token"
+        },
+        "1234567890",
+        solution,
+        "30d",
+        fetcher
+      )
+    ).rejects.toThrow("Google Ads API 403: Access denied");
+
+    expect(errorSpy).toHaveBeenCalledWith(
+      "google_ads_api_request_failed",
+      expect.objectContaining({
+        status: 403,
+        requestId: "google-request-id",
+        message: "Access denied"
+      })
+    );
+    expect(JSON.stringify(errorSpy.mock.calls)).not.toContain("developer-token");
+  });
 });

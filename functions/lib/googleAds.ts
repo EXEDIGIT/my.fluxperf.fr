@@ -74,7 +74,9 @@ type GoogleAdsResult = {
 type GoogleAdsStreamChunk = {
   results?: GoogleAdsResult[];
   error?: {
+    code?: number;
     message?: string;
+    status?: string;
   };
 };
 
@@ -194,12 +196,29 @@ async function searchStream(
       body: JSON.stringify({ query })
     }
   );
-  const payload = await response.json().catch(() => ({}));
+  const rawPayload = await response.text();
+  let payload: unknown = {};
+
+  try {
+    payload = rawPayload ? JSON.parse(rawPayload) : {};
+  } catch {
+    payload = {};
+  }
 
   if (!response.ok) {
-    const message = (payload as GoogleAdsStreamChunk).error?.message || "Google Ads API request failed.";
+    const error = (payload as GoogleAdsStreamChunk).error;
+    const message = error?.message || rawPayload.slice(0, 240) || "Google Ads API request failed.";
 
-    throw new Error(message);
+    console.error("google_ads_api_request_failed", {
+      status: response.status,
+      statusText: response.statusText,
+      apiStatus: error?.status,
+      apiCode: error?.code,
+      requestId: response.headers.get("request-id") || response.headers.get("google-ads-request-id") || undefined,
+      message
+    });
+
+    throw new Error(`Google Ads API ${response.status}: ${message}`);
   }
 
   return streamRows(payload);
