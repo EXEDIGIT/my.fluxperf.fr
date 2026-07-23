@@ -168,7 +168,13 @@ describe("GET /api/statistics/:solutionId", () => {
         impressions: expect.any(Number),
         clicks: expect.any(Number),
         conversions: expect.any(Number)
-      }
+      },
+      keywords: expect.arrayContaining([
+        expect.objectContaining({ label: expect.any(String), clicks: expect.any(Number) })
+      ]),
+      locations: expect.arrayContaining([
+        expect.objectContaining({ label: expect.any(String), clicks: expect.any(Number) })
+      ])
     });
     expect(JSON.stringify(body)).not.toContain("1234567890");
   });

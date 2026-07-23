@@ -263,13 +263,7 @@ function usePrefersReducedMotion(): boolean {
   return prefersReducedMotion;
 }
 
-function TimelineChart({
-  points,
-  granularity
-}: {
-  points: StatisticsTimelinePoint[];
-  granularity: StatisticsTimelineGranularity;
-}) {
+function useTimelineAnimation() {
   const chartRef = useRef<HTMLDivElement>(null);
   const prefersReducedMotion = usePrefersReducedMotion();
   const [hasEnteredViewport, setHasEnteredViewport] = useState(prefersReducedMotion);
@@ -303,6 +297,18 @@ function TimelineChart({
 
     return () => observer.disconnect();
   }, [prefersReducedMotion]);
+
+  return { chartRef, hasEnteredViewport, prefersReducedMotion };
+}
+
+function TimelineChart({
+  points,
+  granularity
+}: {
+  points: StatisticsTimelinePoint[];
+  granularity: StatisticsTimelineGranularity;
+}) {
+  const { chartRef, hasEnteredViewport, prefersReducedMotion } = useTimelineAnimation();
 
   if (points.length === 0) {
     return <EmptyList label="Aucune visite enregistrée sur cette période." />;
@@ -395,14 +401,19 @@ function GoogleAdsTimelineChart({
   points: StatisticsGoogleAdsTimelinePoint[];
   granularity: StatisticsTimelineGranularity;
 }) {
-  const prefersReducedMotion = usePrefersReducedMotion();
+  const { chartRef, hasEnteredViewport, prefersReducedMotion } = useTimelineAnimation();
 
   if (points.length === 0) {
     return <EmptyList label="Aucune activité Google Ads enregistrée sur cette période." />;
   }
 
   return (
-    <div className="statistics-timeline" role="img" aria-label="Évolution des visites et actions utiles issues de Google Ads">
+    <div
+      ref={chartRef}
+      className="statistics-timeline"
+      role="img"
+      aria-label="Évolution des visites et des actions & conversions issues de Google Ads"
+    >
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={points} margin={{ top: 12, right: 8, left: -14, bottom: 0 }} accessibilityLayer>
           <CartesianGrid vertical={false} stroke="rgba(8, 45, 66, 0.1)" strokeDasharray="4 4" />
@@ -424,7 +435,12 @@ function GoogleAdsTimelineChart({
           <Tooltip
             cursor={{ stroke: "rgba(0, 111, 120, 0.28)", strokeWidth: 1 }}
             labelFormatter={(value) => timelineDateLabel(String(value), granularity, true)}
-            formatter={(value, name) => [formatNumber(Number(value)), name === "conversions" ? "Actions utiles" : "Visites via vos annonces"]}
+            formatter={(value, name) => [
+              formatNumber(Number(value)),
+              name === "conversions" || name === "Actions & conversions"
+                ? "Actions & conversions"
+                : "Visites via vos annonces"
+            ]}
             contentStyle={{
               border: "1px solid rgba(8, 45, 66, 0.14)",
               borderRadius: "8px",
@@ -434,30 +450,34 @@ function GoogleAdsTimelineChart({
               fontSize: "12px"
             }}
           />
-          <Line
-            type="monotone"
-            dataKey="clicks"
-            name="Visites via vos annonces"
-            stroke="#006f78"
-            strokeWidth={2.5}
-            dot={false}
-            activeDot={{ r: 5, fill: "#f9b900", stroke: "#ffffff", strokeWidth: 2 }}
-            isAnimationActive={!prefersReducedMotion}
-            animationDuration={900}
-            animationEasing="ease-out"
-          />
-          <Line
-            type="monotone"
-            dataKey="conversions"
-            name="Actions utiles"
-            stroke="#f9b900"
-            strokeWidth={2.5}
-            dot={false}
-            activeDot={{ r: 5, fill: "#006f78", stroke: "#ffffff", strokeWidth: 2 }}
-            isAnimationActive={!prefersReducedMotion}
-            animationDuration={900}
-            animationEasing="ease-out"
-          />
+          {hasEnteredViewport ? (
+            <>
+              <Line
+                type="monotone"
+                dataKey="clicks"
+                name="Visites via vos annonces"
+                stroke="#006f78"
+                strokeWidth={2.5}
+                dot={false}
+                activeDot={{ r: 5, fill: "#f9b900", stroke: "#ffffff", strokeWidth: 2 }}
+                isAnimationActive={!prefersReducedMotion}
+                animationDuration={900}
+                animationEasing="ease-out"
+              />
+              <Line
+                type="monotone"
+                dataKey="conversions"
+                name="Actions & conversions"
+                stroke="#f9b900"
+                strokeWidth={2.5}
+                dot={false}
+                activeDot={{ r: 5, fill: "#006f78", stroke: "#ffffff", strokeWidth: 2 }}
+                isAnimationActive={!prefersReducedMotion}
+                animationDuration={900}
+                animationEasing="ease-out"
+              />
+            </>
+          ) : null}
         </LineChart>
       </ResponsiveContainer>
     </div>
@@ -477,7 +497,7 @@ function GoogleAdsBreakdownList({ rows }: { rows: StatisticsGoogleAdsBreakdownRo
           label={row.label}
           value={formatNumber(row.clicks)}
           percentage={row.percentage}
-          detail={`${formatNumber(row.impressions)} apparitions - ${formatNumber(row.conversions)} actions utiles - ${percentageLabel(row.clickThroughRate)} clics`}
+          detail={`${formatNumber(row.impressions)} apparitions - ${formatNumber(row.conversions)} actions & conversions - ${percentageLabel(row.clickThroughRate)} clics`}
         />
       ))}
     </div>
@@ -728,7 +748,7 @@ export function StatisticsPage({ solution, onBack }: StatisticsPageProps) {
             </article>
             <article>
               <Target aria-hidden="true" />
-              <span>Actions utiles</span>
+              <span>Actions & conversions</span>
               <strong>{formatNumber(readyData.overview.conversions)}</strong>
             </article>
             <article>
@@ -743,10 +763,11 @@ export function StatisticsPage({ solution, onBack }: StatisticsPageProps) {
               <TrendingUp aria-hidden="true" />
               <div>
                 <h3>Évolution des résultats</h3>
-                <p>Visites issues de vos annonces et actions utiles sur la période sélectionnée.</p>
+                <p>Visites issues de vos annonces et actions & conversions sur la période sélectionnée.</p>
               </div>
             </div>
             <GoogleAdsTimelineChart
+              key={period}
               points={readyData.timeline.points}
               granularity={readyData.timeline.granularity}
             />
@@ -762,6 +783,28 @@ export function StatisticsPage({ solution, onBack }: StatisticsPageProps) {
                 </div>
               </div>
               <GoogleAdsBreakdownList rows={readyData.campaigns} />
+            </section>
+
+            <section className="statistics-panel">
+              <div className="statistics-panel-heading">
+                <MapPin aria-hidden="true" />
+                <div>
+                  <h3>Zones géographiques</h3>
+                  <p>Villes et pays où vos annonces ont généré le plus de visites.</p>
+                </div>
+              </div>
+              <GoogleAdsBreakdownList rows={readyData.locations} />
+            </section>
+
+            <section className="statistics-panel">
+              <div className="statistics-panel-heading">
+                <Search aria-hidden="true" />
+                <div>
+                  <h3>Performances des mots-clés</h3>
+                  <p>Les mots-clés ciblés ayant généré le plus de visites.</p>
+                </div>
+              </div>
+              <GoogleAdsBreakdownList rows={readyData.keywords} />
             </section>
 
             <section className="statistics-panel">

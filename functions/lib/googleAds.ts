@@ -48,6 +48,8 @@ export type GoogleAdsStatisticsReadyResponse = {
     points: GoogleAdsTimelinePoint[];
   };
   campaigns: GoogleAdsBreakdownRow[];
+  keywords: GoogleAdsBreakdownRow[];
+  locations: GoogleAdsBreakdownRow[];
   devices: GoogleAdsBreakdownRow[];
 };
 
@@ -65,9 +67,23 @@ type GoogleAdsResult = {
   segments?: {
     date?: string;
     device?: string;
+    keyword?: {
+      info?: {
+        text?: string;
+      };
+    };
+    geoTargetCity?: string;
   };
   campaign?: {
     name?: string;
+  };
+  geographicView?: {
+    countryCriterionId?: string;
+  };
+  geoTargetConstant?: {
+    resourceName?: string;
+    name?: string;
+    countryCode?: string;
   };
 };
 
@@ -250,6 +266,20 @@ function breakdownRow(label: string, row: GoogleAdsResult): GoogleAdsBreakdownRo
   };
 }
 
+function breakdownFromMetrics(label: string, metrics: GoogleAdsMetrics): GoogleAdsBreakdownRow {
+  const impressions = integerValue(metrics.impressions);
+  const clicks = integerValue(metrics.clicks);
+
+  return {
+    label,
+    impressions,
+    clicks,
+    conversions: integerValue(metrics.conversions),
+    clickThroughRate: clickThroughRate(metrics.ctr, clicks, impressions),
+    percentage: 0
+  };
+}
+
 function withPercentages(rows: GoogleAdsBreakdownRow[]): GoogleAdsBreakdownRow[] {
   const totalClicks = rows.reduce((total, row) => total + row.clicks, 0);
 
@@ -302,6 +332,115 @@ function timelineRows(rows: GoogleAdsResult[], periodId: StatisticsPeriodId): Go
   };
 }
 
+function geoTargetResourceName(value: string | undefined): string {
+  const match = /^geoTargetConstants\/(\d+)$/.exec(value?.trim() ?? "");
+
+  return match ? `geoTargetConstants/${match[1]}` : "";
+}
+
+function countryResourceName(value: string | undefined): string {
+  const id = value?.trim() ?? "";
+
+  return /^\d+$/.test(id) ? `geoTargetConstants/${id}` : "";
+}
+
+function quoteGaqlValue(value: string): string {
+  return `'${value.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`;
+}
+
+async function geoTargetNames(
+  env: AppEnv,
+  customerId: string,
+  resourceNames: string[],
+  fetcher: Fetcher
+): Promise<Map<string, { name: string; countryCode: string }>> {
+  if (resourceNames.length === 0) {
+    return new Map();
+  }
+
+  const rows = await searchStream(
+    env,
+    customerId,
+    `SELECT geo_target_constant.resource_name, geo_target_constant.name, geo_target_constant.country_code FROM geo_target_constant WHERE geo_target_constant.resource_name IN (${resourceNames
+      .map(quoteGaqlValue)
+      .join(", ")})`,
+    fetcher
+  );
+  const names = new Map<string, { name: string; countryCode: string }>();
+
+  rows.forEach((row) => {
+    const resourceName = geoTargetResourceName(row.geoTargetConstant?.resourceName);
+    const name = row.geoTargetConstant?.name?.trim();
+
+    if (resourceName && name) {
+      names.set(resourceName, {
+        name,
+        countryCode: row.geoTargetConstant?.countryCode?.trim() ?? ""
+      });
+    }
+  });
+
+  return names;
+}
+
+async function locationRows(
+  env: AppEnv,
+  customerId: string,
+  rows: GoogleAdsResult[],
+  fetcher: Fetcher
+): Promise<GoogleAdsBreakdownRow[]> {
+  const locations = new Map<
+    string,
+    {
+      cityResourceName: string;
+      countryResourceName: string;
+      metrics: GoogleAdsMetrics;
+    }
+  >();
+
+  rows.forEach((row) => {
+    const cityResourceName = geoTargetResourceName(row.segments?.geoTargetCity);
+    const countryResource = countryResourceName(row.geographicView?.countryCriterionId);
+    const key = `${cityResourceName}|${countryResource}`;
+    const current = locations.get(key) ?? {
+      cityResourceName,
+      countryResourceName: countryResource,
+      metrics: {}
+    };
+
+    current.metrics.impressions = String(
+      integerValue(current.metrics.impressions) + integerValue(row.metrics?.impressions)
+    );
+    current.metrics.clicks = String(integerValue(current.metrics.clicks) + integerValue(row.metrics?.clicks));
+    current.metrics.conversions = String(
+      integerValue(current.metrics.conversions) + integerValue(row.metrics?.conversions)
+    );
+    locations.set(key, current);
+  });
+
+  const resourceNames = Array.from(
+    new Set(
+      Array.from(locations.values()).flatMap((location) =>
+        [location.cityResourceName, location.countryResourceName].filter(Boolean)
+      )
+    )
+  );
+  const names = await geoTargetNames(env, customerId, resourceNames, fetcher);
+
+  return withPercentages(
+    Array.from(locations.values())
+      .map((location) => {
+        const city = names.get(location.cityResourceName)?.name ?? "";
+        const country = names.get(location.countryResourceName)?.name ?? "";
+        const label = city && country ? `${city}, ${country}` : city || country || "Zone non identifiée";
+
+        return breakdownFromMetrics(label, location.metrics);
+      })
+      .sort((left, right) => right.clicks - left.clicks)
+      .slice(0, 10)
+  );
+}
+
 function demoStatistics(
   solution: ClientSolutionDto,
   periodId: StatisticsPeriodId
@@ -347,6 +486,16 @@ function demoStatistics(
       { label: "Recherche locale", impressions: 5280, clicks: 221, conversions: 27, clickThroughRate: 4.2, percentage: 0 },
       { label: "Marque", impressions: 2940, clicks: 109, conversions: 12, clickThroughRate: 3.7, percentage: 0 }
     ]),
+    keywords: withPercentages([
+      { label: "agence marketing digital", impressions: 6840, clicks: 286, conversions: 34, clickThroughRate: 4.2, percentage: 0 },
+      { label: "création site internet", impressions: 5930, clicks: 243, conversions: 29, clickThroughRate: 4.1, percentage: 0 },
+      { label: "référencement local", impressions: 3180, clicks: 121, conversions: 15, clickThroughRate: 3.8, percentage: 0 }
+    ]),
+    locations: withPercentages([
+      { label: "Lyon, France", impressions: 5320, clicks: 248, conversions: 29, clickThroughRate: 4.7, percentage: 0 },
+      { label: "Paris, France", impressions: 4840, clicks: 210, conversions: 27, clickThroughRate: 4.3, percentage: 0 },
+      { label: "France", impressions: 3260, clicks: 144, conversions: 18, clickThroughRate: 4.4, percentage: 0 }
+    ]),
     devices: withPercentages([
       { label: "Mobile", impressions: 10500, clicks: 476, conversions: 55, clickThroughRate: 4.5, percentage: 0 },
       { label: "Ordinateur", impressions: 6840, clicks: 297, conversions: 37, clickThroughRate: 4.3, percentage: 0 },
@@ -372,7 +521,7 @@ export async function fetchGoogleAdsStatistics(
 
   const customerId = normalizeCustomerId(googleAdsCustomerId);
   const filter = dateFilter(periodId);
-  const [overviewRows, timeline, campaignRows, deviceRows] = await Promise.all([
+  const [overviewRows, timeline, campaignRows, deviceRows, keywordRows, geographicRows] = await Promise.all([
     searchStream(
       env,
       customerId,
@@ -395,6 +544,18 @@ export async function fetchGoogleAdsStatistics(
       env,
       customerId,
       `SELECT segments.device, metrics.impressions, metrics.clicks, metrics.conversions, metrics.ctr FROM customer WHERE ${filter} ORDER BY metrics.clicks DESC`,
+      fetcher
+    ),
+    searchStream(
+      env,
+      customerId,
+      `SELECT segments.keyword.info.text, metrics.impressions, metrics.clicks, metrics.conversions, metrics.ctr FROM keyword_view WHERE ${filter} AND ad_group_criterion.negative = FALSE ORDER BY metrics.clicks DESC LIMIT 10`,
+      fetcher
+    ),
+    searchStream(
+      env,
+      customerId,
+      `SELECT geographic_view.location_type, geographic_view.country_criterion_id, segments.geo_target_city, metrics.impressions, metrics.clicks, metrics.conversions, metrics.ctr FROM geographic_view WHERE ${filter} AND geographic_view.location_type = 'LOCATION_OF_PRESENCE' ORDER BY metrics.clicks DESC LIMIT 20`,
       fetcher
     )
   ]);
@@ -422,6 +583,10 @@ export async function fetchGoogleAdsStatistics(
     campaigns: withPercentages(
       campaignRows.map((row) => breakdownRow(row.campaign?.name?.trim() || "Campagne sans nom", row))
     ),
+    keywords: withPercentages(
+      keywordRows.map((row) => breakdownRow(row.segments?.keyword?.info?.text?.trim() || "Mot-clé sans nom", row))
+    ),
+    locations: await locationRows(env, customerId, geographicRows, fetcher),
     devices: withPercentages(deviceRows.map((row) => breakdownRow(deviceLabel(row.segments?.device), row)))
   };
 }

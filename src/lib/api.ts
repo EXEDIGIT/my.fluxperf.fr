@@ -386,6 +386,8 @@ export type StatisticsGoogleAdsReadyResponse = {
     points: StatisticsGoogleAdsTimelinePoint[];
   };
   campaigns: StatisticsGoogleAdsBreakdownRow[];
+  keywords: StatisticsGoogleAdsBreakdownRow[];
+  locations: StatisticsGoogleAdsBreakdownRow[];
   devices: StatisticsGoogleAdsBreakdownRow[];
 };
 

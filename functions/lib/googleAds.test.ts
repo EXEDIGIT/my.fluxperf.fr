@@ -38,6 +38,43 @@ describe("Google Ads statistics", () => {
       )
       .mockResolvedValueOnce(
         new Response(JSON.stringify([{ results: [{ segments: { device: "MOBILE" }, metrics: { impressions: "800", clicks: "60", conversions: "8", ctr: "0.075" } }] }]), { status: 200 })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify([{ results: [{ segments: { keyword: { info: { text: "assurance auto" } } }, metrics: { impressions: "460", clicks: "42", conversions: "6", ctr: "0.091" } }] }]), { status: 200 })
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify([
+            {
+              results: [
+                {
+                  geographicView: { countryCriterionId: "2250" },
+                  segments: { geoTargetCity: "geoTargetConstants/1006368" },
+                  metrics: { impressions: "780", clicks: "54", conversions: "8", ctr: "0.069" }
+                },
+                {
+                  geographicView: { countryCriterionId: "2276" },
+                  metrics: { impressions: "210", clicks: "16", conversions: "2", ctr: "0.076" }
+                }
+              ]
+            }
+          ]),
+          { status: 200 }
+        )
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify([
+            {
+              results: [
+                { geoTargetConstant: { resourceName: "geoTargetConstants/1006368", name: "Lyon", countryCode: "FR" } },
+                { geoTargetConstant: { resourceName: "geoTargetConstants/2250", name: "France", countryCode: "FR" } },
+                { geoTargetConstant: { resourceName: "geoTargetConstants/2276", name: "Allemagne", countryCode: "DE" } }
+              ]
+            }
+          ]),
+          { status: 200 }
+        )
       );
 
     const result = await fetchGoogleAdsStatistics(
@@ -64,20 +101,62 @@ describe("Google Ads statistics", () => {
         clickThroughRate: 7
       },
       campaigns: [expect.objectContaining({ label: "Recherche locale", clicks: 84 })],
+      keywords: [expect.objectContaining({ label: "assurance auto", clicks: 42 })],
+      locations: [
+        expect.objectContaining({ label: "Lyon, France", clicks: 54 }),
+        expect.objectContaining({ label: "Allemagne", clicks: 16 })
+      ],
       devices: [expect.objectContaining({ label: "Mobile", clicks: 60 })]
     });
-    expect(fetcher).toHaveBeenCalledTimes(4);
+    expect(fetcher).toHaveBeenCalledTimes(7);
 
     const queries = fetcher.mock.calls.map((call) => String(JSON.parse(String(call[1]?.body)).query)).join("\n").toLowerCase();
 
     expect(queries).toContain("metrics.impressions");
     expect(queries).toContain("metrics.clicks");
     expect(queries).toContain("metrics.conversions");
+    expect(queries).toContain("from keyword_view");
+    expect(queries).toContain("segments.keyword.info.text");
+    expect(queries).toContain("ad_group_criterion.negative = false");
+    expect(queries).toContain("from geographic_view");
+    expect(queries).toContain("location_of_presence");
+    expect(queries).toContain("from geo_target_constant");
     expect(queries).not.toMatch(/cost|cpc|budget|currency|conversion_value/);
     expect(fetcher.mock.calls[0]?.[1]?.headers).toMatchObject({
       "developer-token": "developer-token",
       "login-customer-id": "1112223333"
     });
+  });
+
+  it("keeps an empty geographic list when Google Ads has no usable location data", async () => {
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify([{ results: [{ metrics: { impressions: "1200", clicks: "84", conversions: "11", ctr: "0.07" } }] }]), { status: 200 })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify([{ results: [{ segments: { date: "2026-07-20" }, metrics: { clicks: "84", conversions: "11" } }] }]), { status: 200 })
+      )
+      .mockResolvedValueOnce(new Response(JSON.stringify([{ results: [] }]), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([{ results: [] }]), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([{ results: [] }]), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([{ results: [] }]), { status: 200 }));
+
+    const result = await fetchGoogleAdsStatistics(
+      {
+        APP_ENV: "production",
+        GOOGLE_SERVICE_ACCOUNT_EMAIL: "service@example.com",
+        GOOGLE_PRIVATE_KEY: "private-key",
+        GOOGLE_ADS_DEVELOPER_TOKEN: "developer-token"
+      },
+      "1234567890",
+      solution,
+      "30d",
+      fetcher
+    );
+
+    expect(result.locations).toEqual([]);
+    expect(fetcher).toHaveBeenCalledTimes(6);
   });
 
   it("reports the Google Ads HTTP status without logging credentials", async () => {
