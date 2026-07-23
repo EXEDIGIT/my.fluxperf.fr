@@ -12,6 +12,12 @@ export class ApiError extends Error {
   }
 }
 
+export type RibSubmissionResponse = {
+  status: "received";
+  documentId: string;
+  submittedAt: string;
+};
+
 const demoResponse: MeResponse = {
   user: {
     email: "contact@a2-cm.fr"
@@ -157,7 +163,13 @@ const demoResponse: MeResponse = {
         label: "Support en cours de traitement",
         date: "Il y a 2j"
       }
-    ]
+    ],
+    account: {
+      rib: {
+        status: "missing",
+        submittedAt: null
+      }
+    }
   }
 };
 
@@ -623,6 +635,55 @@ export async function submitInterventionRequest(
       return {
         status: "received",
         requestId: buildDemoRequestId()
+      };
+    }
+
+    throw error;
+  }
+}
+
+export async function submitRibDocument(file: File): Promise<RibSubmissionResponse> {
+  try {
+    const accessToken = await getSupabaseAccessToken();
+    const headers: HeadersInit = {
+      Accept: "application/json"
+    };
+    const formData = new FormData();
+
+    if (accessToken) {
+      headers.Authorization = `Bearer ${accessToken}`;
+    }
+
+    formData.append("rib", file, file.name);
+
+    const response = await fetch("/api/account/rib", {
+      method: "POST",
+      headers,
+      body: formData
+    });
+    const contentType = response.headers.get("Content-Type") ?? "";
+
+    if (!contentType.includes("application/json")) {
+      throw new ApiError(response.status || 500, "INVALID_RESPONSE", "Réponse API invalide.");
+    }
+
+    const data = (await response.json()) as RibSubmissionResponse & ApiErrorResponse;
+
+    if (!response.ok) {
+      throw new ApiError(
+        response.status,
+        data.error?.code || "API_ERROR",
+        data.error?.message || "Le RIB n'a pas pu être transmis."
+      );
+    }
+
+    return data;
+  } catch (error) {
+    if (shouldUseViteDemoFallback()) {
+      return {
+        status: "received",
+        documentId: "RIB-DEMO",
+        submittedAt: new Date().toISOString()
       };
     }
 

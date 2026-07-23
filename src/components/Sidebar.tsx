@@ -6,6 +6,7 @@ import {
   LifeBuoy,
   LogOut,
   Menu,
+  UserRound,
   TimerReset,
   X
 } from "lucide-react";
@@ -14,6 +15,7 @@ import { useState, type MouseEvent } from "react";
 type SidebarProps = {
   onLogout?: () => void;
   onNavigate?: (href: string) => void;
+  ribStatus?: "missing" | "complete";
 };
 
 const navigation = [
@@ -46,10 +48,15 @@ const navigation = [
     label: "Support",
     href: "#support",
     icon: LifeBuoy
+  },
+  {
+    label: "Mon compte",
+    href: "#mon-compte",
+    icon: UserRound
   }
 ];
 
-export function Sidebar({ onLogout, onNavigate }: SidebarProps) {
+export function Sidebar({ onLogout, onNavigate, ribStatus = "missing" }: SidebarProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   function handleNavigation(event: MouseEvent<HTMLAnchorElement>, href: string) {
@@ -70,6 +77,9 @@ export function Sidebar({ onLogout, onNavigate }: SidebarProps) {
           <a key={item.href} href={item.href} onClick={(event) => handleNavigation(event, item.href)}>
             <Icon aria-hidden="true" />
             <span>{item.label}</span>
+            {item.href === "#mon-compte" && ribStatus === "missing" ? (
+              <span className="sidebar-attention" role="img" aria-label="RIB à compléter" />
+            ) : null}
           </a>
         );
       })}

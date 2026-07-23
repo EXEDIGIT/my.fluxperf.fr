@@ -151,6 +151,19 @@ svg {
     transform 0.2s ease;
 }
 
+.sidebar-nav a {
+  position: relative;
+}
+
+.sidebar-attention {
+  width: 8px;
+  height: 8px;
+  margin-left: auto;
+  border-radius: 999px;
+  background: #e77a00;
+  box-shadow: 0 0 0 4px rgba(231, 122, 0, 0.16);
+}
+
 .sidebar-nav a:hover,
 .logout-link:hover {
   background: var(--green-soft);
@@ -410,6 +423,208 @@ svg {
 
 .compact-section {
   min-height: 100%;
+}
+
+.account-section {
+  scroll-margin-top: 28px;
+}
+
+.account-company-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.74);
+}
+
+.account-company-icon,
+.rib-card-icon {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+}
+
+.account-company-icon {
+  width: 42px;
+  height: 42px;
+  background: var(--green-soft);
+  color: var(--green);
+  font-size: 1.28rem;
+}
+
+.account-company-card span:not(.account-company-icon) {
+  display: block;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.account-company-card strong {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink);
+  font-size: 0.95rem;
+}
+
+.rib-card {
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.rib-card.is-missing {
+  border-color: rgba(231, 122, 0, 0.42);
+  background: linear-gradient(135deg, rgba(255, 243, 202, 0.72), rgba(255, 255, 255, 0.9));
+}
+
+.rib-card.is-complete {
+  border-color: rgba(0, 111, 120, 0.22);
+  background: linear-gradient(135deg, rgba(231, 244, 243, 0.86), rgba(255, 255, 255, 0.92));
+}
+
+.rib-card-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.rib-card-icon {
+  width: 42px;
+  height: 42px;
+  margin-top: 2px;
+  font-size: 1.32rem;
+}
+
+.is-missing .rib-card-icon {
+  background: rgba(231, 122, 0, 0.15);
+  color: #b85d00;
+}
+
+.is-complete .rib-card-icon {
+  background: rgba(0, 111, 120, 0.12);
+  color: var(--green);
+}
+
+.rib-card-heading > div {
+  min-width: 0;
+}
+
+.rib-card-heading h3 {
+  margin: 3px 0 0;
+  color: var(--ink);
+  font-size: 1.03rem;
+}
+
+.rib-card-heading p {
+  max-width: 650px;
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.rib-upload-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px 16px;
+  margin-top: 20px;
+}
+
+.rib-upload-zone {
+  position: relative;
+  min-height: 76px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  overflow: hidden;
+  border: 1px dashed rgba(0, 111, 120, 0.48);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.68);
+  color: var(--green);
+  cursor: pointer;
+}
+
+.rib-upload-zone > svg {
+  flex: 0 0 auto;
+  font-size: 1.5rem;
+}
+
+.rib-upload-zone span {
+  min-width: 0;
+}
+
+.rib-upload-zone strong,
+.rib-upload-zone small {
+  display: block;
+}
+
+.rib-upload-zone strong {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 0.82rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rib-upload-zone small,
+.rib-upload-help {
+  color: var(--muted);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.rib-upload-zone input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.rib-upload-zone input:disabled {
+  cursor: wait;
+}
+
+.rib-upload-help,
+.rib-form-error {
+  grid-column: 1 / -1;
+  margin: -4px 0 0;
+}
+
+.rib-form-error {
+  color: #b54232;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.rib-submit-button {
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px;
+  border: 1px solid var(--green);
+  border-radius: var(--radius);
+  background: var(--green);
+  color: var(--white);
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.rib-submit-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.56;
+}
+
+.rib-submit-button:not(:disabled):hover {
+  background: var(--green-2);
 }
 
 .section-heading {
@@ -3814,6 +4029,14 @@ svg {
 
   .intervention-content {
     grid-template-columns: 1fr;
+  }
+
+  .rib-upload-form {
+    grid-template-columns: 1fr;
+  }
+
+  .rib-submit-button {
+    width: 100%;
   }
 
   .simple-modal-content,

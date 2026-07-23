@@ -1,0 +1,452 @@
+{
+  "name": "MyFluxperf - Dépôt RIB / IBAN",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "myfluxperf/rib",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-myfluxperf-rib",
+      "name": "Webhook - MyFluxperf RIB",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [-1360, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nconst headers = item.json.headers || {};\nconst receivedSecret = headers['x-fluxperf-webhook-secret'] || headers['X-Fluxperf-Webhook-Secret'];\nconst expectedSecret = $vars.MYFLUXPERF_RIB_WEBHOOK_SECRET;\n\nif (!expectedSecret) {\n  throw new Error('MYFLUXPERF_RIB_WEBHOOK_SECRET is not configured in n8n variables.');\n}\n\nif (receivedSecret !== expectedSecret) {\n  throw new Error('Unauthorized MyFluxperf RIB webhook request.');\n}\n\nconst rawPayload = item.json.body?.payload ?? item.json.payload;\nconst payload = typeof rawPayload === 'string' ? JSON.parse(rawPayload) : rawPayload;\nconst binary = item.binary || {};\nconst rib = binary.rib;\nconst allowedMimeTypes = {\n  'application/pdf': 'pdf',\n  'image/jpeg': 'jpg',\n  'image/png': 'png'\n};\n\nif (!payload?.documentId || !payload?.submittedAt || !payload?.client?.id || !payload?.client?.companyName || !payload?.requester?.email || payload?.document?.type !== 'rib_iban') {\n  throw new Error('Invalid MyFluxperf RIB payload.');\n}\n\nif (!rib || !allowedMimeTypes[rib.mimeType]) {\n  throw new Error('The webhook must contain one PDF, JPG or PNG file in the binary field rib.');\n}\n\nconst submittedAt = new Date(payload.submittedAt);\nif (Number.isNaN(submittedAt.getTime())) {\n  throw new Error('Invalid RIB submission date.');\n}\n\nconst dateParts = new Intl.DateTimeFormat('fr-FR', {\n  timeZone: 'Europe/Paris',\n  day: '2-digit',\n  month: '2-digit',\n  year: 'numeric'\n}).formatToParts(submittedAt);\nconst datePart = (type) => dateParts.find((part) => part.type === type)?.value || '';\nconst compactDate = `${datePart('day')}${datePart('month')}${datePart('year')}`;\nconst normalizedCompanyName = String(payload.client.companyName)\n  .normalize('NFD')\n  .replace(/[\\u0300-\\u036f]/g, '')\n  .toUpperCase()\n  .replace(/[^A-Z0-9]+/g, '_')\n  .replace(/^_+|_+$/g, '') || 'CLIENT';\n\nreturn [{\n  json: {\n    documentId: payload.documentId,\n    submittedAt: payload.submittedAt,\n    clientId: payload.client.id,\n    companyName: payload.client.companyName,\n    companyFolderName: String(payload.client.companyName).trim() || 'Client Fluxperf',\n    requesterEmail: payload.requester.email,\n    documentType: 'rib_iban',\n    ribFileName: `${normalizedCompanyName}_RIB-IBAN-${compactDate}.${allowedMimeTypes[rib.mimeType]}`\n  },\n  binary: { rib }\n}];"
+      },
+      "id": "validate-normalize-rib",
+      "name": "Validate + Normalize RIB",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-1120, 0]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "sheet",
+        "operation": "read",
+        "documentId": {
+          "__rl": true,
+          "value": "={{$vars.MYFLUXPERF_GOOGLE_SHEET_ID}}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Documents",
+          "mode": "name"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "client_id",
+              "lookupValue": "={{$('Validate + Normalize RIB').first().json.clientId}}"
+            },
+            {
+              "lookupColumn": "document_type",
+              "lookupValue": "rib_iban"
+            }
+          ]
+        },
+        "combineFilters": "AND",
+        "options": {
+          "returnFirstMatch": true
+        }
+      },
+      "id": "read-rib-documents",
+      "name": "Read RIB Documents",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [-880, 0],
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "__REPLACE_WITH_GOOGLE_SHEETS_CREDENTIAL_ID__",
+          "name": "Google Sheets - Fluxperf"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const normalized = $('Validate + Normalize RIB').first();\nconst existingDocument = $input.all()\n  .map((item) => item.json)\n  .filter((document) =>\n    String(document.client_id || '') === normalized.json.clientId\n    && String(document.document_type || '') === 'rib_iban'\n    && String(document.drive_folder_id || '').trim()\n  )\n  .sort((left, right) => String(right.submitted_at || '').localeCompare(String(left.submitted_at || '')))[0];\n\nreturn [{\n  json: {\n    ...normalized.json,\n    driveFolderId: existingDocument?.drive_folder_id || ''\n  },\n  binary: normalized.binary\n}];"
+      },
+      "id": "resolve-rib-folder",
+      "name": "Resolve RIB Folder",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-650, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-existing-folder",
+              "leftValue": "={{$json.driveFolderId}}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "has-rib-folder",
+      "name": "Has RIB Folder?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [-410, 0]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "folder",
+        "operation": "create",
+        "name": "={{$json.companyFolderName}}",
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "={{$vars.MYFLUXPERF_RIB_DRIVE_ROOT_FOLDER_ID}}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "id": "create-client-rib-folder",
+      "name": "Create Client RIB Folder",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [-180, 90],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "__REPLACE_WITH_GOOGLE_DRIVE_CREDENTIAL_ID__",
+          "name": "Google Drive - Fluxperf"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const resolved = $('Resolve RIB Folder').first();\nconst createdFolder = $input.first().json;\n\nif (!createdFolder.id) {\n  throw new Error('Google Drive did not return the created client folder ID.');\n}\n\nreturn [{\n  json: {\n    ...resolved.json,\n    driveFolderId: createdFolder.id\n  },\n  binary: resolved.binary\n}];"
+      },
+      "id": "use-created-rib-folder",
+      "name": "Use Created RIB Folder",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [50, 90]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "file",
+        "operation": "upload",
+        "inputDataFieldName": "rib",
+        "name": "={{$json.ribFileName}}",
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "={{$json.driveFolderId}}",
+          "mode": "id"
+        },
+        "options": {
+          "simplifyOutput": false
+        }
+      },
+      "id": "upload-rib-document",
+      "name": "Upload RIB to Google Drive",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [290, 0],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "__REPLACE_WITH_GOOGLE_DRIVE_CREDENTIAL_ID__",
+          "name": "Google Drive - Fluxperf"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const normalized = $('Validate + Normalize RIB').first().json;\nconst uploaded = $input.first().json;\nconst driveFolderId = Array.isArray(uploaded.parents) ? uploaded.parents[0] : '';\n\nif (!uploaded.id || !driveFolderId) {\n  throw new Error('Google Drive did not return the uploaded file and parent folder IDs.');\n}\n\nreturn [{\n  json: {\n    document_id: normalized.documentId,\n    client_id: normalized.clientId,\n    document_type: normalized.documentType,\n    company_name: normalized.companyName,\n    drive_folder_id: driveFolderId,\n    drive_file_id: uploaded.id,\n    file_name: normalized.ribFileName,\n    submitted_at: normalized.submittedAt,\n    submitted_by_email: normalized.requesterEmail,\n    status: 'complete'\n  }\n}];"
+      },
+      "id": "build-rib-document-record",
+      "name": "Build RIB Document Record",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [530, 0]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "sheet",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{$vars.MYFLUXPERF_GOOGLE_SHEET_ID}}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Documents",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {}
+        },
+        "options": {
+          "cellFormat": "RAW",
+          "handlingExtraData": "ignoreIt",
+          "useAppend": true
+        }
+      },
+      "id": "append-rib-document-record",
+      "name": "Append RIB Document Record",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [770, 0],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "__REPLACE_WITH_GOOGLE_SHEETS_CREDENTIAL_ID__",
+          "name": "Google Sheets - Fluxperf"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const normalized = $('Validate + Normalize RIB').first().json;\n\nreturn [{\n  json: {\n    action_id: `ACT-${normalized.documentId}`,\n    client_id: normalized.clientId,\n    date_action: normalized.submittedAt,\n    type_action: 'rib_submission',\n    libelle_action: 'RIB/IBAN transmis',\n    reference: normalized.documentId,\n    email_demandeur: normalized.requesterEmail,\n    source: 'myfluxperf',\n    statut: 'complete',\n    details: 'Document RIB/IBAN enregistré dans le dossier administratif sécurisé.'\n  }\n}];"
+      },
+      "id": "build-rib-action-record",
+      "name": "Build RIB Action Record",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1010, 0]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "sheet",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "={{$vars.MYFLUXPERF_GOOGLE_SHEET_ID}}",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Actions",
+          "mode": "name"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {}
+        },
+        "options": {
+          "cellFormat": "RAW",
+          "handlingExtraData": "ignoreIt",
+          "useAppend": true
+        }
+      },
+      "id": "append-rib-action-record",
+      "name": "Append RIB Action Record",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [1250, 0],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "__REPLACE_WITH_GOOGLE_SHEETS_CREDENTIAL_ID__",
+          "name": "Google Sheets - Fluxperf"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"status\": \"stored\", \"documentId\": $('Validate + Normalize RIB').first().json.documentId } }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "respond-rib-stored",
+      "name": "Respond RIB Stored",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1490, -90]
+    },
+    {
+      "parameters": {
+        "jsCode": "const normalized = $('Validate + Normalize RIB').first().json;\nconst record = $('Build RIB Document Record').first().json;\nconst escapeHtml = (value) => String(value)\n  .replace(/&/g, '&amp;')\n  .replace(/</g, '&lt;')\n  .replace(/>/g, '&gt;')\n  .replace(/\\\"/g, '&quot;');\nconst fileUrl = `https://drive.google.com/file/d/${record.drive_file_id}/view`;\n\nreturn [{\n  json: {\n    brevoBody: {\n      sender: {\n        name: $vars.BREVO_FROM_NAME || 'Fluxperf',\n        email: $vars.BREVO_FROM_EMAIL || 'notifications@fluxperf.fr'\n      },\n      to: [{\n        email: $vars.MYFLUXPERF_SUPPORT_EMAIL || 'support@fluxperf.fr',\n        name: 'Support Fluxperf'\n      }],\n      subject: `Nouveau RIB reçu — ${normalized.companyName}`,\n      htmlContent: `<p>Un nouveau RIB a été déposé depuis MyFluxperf.</p><ul><li><strong>Client :</strong> ${escapeHtml(normalized.companyName)}</li><li><strong>Déposant :</strong> ${escapeHtml(normalized.requesterEmail)}</li><li><strong>Date :</strong> ${escapeHtml(normalized.submittedAt)}</li></ul><p><a href=\"${fileUrl}\">Ouvrir le document dans Google Drive</a></p>`,\n      textContent: `Un nouveau RIB a été déposé. Client : ${normalized.companyName}. Déposant : ${normalized.requesterEmail}. Date : ${normalized.submittedAt}. Document : ${fileUrl}`\n    }\n  }\n}];"
+      },
+      "id": "build-rib-brevo-notification",
+      "name": "Build RIB Brevo Notification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1490, 100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.brevo.com/v3/smtp/email",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "api-key",
+              "value": "={{$vars.BREVO_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{$json.brevoBody}}",
+        "options": {}
+      },
+      "id": "brevo-notify-support-rib",
+      "name": "Brevo - Notify Support RIB",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [1730, 100],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 1000
+    }
+  ],
+  "connections": {
+    "Webhook - MyFluxperf RIB": {
+      "main": [[{
+        "node": "Validate + Normalize RIB",
+        "type": "main",
+        "index": 0
+      }]]
+    },
+    "Validate + Normalize RIB": {
+      "main": [[{
+        "node": "Read RIB Documents",
+        "type": "main",
+        "index": 0
+      }]]
+    },
+    "Read RIB Documents": {
+      "main": [[{
+        "node": "Resolve RIB Folder",
+        "type": "main",
+        "index": 0
+      }]]
+    },
+    "Resolve RIB Folder": {
+      "main": [[{
+        "node": "Has RIB Folder?",
+        "type": "main",
+        "index": 0
+      }]]
+    },
+    "Has RIB Folder?": {
+      "main": [
+        [{
+          "node": "Upload RIB to Google Drive",
+          "type": "main",
+          "index": 0
+        }],
+        [{
+          "node": "Create Client RIB Folder",
+          "type": "main",
+          "index": 0
+        }]
+      ]
+    },
+    "Create Client RIB Folder": {
+      "main": [[{
+        "node": "Use Created RIB Folder",
+        "type": "main",
+        "index": 0
+      }]]
+    },
+    "Use Created RIB Folder": {
+      "main": [[{
+        "node": "Upload RIB to Google Drive",
+        "type": "main",
+        "index": 0
+      }]]
+    },
+    "Upload RIB to Google Drive": {
+      "main": [[{
+        "node": "Build RIB Document Record",
+        "type": "main",
+        "index": 0
+      }]]
+    },
+    "Build RIB Document Record": {
+      "main": [[{
+        "node": "Append RIB Document Record",
+        "type": "main",
+        "index": 0
+      }]]
+    },
+    "Append RIB Document Record": {
+      "main": [[{
+        "node": "Build RIB Action Record",
+        "type": "main",
+        "index": 0
+      }]]
+    },
+    "Build RIB Action Record": {
+      "main": [[{
+        "node": "Append RIB Action Record",
+        "type": "main",
+        "index": 0
+      }]]
+    },
+    "Append RIB Action Record": {
+      "main": [[
+        {
+          "node": "Respond RIB Stored",
+          "type": "main",
+          "index": 0
+        },
+        {
+          "node": "Build RIB Brevo Notification",
+          "type": "main",
+          "index": 0
+        }
+      ]]
+    },
+    "Build RIB Brevo Notification": {
+      "main": [[{
+        "node": "Brevo - Notify Support RIB",
+        "type": "main",
+        "index": 0
+      }]]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "active": false,
+  "versionId": "myfluxperf-rib-v1"
+}

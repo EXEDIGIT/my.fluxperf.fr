@@ -48,6 +48,15 @@ export type ClientImpact = {
   isEstimated: true;
 };
 
+export type ClientRibStatus = "missing" | "complete";
+
+export type ClientAccount = {
+  rib: {
+    status: ClientRibStatus;
+    submittedAt: string | null;
+  };
+};
+
 export type Client = {
   id: string;
   status: string;
@@ -72,6 +81,7 @@ export type Client = {
     label: string;
     date: string;
   }>;
+  account: ClientAccount;
 };
 
 export type MeResponse = {

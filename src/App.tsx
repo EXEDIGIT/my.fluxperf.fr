@@ -1,6 +1,7 @@
 import { FilePenLine, Layers3, MessageCircle, ShieldCheck, Sparkles, TimerReset } from "lucide-react";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { ActionCard } from "./components/ActionCard";
+import { AccountPage } from "./components/AccountPage";
 import { AdminConsolePage } from "./components/AdminConsolePage";
 import { AuthCallbackPage } from "./components/AuthCallbackPage";
 import { AuthConfirmPage } from "./components/AuthConfirmPage";
@@ -185,6 +186,31 @@ export function App() {
     setNavigationTarget(href);
   }
 
+  function handleRibSubmitted(submittedAt: string) {
+    setState((current) => {
+      if (current.status !== "ready") {
+        return current;
+      }
+
+      return {
+        status: "ready",
+        data: {
+          ...current.data,
+          client: {
+            ...current.data.client,
+            account: {
+              ...current.data.client.account,
+              rib: {
+                status: "complete",
+                submittedAt
+              }
+            }
+          }
+        }
+      };
+    });
+  }
+
   if (isAuthCallback) {
     return <AuthCallbackPage />;
   }
@@ -216,7 +242,11 @@ export function App() {
 
   return (
     <>
-      <Sidebar onLogout={handleLogout} onNavigate={navigateToSection} />
+      <Sidebar
+        onLogout={handleLogout}
+        onNavigate={navigateToSection}
+        ribStatus={state.status === "ready" ? state.data.client.account.rib.status : "missing"}
+      />
       <main className="app-shell" id="accueil">
         <Header client={client} email={user.email} />
 
@@ -324,6 +354,8 @@ export function App() {
         />
 
         <Resources resourcesUrl={client.links.resources} />
+
+        <AccountPage client={client} onRibSubmitted={handleRibSubmitted} />
 
         <section className="support-band" id="support">
           <div>

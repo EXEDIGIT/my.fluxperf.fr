@@ -15,6 +15,7 @@ export type AppEnv = {
   GOOGLE_CONTACTS_RANGE?: string;
   GOOGLE_SOLUTIONS_RANGE?: string;
   GOOGLE_ACTIONS_RANGE?: string;
+  GOOGLE_DOCUMENTS_RANGE?: string;
   GOOGLE_CONNECTIONS_RANGE?: string;
   GOOGLE_PARAMETERS_RANGE?: string;
   GOOGLE_CLIENTS_WRITE_RANGE?: string;
@@ -28,6 +29,8 @@ export type AppEnv = {
   GOOGLE_ADS_LOGIN_CUSTOMER_ID?: string;
   N8N_INTERVENTION_WEBHOOK_URL?: string;
   N8N_INTERVENTION_WEBHOOK_SECRET?: string;
+  N8N_RIB_WEBHOOK_URL?: string;
+  N8N_RIB_WEBHOOK_SECRET?: string;
   BREVO_API_KEY?: string;
 };
 
@@ -97,6 +100,15 @@ export type ClientImpactDto = {
   isEstimated: true;
 };
 
+export type ClientRibStatusDto = "missing" | "complete";
+
+export type ClientAccountDto = {
+  rib: {
+    status: ClientRibStatusDto;
+    submittedAt: string | null;
+  };
+};
+
 export type ClientDto = {
   id: string;
   status: string;
@@ -121,6 +133,7 @@ export type ClientDto = {
     label: string;
     date: string;
   }>;
+  account: ClientAccountDto;
 };
 
 export type RawClientRow = {

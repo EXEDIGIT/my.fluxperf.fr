@@ -705,6 +705,77 @@ describe("client sheet parsing", () => {
     }
   });
 
+  it("exposes only the completed RIB status and submitted date for the authenticated client", () => {
+    const result = findClientForEmailInWorkbook(
+      {
+        ...structuredWorkbook,
+        documents: [
+          [
+            "document_id",
+            "client_id",
+            "document_type",
+            "company_name",
+            "drive_folder_id",
+            "drive_file_id",
+            "file_name",
+            "submitted_at",
+            "submitted_by_email",
+            "status"
+          ],
+          [
+            "RIB-OLD",
+            "CLI-0001",
+            "rib_iban",
+            "HBINT",
+            "folder-1",
+            "file-1",
+            "HBINT_RIB-IBAN-22072026.pdf",
+            "2026-07-22T08:00:00.000Z",
+            "tdacunha@exedigit.fr",
+            "complete"
+          ],
+          [
+            "RIB-OTHER",
+            "CLI-0002",
+            "rib_iban",
+            "SUSPENDU",
+            "folder-2",
+            "file-2",
+            "SUSPENDU_RIB-IBAN-23072026.pdf",
+            "2026-07-23T08:00:00.000Z",
+            "pause@example.com",
+            "complete"
+          ],
+          [
+            "RIB-NEW",
+            "CLI-0001",
+            "rib_iban",
+            "HBINT",
+            "folder-1",
+            "file-3",
+            "HBINT_RIB-IBAN-23072026.pdf",
+            "2026-07-23T09:00:00.000Z",
+            "tdacunha@exedigit.fr",
+            "complete"
+          ]
+        ]
+      },
+      "tdacunha@exedigit.fr"
+    );
+
+    expect(result.status).toBe("ok");
+    if (result.status === "ok") {
+      expect(result.client.account).toEqual({
+        rib: {
+          status: "complete",
+          submittedAt: "2026-07-23T09:00:00.000Z"
+        }
+      });
+      expect(JSON.stringify(result.client)).not.toContain("file-3");
+      expect(JSON.stringify(result.client)).not.toContain("HBINT_RIB-IBAN");
+    }
+  });
+
   it("counts an active automation solution even when the client has no site", () => {
     const workbook = {
       ...structuredWorkbook,

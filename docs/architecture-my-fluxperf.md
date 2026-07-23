@@ -77,6 +77,7 @@ Le portail supporte la structure actuelle de la BDD :
 | `Contacts` | Prenom, nom, email, statut contact |
 | `Solutions` | Services Fluxperf rattaches au client, avec type, statut, nom, domaine, URL ou indication et date d'activation |
 | `Actions` | Journal des demandes client affiche dans le module Dernieres actions |
+| `Documents` | Métadonnées internes des documents administratifs ; aucun fichier bancaire n’est stocké dans le tableur |
 | `Parametres` | Valeurs de reference lues par la console admin pour alimenter les options de solutions |
 
 L'ancien onglet `Sites` peut rester archive sous `Archive_Sites`, masque, le temps
@@ -107,6 +108,9 @@ GOOGLE_ADS_LOGIN_CUSTOMER_ID=...
 CF_ACCESS_HOSTNAME=my.fluxperf.fr
 N8N_INTERVENTION_WEBHOOK_URL=...
 N8N_INTERVENTION_WEBHOOK_SECRET=...
+N8N_RIB_WEBHOOK_URL=...
+N8N_RIB_WEBHOOK_SECRET=...
+GOOGLE_DOCUMENTS_RANGE=Documents!A1:J1000
 THUMBNAIL_WORKER_URL=https://myfluxperf-thumbnail-service.<account>.workers.dev
 THUMBNAIL_INTERNAL_SECRET=...
 ```
@@ -126,6 +130,7 @@ Ce qui protege les donnees :
 - `/api/me` ignore les emails simules en production.
 - L'API ne renvoie qu'un seul client : celui associe a l'email connecte.
 - `/api/intervention-requests` reverifie l'identite et refuse les solutions non rattachees au client.
+- `/api/account/rib` reverifie l'identite, accepte un seul PDF/JPG/PNG de 10 Mo maximum et ne transmet à n8n que la fiche client associée à la session.
 - `/api/thumbnails/:solution_id` reverifie l'identite et refuse les solutions non rattachees au client.
 - Le Worker n'accepte jamais d'URL depuis le frontend ; il relit les sources autorisees via un endpoint interne protege.
 - Les captures bloquent localhost, IP privees, IP locales, protocoles non HTTP(S) et domaines qui ne correspondent pas a `Solutions.domaine`.

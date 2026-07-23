@@ -127,6 +127,7 @@ export type ClientWorkbookValues = {
   solutions?: string[][];
   actions?: string[][];
   connections?: string[][];
+  documents?: string[][];
 };
 
 type SheetRecord = Record<string, string>;
@@ -348,6 +349,72 @@ function latestActionsFromActionRows(
         date: formatActionDate(date)
       };
     });
+}
+
+function ribAccountForClient(clientId: string, documents: string[][] | undefined): ClientDto["account"] {
+  const normalizedClientId = normalizeId(clientId);
+
+  if (!normalizedClientId || !documents || documents.length < 2) {
+    return {
+      rib: {
+        status: "missing",
+        submittedAt: null
+      }
+    };
+  }
+
+  const latestRib = parseRecords(documents)
+    .map((document, index) => {
+      const submittedAt = getValue(document, "submitted_at", "date_depot", "date");
+
+      return {
+        document,
+        submittedAt,
+        index,
+        timestamp: parseActionTimestamp(submittedAt)
+      };
+    })
+    .filter(({ document }) => {
+      const documentType = normalizeAlias(getValue(document, "document_type", "type_document", "type"));
+      const status = normalizeAlias(getValue(document, "status", "statut"));
+
+      return (
+        normalizeId(getValue(document, "client_id")) === normalizedClientId &&
+        ["rib", "rib_iban", "rib_iban_document"].includes(documentType) &&
+        status === "complete"
+      );
+    })
+    .sort((left, right) => right.timestamp - left.timestamp || right.index - left.index)[0];
+
+  if (!latestRib) {
+    return {
+      rib: {
+        status: "missing",
+        submittedAt: null
+      }
+    };
+  }
+
+  return {
+    rib: {
+      status: "complete",
+      submittedAt: latestRib.submittedAt || null
+    }
+  };
+}
+
+function withRibAccount(result: ClientLookupResult, documents: string[][] | undefined): ClientLookupResult {
+  if (result.status !== "ok") {
+    return result;
+  }
+
+  return {
+    status: "ok",
+    client: {
+      ...result.client,
+      account: ribAccountForClient(result.client.id, documents)
+    }
+  };
 }
 
 function isLikelyUrl(value: string): boolean {
@@ -697,7 +764,13 @@ export function toClientDto(row: RawClientRow): ClientDto {
       name: row.contact_fluxperf_name || "Fluxperf",
       email: row.contact_fluxperf_email || "hello@fluxperf.fr"
     },
-    latestActions
+    latestActions,
+    account: {
+      rib: {
+        status: "missing",
+        submittedAt: null
+      }
+    }
   };
 }
 
@@ -1154,7 +1227,13 @@ function structuredClientToDto(
       name: "Fluxperf",
       email: "hello@fluxperf.fr"
     },
-    latestActions: actionHistory.length > 0 ? actionHistory : latestActionsFromStructuredClient(client, activeSolutions)
+    latestActions: actionHistory.length > 0 ? actionHistory : latestActionsFromStructuredClient(client, activeSolutions),
+    account: {
+      rib: {
+        status: "missing",
+        submittedAt: null
+      }
+    }
   };
 }
 
@@ -1212,23 +1291,23 @@ export function findClientForEmailInWorkbook(
           : legacyResult.client;
 
       if (actionHistory.length > 0) {
-        return {
+        return withRibAccount({
           status: "ok",
           client: {
             ...client,
             latestActions: actionHistory
           }
-        };
+        }, workbook.documents);
       }
 
-      return {
+      return withRibAccount({
         status: "ok",
         client
-      };
+      }, workbook.documents);
     }
 
     return legacyResult;
   }
 
-  return findStructuredClientForEmail(workbook, email);
+  return withRibAccount(findStructuredClientForEmail(workbook, email), workbook.documents);
 }
