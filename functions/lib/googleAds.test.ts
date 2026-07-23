@@ -159,6 +159,61 @@ describe("Google Ads statistics", () => {
     expect(fetcher).toHaveBeenCalledTimes(6);
   });
 
+  it("keeps the main dashboard available when an optional report is rejected", async () => {
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify([{ results: [{ metrics: { impressions: "1200", clicks: "84", conversions: "11", ctr: "0.07" } }] }]), { status: 200 })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify([{ results: [{ segments: { date: "2026-07-20" }, metrics: { clicks: "84", conversions: "11" } }] }]), { status: 200 })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify([{ results: [{ campaign: { name: "Recherche locale" }, metrics: { impressions: "1200", clicks: "84", conversions: "11", ctr: "0.07" } }] }]), { status: 200 })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify([{ results: [{ segments: { device: "MOBILE" }, metrics: { impressions: "800", clicks: "60", conversions: "8", ctr: "0.075" } }] }]), { status: 200 })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ error: { message: "Keyword report is unavailable" } }), { status: 400 })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ error: { message: "Location report is unavailable" } }), { status: 400 })
+      );
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const warningSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    const result = await fetchGoogleAdsStatistics(
+      {
+        APP_ENV: "production",
+        GOOGLE_SERVICE_ACCOUNT_EMAIL: "service@example.com",
+        GOOGLE_PRIVATE_KEY: "private-key",
+        GOOGLE_ADS_DEVELOPER_TOKEN: "developer-token"
+      },
+      "1234567890",
+      solution,
+      "30d",
+      fetcher
+    );
+
+    expect(result.overview.clicks).toBe(84);
+    expect(result.campaigns).toHaveLength(1);
+    expect(result.devices).toHaveLength(1);
+    expect(result.keywords).toEqual([]);
+    expect(result.locations).toEqual([]);
+    expect(warningSpy).toHaveBeenCalledWith(
+      "google_ads_optional_report_unavailable",
+      expect.objectContaining({ report: "keywords" })
+    );
+    expect(warningSpy).toHaveBeenCalledWith(
+      "google_ads_optional_report_unavailable",
+      expect.objectContaining({ report: "locations" })
+    );
+
+    errorSpy.mockRestore();
+    warningSpy.mockRestore();
+  });
+
   it("reports the Google Ads HTTP status without logging credentials", async () => {
     const fetcher = vi.fn<typeof fetch>().mockImplementation(async () =>
       new Response("Access denied", {

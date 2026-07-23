@@ -240,6 +240,22 @@ async function searchStream(
   return streamRows(payload);
 }
 
+async function optionalReportRows(
+  report: "keywords" | "locations",
+  request: Promise<GoogleAdsResult[]>
+): Promise<GoogleAdsResult[]> {
+  try {
+    return await request;
+  } catch (error) {
+    console.warn("google_ads_optional_report_unavailable", {
+      report,
+      message: error instanceof Error ? error.message : "Unknown error"
+    });
+
+    return [];
+  }
+}
+
 function deviceLabel(value: string | undefined): string {
   const labels: Record<string, string> = {
     DESKTOP: "Ordinateur",
@@ -441,6 +457,24 @@ async function locationRows(
   );
 }
 
+async function optionalLocationRows(
+  env: AppEnv,
+  customerId: string,
+  rows: GoogleAdsResult[],
+  fetcher: Fetcher
+): Promise<GoogleAdsBreakdownRow[]> {
+  try {
+    return await locationRows(env, customerId, rows, fetcher);
+  } catch (error) {
+    console.warn("google_ads_optional_report_unavailable", {
+      report: "locations",
+      message: error instanceof Error ? error.message : "Unknown error"
+    });
+
+    return [];
+  }
+}
+
 function demoStatistics(
   solution: ClientSolutionDto,
   periodId: StatisticsPeriodId
@@ -546,17 +580,23 @@ export async function fetchGoogleAdsStatistics(
       `SELECT segments.device, metrics.impressions, metrics.clicks, metrics.conversions, metrics.ctr FROM customer WHERE ${filter} ORDER BY metrics.clicks DESC`,
       fetcher
     ),
-    searchStream(
-      env,
-      customerId,
-      `SELECT segments.keyword.info.text, metrics.impressions, metrics.clicks, metrics.conversions, metrics.ctr FROM keyword_view WHERE ${filter} AND ad_group_criterion.negative = FALSE ORDER BY metrics.clicks DESC LIMIT 10`,
-      fetcher
+    optionalReportRows(
+      "keywords",
+      searchStream(
+        env,
+        customerId,
+        `SELECT segments.keyword.info.text, metrics.impressions, metrics.clicks, metrics.conversions, metrics.ctr FROM keyword_view WHERE ${filter} AND ad_group_criterion.negative = FALSE ORDER BY metrics.clicks DESC LIMIT 10`,
+        fetcher
+      )
     ),
-    searchStream(
-      env,
-      customerId,
-      `SELECT geographic_view.location_type, geographic_view.country_criterion_id, segments.geo_target_city, metrics.impressions, metrics.clicks, metrics.conversions, metrics.ctr FROM geographic_view WHERE ${filter} AND geographic_view.location_type = 'LOCATION_OF_PRESENCE' ORDER BY metrics.clicks DESC LIMIT 20`,
-      fetcher
+    optionalReportRows(
+      "locations",
+      searchStream(
+        env,
+        customerId,
+        `SELECT geographic_view.location_type, geographic_view.country_criterion_id, segments.geo_target_city, metrics.impressions, metrics.clicks, metrics.conversions, metrics.ctr FROM geographic_view WHERE ${filter} AND geographic_view.location_type = 'LOCATION_OF_PRESENCE' ORDER BY metrics.clicks DESC LIMIT 20`,
+        fetcher
+      )
     )
   ]);
   const overviewRow = overviewRows[0];
@@ -586,7 +626,7 @@ export async function fetchGoogleAdsStatistics(
     keywords: withPercentages(
       keywordRows.map((row) => breakdownRow(row.segments?.keyword?.info?.text?.trim() || "Mot-clé sans nom", row))
     ),
-    locations: await locationRows(env, customerId, geographicRows, fetcher),
+    locations: await optionalLocationRows(env, customerId, geographicRows, fetcher),
     devices: withPercentages(deviceRows.map((row) => breakdownRow(deviceLabel(row.segments?.device), row)))
   };
 }
