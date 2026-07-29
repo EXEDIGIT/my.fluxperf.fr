@@ -11,6 +11,7 @@ import { ImpactPanel } from "./components/ImpactPanel";
 import { InterventionRequestModal } from "./components/InterventionRequestModal";
 import { LatestActions } from "./components/LatestActions";
 import { LoadingState } from "./components/LoadingState";
+import { LoginTransitionSplash } from "./components/LoginTransitionSplash";
 import { LoginPage } from "./components/LoginPage";
 import { Resources } from "./components/Resources";
 import { ServicesActive } from "./components/ServicesActive";
@@ -18,12 +19,15 @@ import { Sidebar } from "./components/Sidebar";
 import { SolutionsModal } from "./components/SolutionsModal";
 import { SupportRequestModal } from "./components/SupportRequestModal";
 import { ApiError, getMe } from "./lib/api";
+import { consumeLoginTransition } from "./lib/loginTransition";
 import { getSupabaseClient, hasSupabaseConfig } from "./lib/supabase";
 import type { MeResponse } from "./types/client";
 
 const StatisticsPage = lazy(() =>
   import("./components/StatisticsPage").then((module) => ({ default: module.StatisticsPage }))
 );
+
+const LOGIN_TRANSITION_EXIT_MS = 320;
 
 type LoadState =
   | { status: "loading" }
@@ -39,6 +43,8 @@ type SupportPreset = {
 
 export function App() {
   const [state, setState] = useState<LoadState>({ status: "loading" });
+  const [isLoginTransitionVisible, setIsLoginTransitionVisible] = useState(() => consumeLoginTransition());
+  const [isLoginTransitionExiting, setIsLoginTransitionExiting] = useState(false);
   const [isRequestOpen, setIsRequestOpen] = useState(false);
   const [isSupportOpen, setIsSupportOpen] = useState(false);
   const [isSolutionsOpen, setIsSolutionsOpen] = useState(false);
@@ -130,6 +136,25 @@ export function App() {
       window.history.replaceState({}, "", "/");
     }
   }, [state.status]);
+
+  useEffect(() => {
+    if (!isLoginTransitionVisible || isLoginTransitionExiting || state.status === "loading") {
+      return undefined;
+    }
+
+    if (state.status !== "ready") {
+      setIsLoginTransitionVisible(false);
+      return undefined;
+    }
+
+    setIsLoginTransitionExiting(true);
+
+    const timeoutId = window.setTimeout(() => {
+      setIsLoginTransitionVisible(false);
+    }, LOGIN_TRANSITION_EXIT_MS);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [isLoginTransitionExiting, isLoginTransitionVisible, state.status]);
 
   useEffect(() => {
     if (statisticsSolutionId || !navigationTarget || state.status !== "ready") {
@@ -228,7 +253,7 @@ export function App() {
   }
 
   if (state.status === "loading") {
-    return <LoadingState />;
+    return isLoginTransitionVisible ? <LoginTransitionSplash /> : <LoadingState />;
   }
 
   if (state.status === "error") {
@@ -401,6 +426,10 @@ export function App() {
         onClose={() => setIsSolutionsOpen(false)}
         onActivationRequest={openActivationRequest}
       />
+
+      {isLoginTransitionVisible ? (
+        <LoginTransitionSplash isExiting={isLoginTransitionExiting} />
+      ) : null}
     </>
   );
 }

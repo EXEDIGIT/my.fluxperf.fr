@@ -1,7 +1,9 @@
-import { AlertTriangle, LoaderCircle, ShieldCheck } from "lucide-react";
+import { AlertTriangle, ShieldCheck } from "lucide-react";
 import { useMemo, useState } from "react";
 import type { EmailOtpType } from "@supabase/supabase-js";
+import { markLoginTransition } from "../lib/loginTransition";
 import { getSupabaseClient } from "../lib/supabase";
+import { LoginTransitionSplash } from "./LoginTransitionSplash";
 
 type ConfirmState =
   | { status: "idle" }
@@ -54,16 +56,19 @@ export function AuthConfirmPage() {
       return;
     }
 
+    markLoginTransition();
     window.history.replaceState({}, "", nextPath);
     window.location.assign(nextPath);
+  }
+
+  if (state.status === "loading") {
+    return <LoginTransitionSplash />;
   }
 
   return (
     <main className="center-state error-center" aria-live="polite">
       <img src="/assets/img/logo-fluxperf.svg" alt="Fluxperf" />
-      {state.status === "loading" ? (
-        <LoaderCircle className="loading-icon" aria-hidden="true" />
-      ) : state.status === "error" || !canConfirm ? (
+      {state.status === "error" || !canConfirm ? (
         <AlertTriangle aria-hidden="true" />
       ) : (
         <ShieldCheck aria-hidden="true" />
