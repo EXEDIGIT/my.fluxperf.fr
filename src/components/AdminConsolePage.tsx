@@ -77,6 +77,12 @@ type EditingClientSolution = AdminClientSolutionInput & {
   id: string;
 };
 
+type SolutionEditFeedback = {
+  solutionId: string;
+  status: "success" | "error";
+  message: string;
+};
+
 type AdminTab = "dashboard" | "clients" | "create";
 
 const consolePath = "/fp-console";
@@ -380,6 +386,8 @@ export function AdminConsolePage() {
   const [clientSolutionGoogleAdsCustomerId, setClientSolutionGoogleAdsCustomerId] = useState("");
   const [clientSolutionStatusFilter, setClientSolutionStatusFilter] = useState<"active" | "inactive" | "all">("active");
   const [editingClientSolution, setEditingClientSolution] = useState<EditingClientSolution | null>(null);
+  const [savingSolutionId, setSavingSolutionId] = useState<string | null>(null);
+  const [solutionEditFeedback, setSolutionEditFeedback] = useState<SolutionEditFeedback | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [creationWarnings, setCreationWarnings] = useState<AdminClientQualityWarning[]>([]);
   const [success, setSuccess] = useState<AdminCreateClientResponse | null>(null);
@@ -545,6 +553,8 @@ export function AdminConsolePage() {
     setClientError(null);
     setClientMessage(null);
     setEditingClientSolution(null);
+    setSavingSolutionId(null);
+    setSolutionEditFeedback(null);
     setIsAdminDataLoading(true);
 
     try {
@@ -713,6 +723,7 @@ export function AdminConsolePage() {
 
   function changeClientSolutionStatusFilter(filter: "active" | "inactive" | "all") {
     setEditingClientSolution(null);
+    setSolutionEditFeedback(null);
     setClientSolutionStatusFilter(filter);
   }
 
@@ -726,6 +737,7 @@ export function AdminConsolePage() {
 
     setClientError(null);
     setClientMessage(null);
+    setSolutionEditFeedback(null);
     setEditingClientSolution({
       id: solution.id,
       type: option.type,
@@ -739,12 +751,14 @@ export function AdminConsolePage() {
   async function handleUpdateClientSolution(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!selectedClient || !editingClientSolution) {
+    if (!selectedClient || !editingClientSolution || isClientActionPending) {
       return;
     }
 
     setClientError(null);
     setClientMessage(null);
+    setSolutionEditFeedback(null);
+    setSavingSolutionId(editingClientSolution.id);
     setIsClientActionPending(true);
 
     try {
@@ -758,11 +772,25 @@ export function AdminConsolePage() {
           : ""
       });
       setEditingClientSolution(null);
-      setClientMessage("Solution modifiee.");
-      await refreshAdminData(selectedClient.id);
+      setSolutionEditFeedback({
+        solutionId: editingClientSolution.id,
+        status: "success",
+        message: "Modifications enregistrees."
+      });
+
+      try {
+        await refreshAdminData(selectedClient.id);
+      } catch (refreshError) {
+        console.error("admin_solution_refresh_failed", refreshError);
+      }
     } catch (error) {
-      setClientError(error instanceof ApiError ? error.message : "La solution n'a pas pu etre modifiee.");
+      setSolutionEditFeedback({
+        solutionId: editingClientSolution.id,
+        status: "error",
+        message: error instanceof ApiError ? error.message : "La solution n'a pas pu etre modifiee."
+      });
     } finally {
+      setSavingSolutionId(null);
       setIsClientActionPending(false);
     }
   }
@@ -1183,7 +1211,8 @@ export function AdminConsolePage() {
           </section>
 
           {selectedClient ? (
-            <section className="admin-form-panel">
+            <div className="admin-client-detail-stack">
+              <section className="admin-form-panel admin-client-profile-panel">
               <div className="admin-panel-heading">
                 <ShieldCheck aria-hidden="true" />
                 <div>
@@ -1195,7 +1224,7 @@ export function AdminConsolePage() {
               {clientMessage ? <div className="admin-message success">{clientMessage}</div> : null}
               {clientError ? <div className="admin-message error">{clientError}</div> : null}
 
-              <section className="admin-client-detail-block">
+              <div className="admin-client-profile-content">
                 <div className="admin-section-title-row">
                   <h3>Fiche client</h3>
                 </div>
@@ -1254,9 +1283,10 @@ export function AdminConsolePage() {
                 </section>
               </div>
 
+              </div>
               </section>
 
-              <section className="admin-client-detail-block admin-solutions-section">
+              <section className="admin-form-panel admin-client-solutions-panel">
                 <div className="admin-section-title-row">
                   <h3>Solutions</h3>
                   <span>{clientSolutionStatusCounts.all} au total</span>
@@ -1344,9 +1374,11 @@ export function AdminConsolePage() {
                   const editingNameOptions = editing && editingOption
                     ? Array.from(new Set([...editingOption.nameOptions, editing.name]))
                     : [];
+                  const isSaving = savingSolutionId === solution.id;
+                  const feedback = solutionEditFeedback?.solutionId === solution.id ? solutionEditFeedback : null;
 
                   return (
-                    <article className={editing ? "is-editing" : ""} key={solution.id}>
+                    <article className={editing ? "is-editing" : ""} key={solution.id} aria-busy={isSaving}>
                       <div className="admin-solution-row">
                       <span>
                         <strong>{solution.name || solution.type}</strong>
@@ -1385,6 +1417,7 @@ export function AdminConsolePage() {
                           <select
                             value={editing.type}
                             aria-label="Famille de solution"
+                            disabled={isSaving}
                             onChange={(event) => {
                               const type = event.target.value as AdminSolutionType;
                               const option = solutionOptions.find((item) => item.type === type) ?? fallbackSolutionOptions[0];
@@ -1407,6 +1440,7 @@ export function AdminConsolePage() {
                           <select
                             value={editing.name}
                             aria-label="Nom affiche"
+                            disabled={isSaving}
                             onChange={(event) => setEditingClientSolution((current) => current && current.id === solution.id
                               ? { ...current, name: event.target.value }
                               : current)}
@@ -1419,6 +1453,7 @@ export function AdminConsolePage() {
                             value={editing.urlOrIndication}
                             placeholder="exemple.fr ou indication"
                             aria-label="URL ou indication"
+                            disabled={isSaving}
                             onChange={(event) => setEditingClientSolution((current) => current && current.id === solution.id
                               ? { ...current, urlOrIndication: event.target.value }
                               : current)}
@@ -1429,6 +1464,7 @@ export function AdminConsolePage() {
                               inputMode="numeric"
                               placeholder="ID propriete GA4"
                               aria-label="ID propriete GA4"
+                              disabled={isSaving}
                               onChange={(event) => setEditingClientSolution((current) => current && current.id === solution.id
                                 ? { ...current, ga4PropertyId: event.target.value }
                                 : current)}
@@ -1440,6 +1476,7 @@ export function AdminConsolePage() {
                               inputMode="numeric"
                               placeholder="ID client Google Ads (123-456-7890)"
                               aria-label="ID client Google Ads"
+                              disabled={isSaving}
                               onChange={(event) => setEditingClientSolution((current) => current && current.id === solution.id
                                 ? { ...current, googleAdsCustomerId: event.target.value }
                                 : current)}
@@ -1447,15 +1484,29 @@ export function AdminConsolePage() {
                           ) : null}
                           <div className="admin-solution-edit-actions">
                             <button type="submit" title="Enregistrer les modifications" disabled={isClientActionPending}>
-                              <Save aria-hidden="true" />
-                              Enregistrer
+                              {isSaving ? <Loader2 className="loading-icon" aria-hidden="true" /> : <Save aria-hidden="true" />}
+                              {isSaving ? "Enregistrement..." : "Enregistrer"}
                             </button>
-                            <button type="button" title="Annuler la modification" disabled={isClientActionPending} onClick={() => setEditingClientSolution(null)}>
+                            <button
+                              type="button"
+                              title="Annuler la modification"
+                              disabled={isClientActionPending}
+                              onClick={() => {
+                                setEditingClientSolution(null);
+                                setSolutionEditFeedback(null);
+                              }}
+                            >
                               <X aria-hidden="true" />
                               Annuler
                             </button>
                           </div>
                         </form>
+                      ) : null}
+                      {feedback ? (
+                        <p className={`admin-solution-edit-feedback is-${feedback.status}`} role={feedback.status === "error" ? "alert" : "status"}>
+                          {feedback.status === "success" ? <CheckCircle2 aria-hidden="true" /> : null}
+                          {feedback.message}
+                        </p>
                       ) : null}
                     </article>
                   );
@@ -1469,7 +1520,7 @@ export function AdminConsolePage() {
 
               </section>
 
-              <section className="admin-client-detail-block admin-timeline-section">
+              <section className="admin-form-panel admin-client-timeline-panel">
                 <div className="admin-section-title-row">
                   <h3>Activité récente</h3>
                   <span>{selectedClient.timeline.length} événement{selectedClient.timeline.length > 1 ? "s" : ""}</span>
@@ -1491,9 +1542,9 @@ export function AdminConsolePage() {
                   </ol>
                 ) : (
                   <p className="admin-empty-copy">Aucune activité enregistrée pour ce client.</p>
-                )}
+              )}
               </section>
-            </section>
+            </div>
           ) : (
             <section className="admin-form-panel">
               <div className="admin-empty-detail">

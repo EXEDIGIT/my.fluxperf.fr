@@ -3235,7 +3235,8 @@ svg {
 .admin-tabs button,
 .admin-detail-actions button,
 .admin-inline-form button,
-.admin-solution-list button {
+.admin-solution-list button,
+.admin-solution-filter button {
   min-height: 40px;
   display: inline-flex;
   align-items: center;
@@ -3247,6 +3248,53 @@ svg {
   color: var(--green);
   cursor: pointer;
   font-weight: 700;
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease,
+    color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.admin-tabs button:focus-visible,
+.admin-detail-actions button:focus-visible,
+.admin-inline-form button:focus-visible,
+.admin-solution-list button:focus-visible,
+.admin-solution-filter button:focus-visible {
+  outline: 3px solid rgba(0, 111, 120, 0.22);
+  outline-offset: 2px;
+}
+
+.admin-tabs button:disabled,
+.admin-detail-actions button:disabled,
+.admin-inline-form button:disabled,
+.admin-solution-list button:disabled,
+.admin-solution-filter button:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+@media (hover: hover) {
+  .admin-tabs button:not(:disabled):hover,
+  .admin-detail-actions button:not(:disabled):hover,
+  .admin-inline-form button:not(:disabled):hover,
+  .admin-solution-list button:not(:disabled):hover,
+  .admin-solution-filter button:not(:disabled):hover {
+    border-color: rgba(0, 111, 120, 0.42);
+    background: var(--green-soft);
+    color: var(--ink);
+    box-shadow: 0 8px 16px rgba(8, 45, 66, 0.09);
+    transform: translateY(-1px);
+  }
+}
+
+.admin-tabs button:not(:disabled):active,
+.admin-detail-actions button:not(:disabled):active,
+.admin-inline-form button:not(:disabled):active,
+.admin-solution-list button:not(:disabled):active,
+.admin-solution-filter button:not(:disabled):active {
+  box-shadow: none;
+  transform: translateY(0);
 }
 
 .admin-tabs button {
@@ -3591,15 +3639,21 @@ svg {
   gap: 10px;
 }
 
-.admin-client-detail-block {
+.admin-client-detail-stack {
   display: grid;
+  align-content: start;
   gap: 16px;
-  margin-top: 26px;
-  padding-top: 26px;
-  border-top: 1px solid var(--line-strong);
+  min-width: 0;
 }
 
-.admin-client-detail-block .admin-section-title-row h3 {
+.admin-client-profile-content {
+  display: grid;
+  gap: 16px;
+}
+
+.admin-client-profile-content .admin-section-title-row h3,
+.admin-client-solutions-panel .admin-section-title-row h3,
+.admin-client-timeline-panel .admin-section-title-row h3 {
   margin: 0;
   color: var(--green);
   font-size: 1rem;
@@ -3715,11 +3769,6 @@ svg {
   border-top: 1px solid var(--line);
 }
 
-.admin-solutions-section .admin-inline-form {
-  padding-top: 0;
-  border-top: 0;
-}
-
 .admin-inline-form h3 {
   grid-column: 1 / -1;
   font-size: 0.95rem;
@@ -3805,6 +3854,31 @@ svg {
 
 .admin-solution-edit-actions {
   grid-column: 1 / -1;
+}
+
+.admin-solution-edit-feedback {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 11px 12px;
+  border-top: 1px solid var(--line);
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.admin-solution-edit-feedback svg {
+  flex: 0 0 auto;
+}
+
+.admin-solution-edit-feedback.is-success {
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.admin-solution-edit-feedback.is-error {
+  background: var(--yellow-soft);
 }
 
 .admin-solution-empty {
