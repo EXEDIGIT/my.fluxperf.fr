@@ -3841,6 +3841,15 @@ svg {
   background: rgba(231, 244, 243, 0.42);
 }
 
+.admin-solution-edit-form label {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
 .admin-solution-edit-form input,
 .admin-solution-edit-form select {
   min-width: 0;

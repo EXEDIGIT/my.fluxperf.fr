@@ -1414,6 +1414,8 @@ export function AdminConsolePage() {
                       </div>
                       {editing && editingOption ? (
                         <form className="admin-solution-edit-form" onSubmit={handleUpdateClientSolution}>
+                          <label>
+                            <span>Famille</span>
                           <select
                             value={editing.type}
                             aria-label="Famille de solution"
@@ -1437,6 +1439,9 @@ export function AdminConsolePage() {
                               <option value={option.type} key={option.type}>{option.label}</option>
                             ))}
                           </select>
+                          </label>
+                          <label>
+                            <span>Nom affiché</span>
                           <select
                             value={editing.name}
                             aria-label="Nom affiche"
@@ -1449,6 +1454,9 @@ export function AdminConsolePage() {
                               <option value={name} key={name}>{name}</option>
                             ))}
                           </select>
+                          </label>
+                          <label>
+                            <span>URL ou indication</span>
                           <input
                             value={editing.urlOrIndication}
                             placeholder="exemple.fr ou indication"
@@ -1458,7 +1466,10 @@ export function AdminConsolePage() {
                               ? { ...current, urlOrIndication: event.target.value }
                               : current)}
                           />
+                          </label>
                           {isWebsiteSolutionName(editing.name) ? (
+                            <label>
+                              <span>ID propriété GA4</span>
                             <input
                               value={editing.ga4PropertyId}
                               inputMode="numeric"
@@ -1469,8 +1480,11 @@ export function AdminConsolePage() {
                                 ? { ...current, ga4PropertyId: event.target.value }
                                 : current)}
                             />
+                            </label>
                           ) : null}
                           {isGoogleAdsSolutionName(editing.name) ? (
+                            <label>
+                              <span>ID client Google Ads</span>
                             <input
                               value={editing.googleAdsCustomerId}
                               inputMode="numeric"
@@ -1481,6 +1495,7 @@ export function AdminConsolePage() {
                                 ? { ...current, googleAdsCustomerId: event.target.value }
                                 : current)}
                             />
+                            </label>
                           ) : null}
                           <div className="admin-solution-edit-actions">
                             <button type="submit" title="Enregistrer les modifications" disabled={isClientActionPending}>

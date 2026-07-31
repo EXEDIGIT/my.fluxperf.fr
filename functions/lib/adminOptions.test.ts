@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildAdminSolutionOptions, fallbackAdminSolutionOptions } from "./adminOptions";
+import { buildAdminSolutionOptions, fallbackAdminSolutionOptions, optionAllowsSolution } from "./adminOptions";
 
 describe("admin solution options", () => {
   it("builds solution options from the Parametres sheet", () => {
@@ -33,6 +33,16 @@ describe("admin solution options", () => {
 
   it("falls back when Parametres is empty", () => {
     expect(buildAdminSolutionOptions([])).toEqual(fallbackAdminSolutionOptions);
+  });
+
+  it("accepts a canonical solution name prefixed by its type label", () => {
+    expect(
+      optionAllowsSolution(
+        fallbackAdminSolutionOptions,
+        "assistant_ai",
+        "Flux Assistant IA \u2022 Copilote entreprise"
+      )
+    ).toBe(true);
   });
 
   it("maps the short solution labels used by the live Parametres sheet", () => {

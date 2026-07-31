@@ -154,6 +154,34 @@ describe("PUT /api/admin/clients/:clientId/solutions/:solutionId", () => {
     expect(vi.mocked(updateGoogleSheetValues)).not.toHaveBeenCalled();
   });
 
+  it("accepts a prefixed canonical name with a free text indication", async () => {
+    vi.mocked(readGoogleParametersValues).mockResolvedValue([
+      ["categorie", "valeur"],
+      ["type_solution", "Flux Assistant IA"],
+      ["nom_solution", "Copilote entreprise"]
+    ]);
+
+    const response = await onRequestPut(
+      context("CLI-1", "SOL-1", {
+        type: "assistant_ai",
+        name: "Flux Assistant IA \u2022 Copilote entreprise",
+        urlOrIndication: "Agent IA interne",
+        ga4PropertyId: "",
+        googleAdsCustomerId: ""
+      })
+    );
+    const body = await responseBody(response);
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({ status: "updated" });
+    expect(vi.mocked(updateGoogleSheetValues)).toHaveBeenNthCalledWith(
+      2,
+      expect.any(Object),
+      "Solutions!E2:G2",
+      [["Flux Assistant IA \u2022 Copilote entreprise", "", "Agent IA interne"]]
+    );
+  });
+
   it("returns 404 when the solution does not belong to the client", async () => {
     const response = await onRequestPut(context("CLI-1", "SOL-404", validPayload));
     const body = await responseBody(response);

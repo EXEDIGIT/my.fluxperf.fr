@@ -182,10 +182,21 @@ export function optionAllowsSolution(
 ): boolean {
   const normalizedName = normalizeSolutionName(name);
   const option = options.find((item) => item.type === type);
+  const normalizedTypeLabel = normalizeSolutionName(option?.label || solutionLabels[type]);
+  const nameWithoutTypeLabel = normalizedName.startsWith(normalizedTypeLabel)
+    ? normalizedName
+      .slice(normalizedTypeLabel.length)
+      .replace(/^[\s\u2022:|]+/, "")
+      .trim()
+    : normalizedName;
 
   return Boolean(
     option?.nameOptions.some((candidate) => normalizeSolutionName(candidate) === normalizedName) ||
-      solutionNamesByType[type].some((candidate) => normalizedName === normalizeSolutionName(candidate))
+      solutionNamesByType[type].some((candidate) => {
+        const normalizedCandidate = normalizeSolutionName(candidate);
+
+        return normalizedName === normalizedCandidate || nameWithoutTypeLabel === normalizedCandidate;
+      })
   );
 }
 
