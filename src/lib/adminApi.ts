@@ -1,6 +1,7 @@
 import type { ApiErrorResponse } from "../types/client";
 import type {
   AdminCreateClientInput,
+  AdminClientSolutionInput,
   AdminCreateClientResponse,
   AdminClientActionResponse,
   AdminClientDetailResponse,
@@ -105,12 +106,26 @@ export function sendAdminClientWelcomeEmail(clientId: string): Promise<AdminWelc
 
 export function addAdminClientSolution(
   clientId: string,
-  input: AdminCreateClientInput["solutions"][number]
+  input: AdminClientSolutionInput
 ): Promise<AdminClientActionResponse> {
   return adminFetch<AdminClientActionResponse>(`/api/admin/clients/${encodeURIComponent(clientId)}/solutions`, {
     method: "POST",
     body: JSON.stringify(input)
   });
+}
+
+export function updateAdminClientSolution(
+  clientId: string,
+  solutionId: string,
+  input: AdminClientSolutionInput
+): Promise<AdminClientActionResponse> {
+  return adminFetch<AdminClientActionResponse>(
+    `/api/admin/clients/${encodeURIComponent(clientId)}/solutions/${encodeURIComponent(solutionId)}`,
+    {
+      method: "PUT",
+      body: JSON.stringify(input)
+    }
+  );
 }
 
 export function deactivateAdminClientSolution(

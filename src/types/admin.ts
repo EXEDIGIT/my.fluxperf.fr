@@ -23,6 +23,8 @@ export type AdminCreateClientInput = {
   }>;
 };
 
+export type AdminClientSolutionInput = AdminCreateClientInput["solutions"][number];
+
 export type AdminClientQualityWarning = {
   code: "COMPANY_EXISTS" | "ACTIVE_DOMAIN_EXISTS";
   message: string;
@@ -170,7 +172,7 @@ export type AdminDashboardResponse = {
 };
 
 export type AdminClientActionResponse = {
-  status: "deactivated" | "created" | "reactivated";
+  status: "deactivated" | "created" | "reactivated" | "updated";
   clientId: string;
   solutionId?: string;
   activeSolutions?: number;

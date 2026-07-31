@@ -8,14 +8,17 @@ import {
   LockKeyhole,
   LogOut,
   Mail,
+  Pencil,
   Plus,
   RotateCcw,
+  Save,
   Search,
   ShieldCheck,
   Sparkles,
   Trash2,
   UserPlus,
-  Users
+  Users,
+  X
 } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ApiError } from "../lib/api";
@@ -32,11 +35,13 @@ import {
   getAdminSession,
   reactivateAdminClient,
   sendAdminClientWelcomeEmail,
-  reactivateAdminClientSolution
+  reactivateAdminClientSolution,
+  updateAdminClientSolution
 } from "../lib/adminApi";
 import { getSupabaseClient, hasSupabaseConfig } from "../lib/supabase";
 import type {
   AdminClientDetail,
+  AdminClientSolutionInput,
   AdminClientQualityWarning,
   AdminClientSummary,
   AdminCreateClientInput,
@@ -67,6 +72,10 @@ type SolutionDraft = {
 };
 
 type SolutionDraftsByType = Record<AdminSolutionType, SolutionDraft[]>;
+
+type EditingClientSolution = AdminClientSolutionInput & {
+  id: string;
+};
 
 type AdminTab = "dashboard" | "clients" | "create";
 
@@ -152,6 +161,14 @@ function solutionStatusKind(status: string): "active" | "inactive" | "other" {
   }
 
   return "other";
+}
+
+function optionForExistingSolution(
+  options: AdminSolutionOption[],
+  solution: Pick<AdminClientDetail["solutions"][number], "type" | "name">
+): AdminSolutionOption | undefined {
+  return options.find((option) => normalizedSolutionName(option.label) === normalizedSolutionName(solution.type)) ||
+    options.find((option) => option.nameOptions.some((name) => normalizedSolutionName(name) === normalizedSolutionName(solution.name)));
 }
 
 function adminDateTimestamp(value: string): number {
@@ -361,12 +378,43 @@ export function AdminConsolePage() {
   const [clientSolutionValue, setClientSolutionValue] = useState("");
   const [clientSolutionGa4PropertyId, setClientSolutionGa4PropertyId] = useState("");
   const [clientSolutionGoogleAdsCustomerId, setClientSolutionGoogleAdsCustomerId] = useState("");
+  const [clientSolutionStatusFilter, setClientSolutionStatusFilter] = useState<"active" | "inactive" | "all">("active");
+  const [editingClientSolution, setEditingClientSolution] = useState<EditingClientSolution | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [creationWarnings, setCreationWarnings] = useState<AdminClientQualityWarning[]>([]);
   const [success, setSuccess] = useState<AdminCreateClientResponse | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const selectedSolutionOption =
     solutionOptions.find((option) => option.type === clientSolutionType) ?? solutionOptions[0] ?? fallbackSolutionOptions[0];
+  const clientSolutionStatusCounts = useMemo(() => {
+    const all = selectedClient?.solutions.length ?? 0;
+    const active = selectedClient?.solutions.filter((solution) => solutionStatusKind(solution.status) === "active").length ?? 0;
+    const inactive = selectedClient?.solutions.filter((solution) => solutionStatusKind(solution.status) === "inactive").length ?? 0;
+
+    return { all, active, inactive };
+  }, [selectedClient]);
+  const visibleClientSolutions = useMemo(() => {
+    if (!selectedClient) {
+      return [];
+    }
+
+    const filtered = selectedClient.solutions.filter((solution) =>
+      clientSolutionStatusFilter === "all" || solutionStatusKind(solution.status) === clientSolutionStatusFilter
+    );
+    const statusRank = (solution: AdminClientDetail["solutions"][number]) => {
+      const status = solutionStatusKind(solution.status);
+
+      return status === "active" ? 0 : status === "inactive" ? 1 : 2;
+    };
+
+    return filtered.sort((left, right) => {
+      if (clientSolutionStatusFilter === "all") {
+        return statusRank(left) - statusRank(right);
+      }
+
+      return 0;
+    });
+  }, [clientSolutionStatusFilter, selectedClient]);
   const filteredAdminClients = useMemo(() => {
     const query = clientQuery.trim().toLowerCase();
 
@@ -496,6 +544,7 @@ export function AdminConsolePage() {
   async function openClient(clientId: string) {
     setClientError(null);
     setClientMessage(null);
+    setEditingClientSolution(null);
     setIsAdminDataLoading(true);
 
     try {
@@ -657,6 +706,62 @@ export function AdminConsolePage() {
       await refreshAdminData(selectedClient.id);
     } catch (error) {
       setClientError(error instanceof ApiError ? error.message : "La solution n'a pas pu être réactivée.");
+    } finally {
+      setIsClientActionPending(false);
+    }
+  }
+
+  function changeClientSolutionStatusFilter(filter: "active" | "inactive" | "all") {
+    setEditingClientSolution(null);
+    setClientSolutionStatusFilter(filter);
+  }
+
+  function startEditingClientSolution(solution: AdminClientDetail["solutions"][number]) {
+    const option = optionForExistingSolution(solutionOptions, solution);
+
+    if (!option) {
+      setClientError("Cette solution ne peut pas etre modifiee car sa famille n'est plus disponible.");
+      return;
+    }
+
+    setClientError(null);
+    setClientMessage(null);
+    setEditingClientSolution({
+      id: solution.id,
+      type: option.type,
+      name: solution.name || option.defaultName,
+      urlOrIndication: solution.urlOrIndication,
+      ga4PropertyId: solution.ga4PropertyId,
+      googleAdsCustomerId: solution.googleAdsCustomerId
+    });
+  }
+
+  async function handleUpdateClientSolution(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedClient || !editingClientSolution) {
+      return;
+    }
+
+    setClientError(null);
+    setClientMessage(null);
+    setIsClientActionPending(true);
+
+    try {
+      await updateAdminClientSolution(selectedClient.id, editingClientSolution.id, {
+        type: editingClientSolution.type,
+        name: editingClientSolution.name,
+        urlOrIndication: editingClientSolution.urlOrIndication,
+        ga4PropertyId: isWebsiteSolutionName(editingClientSolution.name) ? editingClientSolution.ga4PropertyId : "",
+        googleAdsCustomerId: isGoogleAdsSolutionName(editingClientSolution.name)
+          ? editingClientSolution.googleAdsCustomerId
+          : ""
+      });
+      setEditingClientSolution(null);
+      setClientMessage("Solution modifiee.");
+      await refreshAdminData(selectedClient.id);
+    } catch (error) {
+      setClientError(error instanceof ApiError ? error.message : "La solution n'a pas pu etre modifiee.");
     } finally {
       setIsClientActionPending(false);
     }
@@ -1090,6 +1195,10 @@ export function AdminConsolePage() {
               {clientMessage ? <div className="admin-message success">{clientMessage}</div> : null}
               {clientError ? <div className="admin-message error">{clientError}</div> : null}
 
+              <section className="admin-client-detail-block">
+                <div className="admin-section-title-row">
+                  <h3>Fiche client</h3>
+                </div>
               <div className="admin-detail-grid">
                 <span>Statut : <strong>{selectedClient.status}</strong></span>
                 <span>Accès portail : <strong>{selectedClient.portalEnabled ? "Oui" : "Non"}</strong></span>
@@ -1145,6 +1254,13 @@ export function AdminConsolePage() {
                 </section>
               </div>
 
+              </section>
+
+              <section className="admin-client-detail-block admin-solutions-section">
+                <div className="admin-section-title-row">
+                  <h3>Solutions</h3>
+                  <span>{clientSolutionStatusCounts.all} au total</span>
+                </div>
               <form className="admin-inline-form" onSubmit={handleAddClientSolution}>
                 <h3>Ajouter une solution</h3>
                 <select
@@ -1191,17 +1307,52 @@ export function AdminConsolePage() {
                 </button>
               </form>
 
+              <div className="admin-solution-filter" role="group" aria-label="Filtrer les solutions">
+                <button
+                  type="button"
+                  className={clientSolutionStatusFilter === "active" ? "is-active" : ""}
+                  aria-pressed={clientSolutionStatusFilter === "active"}
+                  onClick={() => changeClientSolutionStatusFilter("active")}
+                >
+                  Actives <span>{clientSolutionStatusCounts.active}</span>
+                </button>
+                <button
+                  type="button"
+                  className={clientSolutionStatusFilter === "inactive" ? "is-active" : ""}
+                  aria-pressed={clientSolutionStatusFilter === "inactive"}
+                  onClick={() => changeClientSolutionStatusFilter("inactive")}
+                >
+                  Inactives <span>{clientSolutionStatusCounts.inactive}</span>
+                </button>
+                <button
+                  type="button"
+                  className={clientSolutionStatusFilter === "all" ? "is-active" : ""}
+                  aria-pressed={clientSolutionStatusFilter === "all"}
+                  onClick={() => changeClientSolutionStatusFilter("all")}
+                >
+                  Toutes <span>{clientSolutionStatusCounts.all}</span>
+                </button>
+              </div>
+
               <div className="admin-solution-list">
-                {selectedClient.solutions.map((solution) => {
+                {visibleClientSolutions.map((solution) => {
                   const statusKind = solutionStatusKind(solution.status);
+                  const editing = editingClientSolution?.id === solution.id ? editingClientSolution : null;
+                  const editingOption = editing
+                    ? solutionOptions.find((option) => option.type === editing.type) ?? fallbackSolutionOptions[0]
+                    : null;
+                  const editingNameOptions = editing && editingOption
+                    ? Array.from(new Set([...editingOption.nameOptions, editing.name]))
+                    : [];
 
                   return (
-                    <article key={solution.id}>
+                    <article className={editing ? "is-editing" : ""} key={solution.id}>
+                      <div className="admin-solution-row">
                       <span>
                         <strong>{solution.name || solution.type}</strong>
                         <small>
                           {[
-                            solution.domain || solution.urlOrIndication || "Sans indication",
+                            solution.urlOrIndication || solution.domain || "Sans indication",
                             solution.ga4PropertyId ? `GA4 ${solution.ga4PropertyId}` : "",
                             solution.googleAdsCustomerId ? `Google Ads ${solution.googleAdsCustomerId}` : ""
                           ]
@@ -1210,6 +1361,11 @@ export function AdminConsolePage() {
                         </small>
                       </span>
                       <em className={`is-${statusKind}`}>{solution.status}</em>
+                      <div className="admin-solution-actions">
+                        <button type="button" title="Modifier la solution" disabled={isClientActionPending} onClick={() => startEditingClientSolution(solution)}>
+                          <Pencil aria-hidden="true" />
+                          Modifier
+                        </button>
                       {statusKind === "active" ? (
                         <button type="button" disabled={isClientActionPending} onClick={() => handleDeactivateSolution(solution.id)}>
                           <Trash2 aria-hidden="true" />
@@ -1222,12 +1378,98 @@ export function AdminConsolePage() {
                           Réactiver
                         </button>
                       ) : null}
+                      </div>
+                      </div>
+                      {editing && editingOption ? (
+                        <form className="admin-solution-edit-form" onSubmit={handleUpdateClientSolution}>
+                          <select
+                            value={editing.type}
+                            aria-label="Famille de solution"
+                            onChange={(event) => {
+                              const type = event.target.value as AdminSolutionType;
+                              const option = solutionOptions.find((item) => item.type === type) ?? fallbackSolutionOptions[0];
+
+                              setEditingClientSolution((current) => current && current.id === solution.id
+                                ? {
+                                    ...current,
+                                    type,
+                                    name: option.defaultName,
+                                    ga4PropertyId: "",
+                                    googleAdsCustomerId: ""
+                                  }
+                                : current);
+                            }}
+                          >
+                            {solutionOptions.map((option) => (
+                              <option value={option.type} key={option.type}>{option.label}</option>
+                            ))}
+                          </select>
+                          <select
+                            value={editing.name}
+                            aria-label="Nom affiche"
+                            onChange={(event) => setEditingClientSolution((current) => current && current.id === solution.id
+                              ? { ...current, name: event.target.value }
+                              : current)}
+                          >
+                            {editingNameOptions.map((name) => (
+                              <option value={name} key={name}>{name}</option>
+                            ))}
+                          </select>
+                          <input
+                            value={editing.urlOrIndication}
+                            placeholder="exemple.fr ou indication"
+                            aria-label="URL ou indication"
+                            onChange={(event) => setEditingClientSolution((current) => current && current.id === solution.id
+                              ? { ...current, urlOrIndication: event.target.value }
+                              : current)}
+                          />
+                          {isWebsiteSolutionName(editing.name) ? (
+                            <input
+                              value={editing.ga4PropertyId}
+                              inputMode="numeric"
+                              placeholder="ID propriete GA4"
+                              aria-label="ID propriete GA4"
+                              onChange={(event) => setEditingClientSolution((current) => current && current.id === solution.id
+                                ? { ...current, ga4PropertyId: event.target.value }
+                                : current)}
+                            />
+                          ) : null}
+                          {isGoogleAdsSolutionName(editing.name) ? (
+                            <input
+                              value={editing.googleAdsCustomerId}
+                              inputMode="numeric"
+                              placeholder="ID client Google Ads (123-456-7890)"
+                              aria-label="ID client Google Ads"
+                              onChange={(event) => setEditingClientSolution((current) => current && current.id === solution.id
+                                ? { ...current, googleAdsCustomerId: event.target.value }
+                                : current)}
+                            />
+                          ) : null}
+                          <div className="admin-solution-edit-actions">
+                            <button type="submit" title="Enregistrer les modifications" disabled={isClientActionPending}>
+                              <Save aria-hidden="true" />
+                              Enregistrer
+                            </button>
+                            <button type="button" title="Annuler la modification" disabled={isClientActionPending} onClick={() => setEditingClientSolution(null)}>
+                              <X aria-hidden="true" />
+                              Annuler
+                            </button>
+                          </div>
+                        </form>
+                      ) : null}
                     </article>
                   );
                 })}
+                {visibleClientSolutions.length === 0 ? (
+                  <p className="admin-empty-copy admin-solution-empty">
+                    Aucune solution {clientSolutionStatusFilter === "active" ? "active" : clientSolutionStatusFilter === "inactive" ? "inactive" : "enregistree"}.
+                  </p>
+                ) : null}
               </div>
 
-              <section className="admin-detail-section admin-timeline-section">
+              </section>
+
+              <section className="admin-client-detail-block admin-timeline-section">
                 <div className="admin-section-title-row">
                   <h3>Activité récente</h3>
                   <span>{selectedClient.timeline.length} événement{selectedClient.timeline.length > 1 ? "s" : ""}</span>

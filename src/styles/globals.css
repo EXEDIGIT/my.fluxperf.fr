@@ -3486,8 +3486,7 @@ svg {
   gap: 10px;
 }
 
-.admin-client-list button,
-.admin-solution-list article {
+.admin-client-list button {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
@@ -3497,6 +3496,21 @@ svg {
   border-radius: var(--radius);
   background: #fbfdfc;
   text-align: left;
+}
+
+.admin-solution-list article {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fbfdfc;
+}
+
+.admin-solution-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
 }
 
 .admin-client-list button {
@@ -3577,6 +3591,20 @@ svg {
   gap: 10px;
 }
 
+.admin-client-detail-block {
+  display: grid;
+  gap: 16px;
+  margin-top: 26px;
+  padding-top: 26px;
+  border-top: 1px solid var(--line-strong);
+}
+
+.admin-client-detail-block .admin-section-title-row h3 {
+  margin: 0;
+  color: var(--green);
+  font-size: 1rem;
+}
+
 .admin-detail-section {
   display: grid;
   align-content: start;
@@ -3584,6 +3612,12 @@ svg {
   min-width: 0;
   padding-top: 14px;
   border-top: 1px solid var(--line);
+}
+
+.admin-detail-section h4 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 0.95rem;
 }
 
 .admin-contact-list {
@@ -3681,6 +3715,11 @@ svg {
   border-top: 1px solid var(--line);
 }
 
+.admin-solutions-section .admin-inline-form {
+  padding-top: 0;
+  border-top: 0;
+}
+
 .admin-inline-form h3 {
   grid-column: 1 / -1;
   font-size: 0.95rem;
@@ -3695,6 +3734,85 @@ svg {
   border-radius: var(--radius);
   background: var(--white);
   outline: 0;
+}
+
+.admin-solution-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-solution-filter button {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--white);
+  color: var(--green);
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.admin-solution-filter button.is-active {
+  border-color: rgba(0, 111, 120, 0.28);
+  background: var(--green-soft);
+  color: var(--ink);
+}
+
+.admin-solution-filter span {
+  min-width: 20px;
+  min-height: 20px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: rgba(0, 111, 120, 0.1);
+  color: var(--green);
+  font-size: 0.7rem;
+}
+
+.admin-solution-actions,
+.admin-solution-edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.admin-solution-edit-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  padding: 14px 12px;
+  border-top: 1px solid var(--line);
+  background: rgba(231, 244, 243, 0.42);
+}
+
+.admin-solution-edit-form input,
+.admin-solution-edit-form select {
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--white);
+  outline: 0;
+}
+
+.admin-solution-edit-actions {
+  grid-column: 1 / -1;
+}
+
+.admin-solution-empty {
+  margin: 0;
+  padding: 14px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius);
+  background: rgba(231, 244, 243, 0.32);
 }
 
 .admin-empty-detail {
@@ -4123,6 +4241,10 @@ svg {
   .admin-inline-form {
     grid-template-columns: 1fr;
   }
+
+  .admin-solution-edit-form {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 760px) {
@@ -4454,8 +4576,18 @@ svg {
   }
 
   .admin-client-list button,
-  .admin-solution-list article {
+  .admin-solution-row {
     grid-template-columns: 1fr;
     align-items: stretch;
+  }
+
+  .admin-solution-actions,
+  .admin-solution-edit-actions {
+    justify-content: stretch;
+  }
+
+  .admin-solution-actions button,
+  .admin-solution-edit-actions button {
+    flex: 1 1 150px;
   }
 }
