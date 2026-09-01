@@ -8,6 +8,7 @@ _elmts
 .dev.vars
 .env
 .env.local
+*.env
 coverage
 *.log
 *.key

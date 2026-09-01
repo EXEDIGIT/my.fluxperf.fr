@@ -11,6 +11,7 @@ import {
 } from "../../../../../../lib/googleSheets";
 import { json, jsonError } from "../../../../../../lib/response";
 import { formatFrenchDate } from "../../../../../../lib/dateFormats";
+import { refreshWebsiteThumbnail } from "../../../../../../lib/thumbnailRefresh";
 import type { PagesContext } from "../../../../../../lib/types";
 
 function param(context: PagesContext, key: string): string {
@@ -65,6 +66,14 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
     await updateGoogleSheetValues(context.env, `Clients!H${client.rowNumber}:H${client.rowNumber}`, [[String(nextActiveCount)]]);
     await updateGoogleSheetValues(context.env, `Clients!J${client.rowNumber}:J${client.rowNumber}`, [[formatFrenchDate()]]);
 
+    const thumbnailRefresh = await refreshWebsiteThumbnail(context.env, {
+      clientId,
+      solutionId,
+      name: solution.record.nom_solution || "",
+      domain: solution.record.domaine || "",
+      urlOrIndication: solution.record.url_ou_indication || ""
+    });
+
     await logAdminAction(context.env, {
       clientId,
       type: "admin_solution_reactivated",
@@ -79,6 +88,7 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
       clientId,
       solutionId,
       activeSolutions: nextActiveCount,
+      thumbnailRefresh,
       updatedBy: admin.email
     });
   } catch {

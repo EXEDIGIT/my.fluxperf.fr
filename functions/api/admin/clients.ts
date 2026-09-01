@@ -17,6 +17,7 @@ import {
 } from "../../lib/googleSheets";
 import { json, jsonError } from "../../lib/response";
 import { createSupabaseUserForClient } from "../../lib/supabaseAdmin";
+import { refreshWebsiteThumbnail } from "../../lib/thumbnailRefresh";
 import type { PagesContext } from "../../lib/types";
 
 function warningsConfirmed(payload: unknown): boolean {
@@ -104,6 +105,18 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
     await appendGoogleSheetValues(context.env, ranges.contacts, rows.contactRows);
     await appendGoogleSheetValues(context.env, ranges.solutions, rows.solutionRows);
 
+    const thumbnailRefreshes = await Promise.all(
+      rows.solutionRows.map((row, index) =>
+        refreshWebsiteThumbnail(context.env, {
+          clientId: rows.clientId,
+          solutionId: row[0] ?? "",
+          name: input.solutions[index]?.name ?? "",
+          domain: row[5] ?? "",
+          urlOrIndication: row[6] ?? ""
+        })
+      )
+    );
+
     const notifications = await Promise.all(
       input.contacts.map(async (contact) => {
         try {
@@ -150,6 +163,7 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
           solutionsCreated: rows.solutionRows.length
         },
         contactsCreated: rows.contactRows.length,
+        thumbnailRefreshes,
         supabaseUser: supabaseUsers[0],
         supabaseUsers,
         notification,

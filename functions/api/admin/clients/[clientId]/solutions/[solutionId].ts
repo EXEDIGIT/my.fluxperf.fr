@@ -16,12 +16,29 @@ import {
 } from "../../../../../lib/googleSheets";
 import { json, jsonError } from "../../../../../lib/response";
 import { formatFrenchDate } from "../../../../../lib/dateFormats";
+import {
+  canRefreshWebsiteThumbnail,
+  refreshWebsiteThumbnail,
+  shouldRefreshWebsiteThumbnail,
+  type ThumbnailRefreshInput,
+  type ThumbnailRefreshResult
+} from "../../../../../lib/thumbnailRefresh";
 import type { PagesContext } from "../../../../../lib/types";
 
 function param(context: PagesContext, key: string): string {
   const value = context.params?.[key];
 
   return Array.isArray(value) ? value[0] ?? "" : value ?? "";
+}
+
+function isActiveStatus(value: string): boolean {
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+  return normalized === "actif" || normalized === "active";
 }
 
 export async function onRequestPut(context: PagesContext): Promise<Response> {
@@ -84,6 +101,32 @@ export async function onRequestPut(context: PagesContext): Promise<Response> {
       [[formatFrenchDate()]]
     );
 
+    const nextThumbnail: ThumbnailRefreshInput = {
+      clientId,
+      solutionId,
+      name: input.name,
+      domain: domainFromUrlOrIndication(input.urlOrIndication),
+      urlOrIndication: input.urlOrIndication
+    };
+    const previousThumbnail: ThumbnailRefreshInput = {
+      clientId,
+      solutionId,
+      name: solution.record.nom_solution || "",
+      domain: solution.record.domaine || "",
+      urlOrIndication: solution.record.url_ou_indication || ""
+    };
+    let thumbnailRefresh: ThumbnailRefreshResult;
+
+    if (!isActiveStatus(solution.record.statut_solution || "")) {
+      thumbnailRefresh = { status: "skipped", reason: "not_active" };
+    } else if (!canRefreshWebsiteThumbnail(nextThumbnail)) {
+      thumbnailRefresh = { status: "skipped", reason: "not_website" };
+    } else if (!shouldRefreshWebsiteThumbnail(previousThumbnail, nextThumbnail)) {
+      thumbnailRefresh = { status: "skipped", reason: "unchanged" };
+    } else {
+      thumbnailRefresh = await refreshWebsiteThumbnail(context.env, nextThumbnail);
+    }
+
     await logAdminAction(context.env, {
       clientId,
       type: "admin_solution_updated",
@@ -97,6 +140,7 @@ export async function onRequestPut(context: PagesContext): Promise<Response> {
       status: "updated",
       clientId,
       solutionId,
+      thumbnailRefresh,
       updatedBy: admin.email
     });
   } catch {

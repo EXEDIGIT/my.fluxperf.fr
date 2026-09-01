@@ -6,6 +6,7 @@ import {
   readGoogleWorkbookValues,
   updateGoogleSheetValues
 } from "../../../../../lib/googleSheets";
+import { refreshWebsiteThumbnail } from "../../../../../lib/thumbnailRefresh";
 import type { ClientWorkbookValues } from "../../../../../lib/clients";
 import type { PagesContext } from "../../../../../lib/types";
 
@@ -16,6 +17,17 @@ vi.mock("../../../../../lib/googleSheets", () => ({
   appendGoogleSheetValues: vi.fn(async () => ({ updatedRows: 1 })),
   getGoogleWriteRanges: vi.fn(() => ({ actions: "Actions!A:J" }))
 }));
+
+vi.mock("../../../../../lib/thumbnailRefresh", async () => {
+  const actual = await vi.importActual<typeof import("../../../../../lib/thumbnailRefresh")>(
+    "../../../../../lib/thumbnailRefresh"
+  );
+
+  return {
+    ...actual,
+    refreshWebsiteThumbnail: vi.fn(async () => ({ status: "ready" as const }))
+  };
+});
 
 const workbook: ClientWorkbookValues = {
   clients: [
@@ -53,7 +65,7 @@ const workbook: ClientWorkbookValues = {
       "SOL-1",
       "CLI-1",
       "Flux Visibilite & Acquisition",
-      "Inactif",
+      "Actif",
       "Site web",
       "alpha.fr",
       "alpha.fr",
@@ -104,6 +116,7 @@ describe("PUT /api/admin/clients/:clientId/solutions/:solutionId", () => {
     vi.clearAllMocks();
     vi.mocked(readGoogleWorkbookValues).mockResolvedValue(workbook);
     vi.mocked(readGoogleParametersValues).mockResolvedValue([]);
+    vi.mocked(refreshWebsiteThumbnail).mockResolvedValue({ status: "ready" });
   });
 
   it("updates the editable solution fields while preserving its status and raw indication", async () => {
@@ -116,6 +129,7 @@ describe("PUT /api/admin/clients/:clientId/solutions/:solutionId", () => {
       clientId: "CLI-1",
       solutionId: "SOL-1"
     });
+    expect(body.thumbnailRefresh).toEqual({ status: "ready" });
     expect(vi.mocked(updateGoogleSheetValues)).toHaveBeenNthCalledWith(
       1,
       expect.any(Object),
@@ -141,6 +155,16 @@ describe("PUT /api/admin/clients/:clientId/solutions/:solutionId", () => {
       [[expect.any(String)]]
     );
     expect(vi.mocked(appendGoogleSheetValues)).toHaveBeenCalledOnce();
+    expect(vi.mocked(refreshWebsiteThumbnail)).toHaveBeenCalledWith(
+      expect.any(Object),
+      {
+        clientId: "CLI-1",
+        solutionId: "SOL-1",
+        name: "Site web",
+        domain: "hbint.com",
+        urlOrIndication: "www.hbint.com"
+      }
+    );
   });
 
   it("rejects an invalid solution input without updating the sheet", async () => {
@@ -152,6 +176,17 @@ describe("PUT /api/admin/clients/:clientId/solutions/:solutionId", () => {
     expect(response.status).toBe(400);
     expect(body.error).toMatchObject({ code: "INVALID_SOLUTION" });
     expect(vi.mocked(updateGoogleSheetValues)).not.toHaveBeenCalled();
+  });
+
+  it("does not recreate a thumbnail when a website source is unchanged", async () => {
+    const response = await onRequestPut(
+      context("CLI-1", "SOL-1", { ...validPayload, urlOrIndication: "alpha.fr", ga4PropertyId: "987654321" })
+    );
+    const body = await responseBody(response);
+
+    expect(response.status).toBe(200);
+    expect(body.thumbnailRefresh).toEqual({ status: "skipped", reason: "unchanged" });
+    expect(vi.mocked(refreshWebsiteThumbnail)).not.toHaveBeenCalled();
   });
 
   it("rejects a legacy prefixed solution name", async () => {

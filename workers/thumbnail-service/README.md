@@ -6,6 +6,7 @@ Worker Cloudflare dedie aux vignettes de services actifs MyFluxperf.
 
 - sert `GET /thumbnail/:solution_id` depuis le cache Cloudflare puis R2 ;
 - lance `POST /thumbnail/:solution_id/refresh` sans accepter d'URL libre ;
+- accepte `DELETE /thumbnail/:solution_id` uniquement avec le secret interne, afin de purger l'image, son état et son cache ;
 - relit les sources autorisees via `/api/internal/thumbnail-sources` ;
 - genere les captures avec Browser Run ;
 - rafraichit les vignettes obsoletes via le cron hebdomadaire.

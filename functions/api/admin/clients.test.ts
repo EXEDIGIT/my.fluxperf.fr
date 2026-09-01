@@ -4,6 +4,7 @@ import { sendContactWelcomeEmail } from "../../lib/adminClients";
 import { fallbackAdminSolutionOptions } from "../../lib/adminOptions";
 import { appendGoogleSheetValues, readGoogleParametersValues, readGoogleWorkbookValues } from "../../lib/googleSheets";
 import { createSupabaseUserForClient } from "../../lib/supabaseAdmin";
+import { refreshWebsiteThumbnail } from "../../lib/thumbnailRefresh";
 import type { PagesContext } from "../../lib/types";
 
 vi.mock("../../lib/googleSheets", () => ({
@@ -27,6 +28,10 @@ vi.mock("../../lib/supabaseAdmin", () => ({
     status: "created",
     email
   }))
+}));
+
+vi.mock("../../lib/thumbnailRefresh", () => ({
+  refreshWebsiteThumbnail: vi.fn(async () => ({ status: "ready" as const }))
 }));
 
 vi.mock("../../lib/adminClients", async () => {
@@ -92,6 +97,7 @@ describe("POST /api/admin/clients", () => {
       actions: []
     });
     vi.mocked(readGoogleParametersValues).mockResolvedValue([]);
+    vi.mocked(refreshWebsiteThumbnail).mockResolvedValue({ status: "ready" });
   });
 
   it("creates the client, writes a derived domain and reports a sent notification", async () => {
@@ -106,6 +112,18 @@ describe("POST /api/admin/clients", () => {
     });
     expect(vi.mocked(createSupabaseUserForClient)).toHaveBeenCalledOnce();
     expect(vi.mocked(appendGoogleSheetValues)).toHaveBeenCalledTimes(5);
+    expect(vi.mocked(refreshWebsiteThumbnail)).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.objectContaining({
+        clientId: expect.stringMatching(/^CLI-/),
+        solutionId: expect.stringMatching(/^SOL-/),
+        name: "Site web",
+        domain: "example.com",
+        urlOrIndication: "https://example.com"
+      })
+    );
+
+    expect(body.thumbnailRefreshes).toEqual([{ status: "ready" }]);
 
     const solutionRows = vi.mocked(appendGoogleSheetValues).mock.calls[2][2] as string[][];
 

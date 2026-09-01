@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { authenticationEmails, buildImportPlan, csv, domainFromUrl, isActive, parseCsv, rowsForClient } from "./lib/client-import.mjs";
+import { createSilentSupabaseUser } from "./lib/silent-supabase.mjs";
 
 if (!globalThis.crypto) globalThis.crypto = webcrypto;
 
@@ -130,15 +131,8 @@ function outputRecord(item, extra = {}) {
 }
 
 async function createSupabaseUser(env, email) {
-  requiredEnv(env, ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"]);
-  const url = env.SUPABASE_URL.replace(/\/+$/, "");
-  const key = env.SUPABASE_SERVICE_ROLE_KEY;
-  const response = await fetch(`${url}/auth/v1/admin/users`, { method: "POST", headers: { apikey: key, Authorization: `Bearer ${key}`, "Content-Type": "application/json" }, body: JSON.stringify({ email: email.trim().toLowerCase(), email_confirm: true, user_metadata: { source: "my-fluxperf-silent-import" } }) });
-  if (response.ok) return "created";
-  const data = await response.json().catch(() => ({}));
-  const message = `${data.message ?? ""} ${data.error ?? ""} ${data.msg ?? ""}`.toLowerCase();
-  if (message.includes("already") || message.includes("registered") || message.includes("exists")) return "already_exists";
-  throw new Error(data.message || data.error || data.msg || "Création Supabase impossible.");
+  const result = await createSilentSupabaseUser(env, email);
+  return result.status;
 }
 
 async function verifyStatistics(env, item) {

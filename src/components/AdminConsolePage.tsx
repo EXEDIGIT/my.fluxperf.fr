@@ -1508,7 +1508,7 @@ export function AdminConsolePage() {
                   <input
                     value={clientSolutionGa4PropertyId}
                     inputMode="numeric"
-                    placeholder="ID propriete GA4"
+                    placeholder="ID propriete GA4, pas ID de flux"
                     onChange={(event) => setClientSolutionGa4PropertyId(event.target.value)}
                   />
                 ) : null}
@@ -1658,12 +1658,12 @@ export function AdminConsolePage() {
                           </label>
                           {isWebsiteSolutionName(editing.name) ? (
                             <label>
-                              <span>ID propriété GA4</span>
+                              <span>ID propriete GA4 (pas ID de flux)</span>
                             <input
                               value={editing.ga4PropertyId}
                               inputMode="numeric"
-                              placeholder="ID propriete GA4"
-                              aria-label="ID propriete GA4"
+                              placeholder="ID propriete GA4, pas ID de flux"
+                              aria-label="ID propriete GA4, pas ID de flux"
                               disabled={isSaving}
                               onChange={(event) => setEditingClientSolution((current) => current && current.id === solution.id
                                 ? { ...current, ga4PropertyId: event.target.value }
@@ -1900,11 +1900,11 @@ export function AdminConsolePage() {
                       </label>
                       {isWebsiteSolutionName(draft.name) ? (
                         <label>
-                          ID propriete GA4
+                          ID propriete GA4 (pas ID de flux)
                           <input
                             value={draft.ga4PropertyId}
                             inputMode="numeric"
-                            placeholder="123456789"
+                            placeholder="ID propriete GA4, pas ID de flux"
                             onChange={(event) => updateSolution(option.type, draft.id, { ga4PropertyId: event.target.value })}
                           />
                         </label>

@@ -18,6 +18,7 @@ import {
 } from "../../../../lib/googleSheets";
 import { json, jsonError } from "../../../../lib/response";
 import { formatFrenchDate } from "../../../../lib/dateFormats";
+import { refreshWebsiteThumbnail } from "../../../../lib/thumbnailRefresh";
 import type { PagesContext } from "../../../../lib/types";
 
 function clientIdFromContext(context: PagesContext): string {
@@ -65,6 +66,14 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
     await updateGoogleSheetValues(context.env, `Clients!H${client.rowNumber}:H${client.rowNumber}`, [[String(nextActiveCount)]]);
     await updateGoogleSheetValues(context.env, `Clients!J${client.rowNumber}:J${client.rowNumber}`, [[formatFrenchDate()]]);
 
+    const thumbnailRefresh = await refreshWebsiteThumbnail(context.env, {
+      clientId,
+      solutionId: row[0] ?? "",
+      name: input.name,
+      domain: row[5] ?? "",
+      urlOrIndication: row[6] ?? ""
+    });
+
     await logAdminAction(context.env, {
       clientId,
       type: "admin_solution_added",
@@ -80,6 +89,7 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
         clientId,
         solutionId: row[0],
         activeSolutions: nextActiveCount,
+        thumbnailRefresh,
         createdBy: admin.email
       },
       { status: 201 }

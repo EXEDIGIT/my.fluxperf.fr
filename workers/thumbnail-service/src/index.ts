@@ -36,6 +36,7 @@ type R2ObjectBody = {
 
 type R2BucketBinding = {
   get(key: string): Promise<R2ObjectBody | null>;
+  delete(keys: string | string[]): Promise<void>;
   put(
     key: string,
     value: ArrayBuffer | string,
@@ -133,6 +134,10 @@ function solutionIdFromPath(pathname: string): { solutionId: string; isRefresh: 
     solutionId: decodeURIComponent(match[1] ?? "").trim(),
     isRefresh: Boolean(match[2])
   };
+}
+
+function isPurgeableSolutionId(solutionId: string): boolean {
+  return /^SOL-[A-Z0-9][A-Z0-9-]{0,127}$/i.test(solutionId);
 }
 
 function normalizeHostname(value: string): string {
@@ -303,13 +308,17 @@ export function looksLikeBlockedPage(content: string): boolean {
   );
 }
 
-function browserPagePayload(url: string): Record<string, unknown> {
+export function browserPagePayload(url: string): Record<string, unknown> {
   return {
     url,
     userAgent: BROWSER_USER_AGENT,
     gotoOptions: {
-      waitUntil: "networkidle2"
-    }
+      // A homepage can keep analytics or embedded tools connected indefinitely.
+      // Proceed when its DOM is ready, or when the network becomes quiet.
+      waitUntil: ["domcontentloaded", "networkidle2"],
+      timeout: 20_000
+    },
+    waitForTimeout: 1_000
   };
 }
 
@@ -355,7 +364,7 @@ async function fetchThumbnailSources(env: Env, solutionId?: string): Promise<Thu
   return Array.isArray(data.sources) ? data.sources : [];
 }
 
-async function captureAndStore(source: ThumbnailSource, env: Env): Promise<void> {
+async function captureAndStore(source: ThumbnailSource, env: Env): Promise<ThumbnailState> {
   const sourceUrlHash = await hashText(source.url);
 
   await writeState(env, {
@@ -397,22 +406,30 @@ async function captureAndStore(source: ThumbnailSource, env: Env): Promise<void>
         sourceUrl: source.url
       }
     });
-    await writeState(env, {
+    const state: ThumbnailState = {
       solutionId: source.solutionId,
       status: "ready",
       capturedAt,
       sourceUrlHash
-    });
+    };
+
+    await writeState(env, state);
     await defaultCache().delete(cacheRequestForSolution(source.solutionId));
+
+    return state;
   } catch (error) {
-    await writeState(env, {
+    const state: ThumbnailState = {
       solutionId: source.solutionId,
       status: "error",
       capturedAt: new Date().toISOString(),
       sourceUrlHash,
       error: error instanceof Error ? error.message : "Unknown capture error."
-    });
+    };
+
+    await writeState(env, state);
     await defaultCache().delete(cacheRequestForSolution(source.solutionId));
+
+    return state;
   }
 }
 
@@ -457,8 +474,7 @@ async function serveThumbnail(solutionId: string, env: Env): Promise<Response> {
 async function refreshThumbnail(
   solutionId: string,
   request: Request,
-  env: Env,
-  context: ExecutionContextLike
+  env: Env
 ): Promise<Response> {
   if (env.REFRESH_RATE_LIMITER) {
     const clientId = request.headers.get("X-Fluxperf-Client-Id")?.trim() || "internal";
@@ -477,15 +493,32 @@ async function refreshThumbnail(
     return jsonError(404, "THUMBNAIL_SOURCE_NOT_FOUND", "No active website solution matches this id.");
   }
 
-  context.waitUntil(captureAndStore(source, env));
+  const state = await captureAndStore(source, env);
+
+  if (state.status === "error") {
+    return jsonError(502, "THUMBNAIL_CAPTURE_FAILED", "The website preview could not be generated.");
+  }
 
   return json(
     {
-      status: "refreshing",
+      status: "ready",
       solutionId
-    },
-    { status: 202 }
+    }
   );
+}
+
+export async function purgeThumbnail(solutionId: string, env: Env): Promise<Response> {
+  if (!isPurgeableSolutionId(solutionId)) {
+    return jsonError(400, "INVALID_SOLUTION_ID", "Solution id is invalid.");
+  }
+
+  await env.THUMBNAILS_BUCKET.delete([thumbnailPath(solutionId), statePath(solutionId)]);
+  await defaultCache().delete(cacheRequestForSolution(solutionId));
+
+  return json({
+    status: "purged",
+    solutionId
+  });
 }
 
 async function scheduledRefresh(env: Env, context: ExecutionContextLike): Promise<void> {
@@ -541,7 +574,11 @@ export default {
     }
 
     if (request.method === "POST" && route.isRefresh) {
-      return refreshThumbnail(route.solutionId, request, env, context);
+      return refreshThumbnail(route.solutionId, request, env);
+    }
+
+    if (request.method === "DELETE" && !route.isRefresh) {
+      return purgeThumbnail(route.solutionId, env);
     }
 
     return jsonError(405, "METHOD_NOT_ALLOWED", "Method not allowed.");

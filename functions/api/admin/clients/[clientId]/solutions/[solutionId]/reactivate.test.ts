@@ -4,6 +4,7 @@ import {
   readGoogleWorkbookValues,
   updateGoogleSheetValues
 } from "../../../../../../lib/googleSheets";
+import { refreshWebsiteThumbnail } from "../../../../../../lib/thumbnailRefresh";
 import type { ClientWorkbookValues } from "../../../../../../lib/clients";
 import type { PagesContext } from "../../../../../../lib/types";
 
@@ -12,6 +13,10 @@ vi.mock("../../../../../../lib/googleSheets", () => ({
   updateGoogleSheetValues: vi.fn(async () => ({ updatedRows: 1 })),
   appendGoogleSheetValues: vi.fn(async () => ({ updatedRows: 1 })),
   getGoogleWriteRanges: vi.fn(() => ({ actions: "Actions!A:J" }))
+}));
+
+vi.mock("../../../../../../lib/thumbnailRefresh", () => ({
+  refreshWebsiteThumbnail: vi.fn(async () => ({ status: "ready" as const }))
 }));
 
 const workbook: ClientWorkbookValues = {
@@ -36,6 +41,7 @@ const workbook: ClientWorkbookValues = {
     ["solution_id", "client_id", "type_solution", "statut_solution", "nom_solution", "domaine", "url_ou_indication", "date_activation", "notes"],
     ["SOL-ACTIVE", "CLI-1", "Flux Visibilite & Acquisition", "Actif", "Site web", "alpha.fr", "alpha.fr", "01/07/2026", ""],
     ["SOL-INACTIVE", "CLI-1", "Flux Automatisation & IA", "Inactif", "Workflow", "", "Centralisation", "01/07/2026", ""],
+    ["SOL-WEB", "CLI-1", "Flux Visibilite & Acquisition", "Inactif", "Site web", "alpha.fr", "www.alpha.fr", "01/07/2026", ""],
     ["SOL-PAUSED", "CLI-1", "Flux Assistant IA", "En pause", "Copilote", "", "", "01/07/2026", ""]
   ],
   actions: [],
@@ -66,6 +72,7 @@ describe("POST /api/admin/clients/:clientId/solutions/:solutionId/reactivate", (
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(readGoogleWorkbookValues).mockResolvedValue(workbook);
+    vi.mocked(refreshWebsiteThumbnail).mockResolvedValue({ status: "ready" });
   });
 
   it("reactivates an inactive solution and updates the active solution count", async () => {
@@ -100,6 +107,24 @@ describe("POST /api/admin/clients/:clientId/solutions/:solutionId/reactivate", (
     expect(response.status).toBe(409);
     expect(body.error).toMatchObject({ code: "ADMIN_SOLUTION_ALREADY_ACTIVE" });
     expect(vi.mocked(updateGoogleSheetValues)).not.toHaveBeenCalled();
+  });
+
+  it("refreshes the thumbnail immediately when a website solution is reactivated", async () => {
+    const response = await onRequestPost(context("CLI-1", "SOL-WEB"));
+    const body = await responseBody(response);
+
+    expect(response.status).toBe(200);
+    expect(body.thumbnailRefresh).toEqual({ status: "ready" });
+    expect(vi.mocked(refreshWebsiteThumbnail)).toHaveBeenCalledWith(
+      expect.any(Object),
+      {
+        clientId: "CLI-1",
+        solutionId: "SOL-WEB",
+        name: "Site web",
+        domain: "alpha.fr",
+        urlOrIndication: "www.alpha.fr"
+      }
+    );
   });
 
   it("rejects a status that is not reactivatable", async () => {
