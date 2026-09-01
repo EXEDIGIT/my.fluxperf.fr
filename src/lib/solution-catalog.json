@@ -1,0 +1,27 @@
+[
+  {
+    "type": "visibility_acquisition",
+    "label": "Flux Visibilité & Acquisition",
+    "nameOptions": [
+      "Site web",
+      "Site e-shop",
+      "Publicité Google Ads",
+      "Réseaux sociaux"
+    ]
+  },
+  {
+    "type": "automation_ai",
+    "label": "Flux Automatisation & IA",
+    "nameOptions": [
+      "Tableau de bord",
+      "Automatisation & Synchronisation"
+    ]
+  },
+  {
+    "type": "assistant_ai",
+    "label": "Flux Assistant IA",
+    "nameOptions": [
+      "Copilote entreprise - Alzy"
+    ]
+  }
+]

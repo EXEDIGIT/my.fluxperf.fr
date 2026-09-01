@@ -210,10 +210,10 @@ categorie: nom_solution
 valeur: Tableau de bord
 
 categorie: nom_solution
-valeur: Synchronisation de données
+valeur: Automatisation & Synchronisation
 
 categorie: nom_solution
-valeur: Copilote entreprise
+valeur: Copilote entreprise - Alzy
 
 categorie: nom_solution
 valeur: Publicité Google Ads

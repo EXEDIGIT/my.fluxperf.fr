@@ -177,7 +177,7 @@ const structuredWorkbook = {
       "CLI-0001",
       "Flux Visibilité & Acquisition",
       "Actif",
-      "Flux Visibilité & Acquisition • Site web",
+      "Site web",
       "hbint.com",
       "https://www.hbint.com",
       "2026-07-06",
@@ -188,7 +188,7 @@ const structuredWorkbook = {
       "CLI-0001",
       "Flux Visibilité & Acquisition",
       "Actif",
-      "Flux Visibilité & Acquisition • Site e-shop",
+      "Site e-shop",
       "trial.hbint.com",
       "https://trial.hbint.com",
       "2026-07-06",
@@ -249,8 +249,8 @@ describe("client sheet parsing", () => {
       expect(result.client.firstName).toBe("Celine");
       expect(result.client.lastName).toBe("HEMING");
       expect(result.client.services).toEqual([
-        "Flux Visibilité & Acquisition • Site web - hbint.com",
-        "Flux Visibilité & Acquisition • Site e-shop - trial.hbint.com"
+        "Flux Visibilité & Acquisition : Site web - hbint.com",
+        "Flux Visibilité & Acquisition : Site e-shop - trial.hbint.com"
       ]);
       expect(result.client.solutions).toEqual([
         {
@@ -258,7 +258,7 @@ describe("client sheet parsing", () => {
           type: "visibility_acquisition",
           typeLabel: "Flux Visibilité & Acquisition",
           status: "Actif",
-          name: "Flux Visibilité & Acquisition • Site web",
+          name: "Site web",
           domain: "hbint.com",
           url: "https://www.hbint.com",
           activatedAt: "2026-07-06",
@@ -277,7 +277,7 @@ describe("client sheet parsing", () => {
           type: "visibility_acquisition",
           typeLabel: "Flux Visibilité & Acquisition",
           status: "Actif",
-          name: "Flux Visibilité & Acquisition • Site e-shop",
+          name: "Site e-shop",
           domain: "trial.hbint.com",
           url: "https://trial.hbint.com",
           activatedAt: "2026-07-06",
@@ -505,7 +505,7 @@ describe("client sheet parsing", () => {
         clientId: "CLI-0001",
         type: "visibility_acquisition",
         typeLabel: "Flux Visibilité & Acquisition",
-        name: "Flux Visibilité & Acquisition • Site web",
+        name: "Site web",
         domain: "hbint.com",
         url: "https://www.hbint.com/"
       },
@@ -514,7 +514,7 @@ describe("client sheet parsing", () => {
         clientId: "CLI-0001",
         type: "visibility_acquisition",
         typeLabel: "Flux Visibilité & Acquisition",
-        name: "Flux Visibilité & Acquisition • Site e-shop",
+        name: "Site e-shop",
         domain: "trial.hbint.com",
         url: "https://trial.hbint.com/"
       }

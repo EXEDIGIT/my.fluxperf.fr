@@ -30,9 +30,9 @@ const demoResponse: MeResponse = {
     lastName: "Dupont",
     planLabel: "Abonnement actif",
     services: [
-      "Flux Visibilité & Acquisition • Site web - a2-cm.fr",
-      "Flux Automatisation & IA : Reporting automatique",
-      "Flux Assistant IA : Assistant support"
+      "Flux Visibilité & Acquisition : Site web - a2-cm.fr",
+      "Flux Automatisation & IA : Tableau de bord",
+      "Flux Assistant IA : Copilote entreprise - Alzy"
     ],
     solutions: [
       {
@@ -40,7 +40,7 @@ const demoResponse: MeResponse = {
         type: "visibility_acquisition",
         typeLabel: "Flux Visibilité & Acquisition",
         status: "Actif",
-        name: "Flux Visibilité & Acquisition • Site web",
+        name: "Site web",
         domain: "a2-cm.fr",
         url: "https://www.a2-cm.fr",
         activatedAt: "2026-07-06",
@@ -59,7 +59,7 @@ const demoResponse: MeResponse = {
         type: "visibility_acquisition",
         typeLabel: "Flux Visibilité & Acquisition",
         status: "Actif",
-        name: "Flux Visibilité & Acquisition • Site e-shop",
+        name: "Site e-shop",
         domain: "blog.a2-cm.fr",
         url: "https://blog.a2-cm.fr",
         activatedAt: "2026-07-06",
@@ -97,7 +97,7 @@ const demoResponse: MeResponse = {
         type: "assistant_ai",
         typeLabel: "Flux Assistant IA",
         status: "Actif",
-        name: "Flux Assistant IA - Copilote entreprise",
+        name: "Copilote entreprise - Alzy",
         domain: "",
         url: "",
         activatedAt: "2026-07-06",

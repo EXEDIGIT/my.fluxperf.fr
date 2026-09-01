@@ -38,6 +38,7 @@ import {
   reactivateAdminClientSolution,
   updateAdminClientSolution
 } from "../lib/adminApi";
+import { fallbackSolutionOptions } from "../lib/solutionCatalog";
 import { getSupabaseClient, hasSupabaseConfig } from "../lib/supabase";
 import type {
   AdminClientDetail,
@@ -86,35 +87,6 @@ type SolutionEditFeedback = {
 type AdminTab = "dashboard" | "clients" | "create";
 
 const consolePath = "/fp-console";
-
-const fallbackSolutionOptions: AdminSolutionOption[] = [
-  {
-    type: "visibility_acquisition",
-    label: "Flux Visibilité & Acquisition",
-    defaultName: "Site web",
-    nameOptions: [
-      "Site web",
-      "Site e-shop",
-      "Publicité Google Ads",
-      "Réseaux sociaux"
-    ]
-  },
-  {
-    type: "automation_ai",
-    label: "Flux Automatisation & IA",
-    defaultName: "Tableau de bord",
-    nameOptions: [
-      "Tableau de bord",
-      "Synchronisation de données"
-    ]
-  },
-  {
-    type: "assistant_ai",
-    label: "Flux Assistant IA",
-    defaultName: "Copilote entreprise",
-    nameOptions: ["Copilote entreprise"]
-  }
-];
 
 function buildDraftId(type: AdminSolutionType): string {
   return `${type}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;

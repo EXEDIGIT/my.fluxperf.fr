@@ -154,11 +154,11 @@ describe("PUT /api/admin/clients/:clientId/solutions/:solutionId", () => {
     expect(vi.mocked(updateGoogleSheetValues)).not.toHaveBeenCalled();
   });
 
-  it("accepts a prefixed canonical name with a free text indication", async () => {
+  it("rejects a legacy prefixed solution name", async () => {
     vi.mocked(readGoogleParametersValues).mockResolvedValue([
       ["categorie", "valeur"],
       ["type_solution", "Flux Assistant IA"],
-      ["nom_solution", "Copilote entreprise"]
+      ["nom_solution", "Copilote entreprise - Alzy"]
     ]);
 
     const response = await onRequestPut(
@@ -172,14 +172,9 @@ describe("PUT /api/admin/clients/:clientId/solutions/:solutionId", () => {
     );
     const body = await responseBody(response);
 
-    expect(response.status).toBe(200);
-    expect(body).toMatchObject({ status: "updated" });
-    expect(vi.mocked(updateGoogleSheetValues)).toHaveBeenNthCalledWith(
-      2,
-      expect.any(Object),
-      "Solutions!E2:G2",
-      [["Flux Assistant IA \u2022 Copilote entreprise", "", "Agent IA interne"]]
-    );
+    expect(response.status).toBe(400);
+    expect(body.error).toMatchObject({ code: "INVALID_SOLUTION" });
+    expect(vi.mocked(updateGoogleSheetValues)).not.toHaveBeenCalled();
   });
 
   it("returns 404 when the solution does not belong to the client", async () => {

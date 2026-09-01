@@ -41,7 +41,7 @@ describe("GET /api/internal/thumbnail-sources", () => {
         clientId: "a2cm",
         type: "visibility_acquisition",
         typeLabel: "Flux Visibilité & Acquisition",
-        name: "Flux Visibilité & Acquisition • Site web",
+        name: "Site web",
         domain: "a2-cm.fr",
         url: "https://www.a2-cm.fr/"
       }

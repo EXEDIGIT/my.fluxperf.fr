@@ -1,5 +1,6 @@
 import { isProduction, normalizeEmail } from "./auth";
 import {
+  canonicalNameForType,
   defaultNameForType,
   fallbackAdminSolutionOptions,
   isGoogleAdsSolutionName,
@@ -214,7 +215,8 @@ export function validateAdminClientInput(
     }
 
     const urlOrIndication = asText(item.urlOrIndication) || asText(item.url);
-    const name = asText(item.name) || defaultNameForType(solutionOptions, type);
+    const requestedName = asText(item.name) || defaultNameForType(solutionOptions, type);
+    const name = canonicalNameForType(type, requestedName) || requestedName;
     const ga4PropertyId = normalizeGa4PropertyId(
       asText(item.ga4PropertyId) || asText(item.ga4_property_id) || asText(item.analyticsPropertyId)
     );

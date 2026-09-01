@@ -123,9 +123,10 @@ Elle permet de creer rapidement :
 - l'utilisateur correspondant dans Supabase Auth ;
 - l'email d'ouverture d'acces via Brevo.
 
-Les listes de solutions de la console sont lues depuis l'onglet `Parametres`
-quand il est disponible. Si l'onglet est vide ou indisponible, la console garde
-une liste de secours pour rester utilisable.
+Le catalogue des solutions est défini par l'application et reproduit dans
+`Parametres`. Cette feuille ne peut pas ajouter de libellé libre ; consultez
+[`docs/solution-catalogue.md`](docs/solution-catalogue.md) pour les sept couples
+famille/solution autorisés et la procédure de normalisation.
 
 Securite attendue :
 
