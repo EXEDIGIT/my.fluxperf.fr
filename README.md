@@ -94,10 +94,20 @@ Supabase gere l'envoi du magic link et la session navigateur :
 1. Configurer `Site URL` sur `https://my.fluxperf.fr`.
 2. Autoriser les redirects `https://my.fluxperf.fr/auth/callback` et `http://127.0.0.1:5173/auth/callback`.
 3. Creer dans Supabase Auth les utilisateurs autorises a recevoir un lien.
-4. Personnaliser le template email magic link / OTP.
+4. Personnaliser le template email magic link / OTP avec un contenu generique Fluxperf.
 5. Configurer un SMTP custom avant production.
 
 Le code utilise `shouldCreateUser: false` pour eviter qu'une adresse inconnue cree automatiquement un compte.
+
+Le template **Magic Link** doit conserver la destination demandee par l'application, notamment pour la console interne. Utiliser un objet generique, par exemple `Votre lien de connexion Fluxperf`, puis conserver `{{ .RedirectTo }}` dans le lien de confirmation :
+
+```html
+<a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=magiclink&next={{ .RedirectTo }}">
+  Confirmer ma connexion
+</a>
+```
+
+La liste des redirects autorises doit contenir `https://my.fluxperf.fr/auth/callback`. Ce lien de confirmation renvoie ensuite automatiquement vers l'espace client ou `/fp-console` selon la demande initiale.
 
 ## Google Cloud et Google Sheets
 

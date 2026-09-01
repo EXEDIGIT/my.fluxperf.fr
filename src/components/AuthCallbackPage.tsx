@@ -1,5 +1,6 @@
 import { AlertTriangle, LoaderCircle } from "lucide-react";
 import { useEffect, useState } from "react";
+import { resolveAuthRedirectPath } from "../lib/authRedirect";
 import { getSupabaseClient } from "../lib/supabase";
 
 type CallbackState =
@@ -27,14 +28,6 @@ function getHashSession() {
   };
 }
 
-function safeRedirectPath(value: string | null): string {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) {
-    return "/";
-  }
-
-  return value;
-}
-
 export function AuthCallbackPage() {
   const [state, setState] = useState<CallbackState>({ status: "loading" });
 
@@ -45,7 +38,7 @@ export function AuthCallbackPage() {
       const supabase = getSupabaseClient();
       const searchParams = new URLSearchParams(window.location.search);
       const code = searchParams.get("code");
-      const nextPath = safeRedirectPath(searchParams.get("next"));
+      const nextPath = resolveAuthRedirectPath(searchParams.get("next"), window.location.origin);
       const callbackError = searchParams.get("error_description") || searchParams.get("error");
 
       if (!supabase || callbackError) {

@@ -390,6 +390,7 @@ export function AdminConsolePage() {
   const [creationWarnings, setCreationWarnings] = useState<AdminClientQualityWarning[]>([]);
   const [success, setSuccess] = useState<AdminCreateClientResponse | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [sessionRetryKey, setSessionRetryKey] = useState(0);
   const selectedSolutionOption =
     solutionOptions.find((option) => option.type === clientSolutionType) ?? solutionOptions[0] ?? fallbackSolutionOptions[0];
   const clientSolutionStatusCounts = useMemo(() => {
@@ -449,9 +450,16 @@ export function AdminConsolePage() {
 
   useEffect(() => {
     let isMounted = true;
+    let latestLoadId = 0;
     const supabase = getSupabaseClient();
 
-    async function loadAdminSession() {
+    function isLatestLoad(loadId: number) {
+      return isMounted && loadId === latestLoadId;
+    }
+
+    async function loadAdminSession(canRefreshSession = true) {
+      const loadId = ++latestLoadId;
+
       try {
         const [session, options, clientsData, dashboardData] = await Promise.all([
           getAdminSession(),
@@ -460,7 +468,7 @@ export function AdminConsolePage() {
           getAdminDashboard()
         ]);
 
-        if (isMounted) {
+        if (isLatestLoad(loadId)) {
           setSolutionOptions(options.solutionOptions);
           setSolutions(emptySolutions(options.solutionOptions));
           setAdminClients(clientsData.clients);
@@ -468,18 +476,31 @@ export function AdminConsolePage() {
           setLoadState({ status: "ready", email: session.admin.email });
         }
       } catch (error) {
-        if (!isMounted) {
+        if (!isLatestLoad(loadId)) {
           return;
         }
 
-        if (error instanceof ApiError && error.status === 401) {
-          setLoadState({ status: "anonymous" });
-          return;
+        if (error instanceof ApiError && error.status === 401 && canRefreshSession && supabase) {
+          const { data, error: refreshError } = await supabase.auth.refreshSession();
+
+          if (!isLatestLoad(loadId)) {
+            return;
+          }
+
+          if (!refreshError && data.session) {
+            await loadAdminSession(false);
+            return;
+          }
         }
 
         setLoadState({
           status: "error",
-          message: error instanceof Error ? error.message : "Accès interne indisponible."
+          message:
+            error instanceof ApiError && error.status === 401
+              ? "Votre session n'a pas pu être vérifiée pour le moment. Réessayez dans quelques instants."
+              : error instanceof Error
+                ? error.message
+                : "Accès interne indisponible."
         });
       }
     }
@@ -488,7 +509,7 @@ export function AdminConsolePage() {
       if (!hasSupabaseConfig() || !supabase) {
         setLoadState({
           status: "error",
-          message: "La connexion Supabase n'est pas configurée."
+          message: "La connexion sécurisée est indisponible."
         });
         return;
       }
@@ -509,24 +530,26 @@ export function AdminConsolePage() {
 
     void bootstrap();
 
-    const listener = supabase?.auth.onAuthStateChange((_event, session) => {
+    const listener = supabase?.auth.onAuthStateChange((event, session) => {
       if (!isMounted) {
         return;
       }
 
-      if (!session) {
+      if (event === "SIGNED_OUT") {
         setLoadState({ status: "anonymous" });
         return;
       }
 
-      void loadAdminSession();
+      if (event === "SIGNED_IN" && session) {
+        void loadAdminSession();
+      }
     });
 
     return () => {
       isMounted = false;
       listener?.data.subscription.unsubscribe();
     };
-  }, []);
+  }, [sessionRetryKey]);
 
   async function refreshAdminData(clientId = selectedClient?.id) {
     setIsAdminDataLoading(true);
@@ -1031,6 +1054,9 @@ export function AdminConsolePage() {
         <LockKeyhole aria-hidden="true" />
         <h1>Accès refusé</h1>
         <p>{loadState.message}</p>
+        <button type="button" onClick={() => setSessionRetryKey((current) => current + 1)}>
+          Réessayer
+        </button>
         <button type="button" onClick={handleLogout}>
           Changer de compte
         </button>
