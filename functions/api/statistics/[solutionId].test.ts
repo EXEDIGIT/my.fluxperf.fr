@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { onRequestGet } from "./[solutionId]";
+import {
+  fetchGa4Statistics,
+  Ga4PropertyAccessError,
+  statisticsPeriod
+} from "../../lib/googleAnalytics";
 import { readGoogleWorkbookValues } from "../../lib/googleSheets";
 import type { PagesContext } from "../../lib/types";
 
@@ -9,6 +14,15 @@ vi.mock("../../lib/googleSheets", async () => {
   return {
     ...actual,
     readGoogleWorkbookValues: vi.fn()
+  };
+});
+
+vi.mock("../../lib/googleAnalytics", async () => {
+  const actual = await vi.importActual<typeof import("../../lib/googleAnalytics")>("../../lib/googleAnalytics");
+
+  return {
+    ...actual,
+    fetchGa4Statistics: vi.fn()
   };
 });
 
@@ -106,6 +120,38 @@ describe("GET /api/statistics/:solutionId", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(readGoogleWorkbookValues).mockResolvedValue(baseWorkbook);
+    vi.mocked(fetchGa4Statistics).mockImplementation(async (_env, _propertyId, solution, periodId) => ({
+      status: "ready",
+      provider: "ga4",
+      generatedAt: "2026-09-01T10:00:00.000Z",
+      period: statisticsPeriod(periodId),
+      solution: {
+        id: solution.id,
+        name: solution.name || solution.typeLabel,
+        domain: solution.domain
+      },
+      overview: {
+        visits: 0,
+        uniqueVisitors: 0,
+        averageVisitDurationSeconds: 0,
+        topEvents: [],
+        countries: [],
+        cities: [],
+        topPages: []
+      },
+      timeline: {
+        granularity: "day",
+        points: []
+      },
+      acquisition: {
+        channels: [],
+        sources: []
+      },
+      behavior: {
+        pages: [],
+        events: []
+      }
+    }));
   });
 
   it("rejects an invalid period", async () => {
@@ -138,7 +184,7 @@ describe("GET /api/statistics/:solutionId", () => {
     });
   });
 
-  it("returns ready demo statistics in local mode for a configured solution", async () => {
+  it("returns ready GA4 statistics for a configured solution", async () => {
     const response = await onRequestGet(context("SOL-GA4"));
     const body = await bodyOf(response);
 
@@ -154,6 +200,31 @@ describe("GET /api/statistics/:solutionId", () => {
       }
     });
     expect(JSON.stringify(body)).not.toContain("123456789");
+  });
+
+  it("returns a pending setup state when GA4 access is missing", async () => {
+    vi.mocked(fetchGa4Statistics).mockRejectedValueOnce(
+      new Ga4PropertyAccessError("User does not have sufficient permissions for this property.")
+    );
+    const warningSpy = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+    const response = await onRequestGet(context("SOL-GA4"));
+    const body = await bodyOf(response);
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      status: "pending_setup",
+      provider: "ga4",
+      solution: {
+        id: "SOL-GA4",
+        domain: "example.com"
+      }
+    });
+    expect(warningSpy).toHaveBeenCalledWith(
+      "ga4_statistics_setup_required",
+      expect.objectContaining({ solutionId: "SOL-GA4" })
+    );
+    warningSpy.mockRestore();
   });
 
   it("returns Google Ads statistics without exposing the customer id", async () => {

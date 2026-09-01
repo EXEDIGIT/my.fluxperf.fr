@@ -2,6 +2,7 @@ import { getAuthenticatedEmail } from "../../lib/auth";
 import { findClientForEmailInWorkbook, getStatisticsSourceForClientSolution } from "../../lib/clients";
 import {
   fetchGa4Statistics,
+  isGa4PropertyAccessError,
   isStatisticsPeriod,
   statisticsPeriod,
   type StatisticsReadyResponse
@@ -67,6 +68,23 @@ function cachedJson(data: unknown): Response {
   });
 }
 
+function pendingSetupResponse(
+  provider: "ga4" | "google_ads",
+  solution: { id: string; name: string; typeLabel: string; domain: string },
+  periodId: Parameters<typeof statisticsPeriod>[0]
+): Response {
+  return json({
+    status: "pending_setup",
+    provider,
+    period: statisticsPeriod(periodId),
+    solution: {
+      id: solution.id,
+      name: solution.name || solution.typeLabel,
+      domain: solution.domain
+    }
+  });
+}
+
 export async function onRequestGet(context: PagesContext): Promise<Response> {
   const email = await getAuthenticatedEmail(context.request, context.env);
 
@@ -104,16 +122,11 @@ export async function onRequestGet(context: PagesContext): Promise<Response> {
     }
 
     if (source.status === "pending_setup") {
-      return json({
-        status: "pending_setup",
-        provider: source.provider,
-        period: statisticsPeriod(periodId),
-        solution: {
-          id: source.solution.id,
-          name: source.solution.name || source.solution.typeLabel,
-          domain: source.solution.domain
-        }
-      });
+      return pendingSetupResponse(
+        source.provider === "google_ads" ? "google_ads" : "ga4",
+        source.solution,
+        periodId
+      );
     }
 
     if (source.status !== "available") {
@@ -128,15 +141,30 @@ export async function onRequestGet(context: PagesContext): Promise<Response> {
       return cached;
     }
 
-    const statistics =
-      source.provider === "google_ads"
-        ? await fetchGoogleAdsStatistics(
-            context.env,
-            source.googleAdsCustomerId,
-            source.solution,
-            periodId
-          )
-        : await fetchGa4Statistics(context.env, source.ga4PropertyId, source.solution, periodId);
+    let statistics: StatisticsApiReadyResponse;
+
+    try {
+      statistics =
+        source.provider === "google_ads"
+          ? await fetchGoogleAdsStatistics(
+              context.env,
+              source.googleAdsCustomerId,
+              source.solution,
+              periodId
+            )
+          : await fetchGa4Statistics(context.env, source.ga4PropertyId, source.solution, periodId);
+    } catch (error) {
+      if (source.provider === "ga4" && isGa4PropertyAccessError(error)) {
+        console.warn("ga4_statistics_setup_required", {
+          solutionId: source.solution.id,
+          message: error.message
+        });
+
+        return pendingSetupResponse("ga4", source.solution, periodId);
+      }
+
+      throw error;
+    }
     const response = cachedJson(statistics satisfies StatisticsApiReadyResponse);
 
     await cache?.put(key, response.clone());

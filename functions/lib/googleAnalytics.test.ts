@@ -6,7 +6,9 @@ import {
   countryPresentation,
   eventLabel,
   fetchGa4Statistics,
+  Ga4PropertyAccessError,
   isHiddenGa4Event,
+  isGa4PropertyAccessError,
   isStatisticsPeriod,
   pageLabel,
   sourcePresentation,
@@ -33,6 +35,50 @@ describe("google analytics statistics helpers", () => {
       startDate: "365daysAgo",
       endDate: "yesterday"
     });
+  });
+
+  it("identifies a missing GA4 property permission", async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          error: {
+            message: "User does not have sufficient permissions for this property."
+          }
+        }),
+        { status: 403, headers: { "Content-Type": "application/json" } }
+      )
+    );
+
+    try {
+      await fetchGa4Statistics(
+        {
+          APP_ENV: "production",
+          GOOGLE_SERVICE_ACCOUNT_EMAIL: "analytics@example.com",
+          GOOGLE_PRIVATE_KEY: "private-key"
+        },
+        "123456789",
+        {
+          id: "SOL-1",
+          type: "visibility_acquisition",
+          typeLabel: "Flux Visibilité & Acquisition",
+          status: "Actif",
+          name: "Site web",
+          domain: "example.com",
+          url: "https://example.com",
+          activatedAt: "",
+          thumbnail: { kind: "website", endpoint: null, placeholderKey: "visibility_acquisition" },
+          statistics: { status: "available", provider: "ga4" }
+        },
+        "30d",
+        fetcher
+      );
+    } catch (error) {
+      expect(error).toBeInstanceOf(Ga4PropertyAccessError);
+      expect(isGa4PropertyAccessError(error)).toBe(true);
+      return;
+    }
+
+    throw new Error("The GA4 permission error should be propagated.");
   });
 
   it("groups GA4 channel labels into client-friendly acquisition families", () => {

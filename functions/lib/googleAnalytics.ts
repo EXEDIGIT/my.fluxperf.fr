@@ -103,6 +103,17 @@ type GaBatchResponse = {
   };
 };
 
+export class Ga4PropertyAccessError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "Ga4PropertyAccessError";
+  }
+}
+
+export function isGa4PropertyAccessError(error: unknown): error is Ga4PropertyAccessError {
+  return error instanceof Ga4PropertyAccessError;
+}
+
 type BatchReportRequest = {
   dateRanges: Array<{
     startDate: string;
@@ -281,7 +292,13 @@ async function batchRunReports(
   const data = (await response.json()) as GaBatchResponse;
 
   if (!response.ok) {
-    throw new Error(data.error?.message || "Unable to read GA4 statistics.");
+    const message = data.error?.message || "Unable to read GA4 statistics.";
+
+    if (response.status === 403) {
+      throw new Ga4PropertyAccessError(message);
+    }
+
+    throw new Error(message);
   }
 
   return data.reports ?? [];
