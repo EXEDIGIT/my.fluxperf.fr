@@ -22,6 +22,7 @@ export type AdminClientInput = {
   email: string;
   notes: string;
   notifyClient: boolean;
+  contacts: AdminContactInput[];
   solutions: Array<{
     type: AdminSolutionType;
     name: string;
@@ -31,6 +32,17 @@ export type AdminClientInput = {
   }>;
 };
 
+export type AdminContactInput = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+  isPrimary: boolean;
+  sendAccessEmail: boolean;
+};
+
+export type AdminAdditionalContactInput = Omit<AdminContactInput, "isPrimary">;
+
 export type AdminClientSolutionInput = AdminClientInput["solutions"][number];
 
 export type BuiltAdminClientRows = {
@@ -38,6 +50,8 @@ export type BuiltAdminClientRows = {
   contactId: string;
   clientRow: string[];
   contactRow: string[];
+  contactRows: string[][];
+  contactIds: string[];
   solutionRows: string[][];
 };
 
@@ -172,6 +186,108 @@ function buildId(prefix: string, now: Date): string {
   return `${prefix}-${formatCompactFrenchDate(now)}-${randomSuffix()}`;
 }
 
+function contactRole(contact: Pick<AdminContactInput, "isPrimary" | "role">): string {
+  return contact.role || (contact.isPrimary ? "Contact principal" : "Utilisateur");
+}
+
+function contactsFromPayload(payload: Record<string, unknown>, notifyClient: boolean): AdminContactInput[] | string {
+  const rawContacts = payload.contacts;
+
+  if (!Array.isArray(rawContacts)) {
+    return [
+      {
+        firstName: asText(payload.contactFirstName),
+        lastName: asText(payload.contactLastName),
+        email: normalizeEmail(asText(payload.email)),
+        role: "Contact principal",
+        isPrimary: true,
+        sendAccessEmail: notifyClient
+      }
+    ];
+  }
+
+  if (rawContacts.length === 0) {
+    return "Ajoutez au moins un utilisateur pour cette organisation.";
+  }
+
+  const contacts = rawContacts.map((value): AdminContactInput | string => {
+    if (!isRecord(value)) {
+      return "Un utilisateur est invalide.";
+    }
+
+    return {
+      firstName: asText(value.firstName) || asText(value.prenom),
+      lastName: asText(value.lastName) || asText(value.nom),
+      email: normalizeEmail(asText(value.email)),
+      role: asText(value.role) || asText(value.fonction),
+      isPrimary: value.isPrimary === true,
+      sendAccessEmail: value.sendAccessEmail === true || value.notifyClient === true
+    };
+  });
+  const error = contacts.find((value): value is string => typeof value === "string");
+
+  if (error) {
+    return error;
+  }
+
+  return contacts as AdminContactInput[];
+}
+
+export function validateAdminAdditionalContactInput(payload: unknown): AdminAdditionalContactInput | string {
+  if (!isRecord(payload)) {
+    return "La demande est invalide.";
+  }
+
+  const firstName = asText(payload.firstName) || asText(payload.prenom);
+  const lastName = asText(payload.lastName) || asText(payload.nom);
+  const email = normalizeEmail(asText(payload.email));
+  const role = asText(payload.role) || asText(payload.fonction);
+
+  if (!firstName && !lastName) {
+    return "Renseignez au moins le prénom ou le nom de l'utilisateur.";
+  }
+
+  if (!isValidEmail(email)) {
+    return "Renseignez une adresse email valide.";
+  }
+
+  return {
+    firstName,
+    lastName,
+    email,
+    role,
+    sendAccessEmail: payload.sendAccessEmail === true || payload.notifyClient === true
+  };
+}
+
+function validateContacts(contacts: AdminContactInput[]): string | null {
+  const primaryContacts = contacts.filter((contact) => contact.isPrimary);
+
+  if (primaryContacts.length !== 1) {
+    return "Un unique contact principal est requis.";
+  }
+
+  const seenEmails = new Set<string>();
+
+  for (const contact of contacts) {
+    if (!contact.firstName && !contact.lastName) {
+      return "Renseignez au moins le prénom ou le nom de chaque utilisateur.";
+    }
+
+    if (!isValidEmail(contact.email)) {
+      return "Renseignez une adresse email valide pour chaque utilisateur.";
+    }
+
+    if (seenEmails.has(contact.email)) {
+      return "Une même adresse email ne peut être ajoutée qu'une fois.";
+    }
+
+    seenEmails.add(contact.email);
+  }
+
+  return null;
+}
+
 export function validateAdminClientInput(
   payload: unknown,
   solutionOptions: AdminSolutionOption[] = fallbackAdminSolutionOptions
@@ -181,23 +297,25 @@ export function validateAdminClientInput(
   }
 
   const companyName = asText(payload.companyName);
-  const contactFirstName = asText(payload.contactFirstName);
-  const contactLastName = asText(payload.contactLastName);
-  const email = normalizeEmail(asText(payload.email));
   const notes = asText(payload.notes);
   const notifyClient = payload.notifyClient !== false;
+  const contacts = contactsFromPayload(payload, notifyClient);
 
   if (companyName.length < 2) {
     return "Renseignez le nom de l'organisation.";
   }
 
-  if (!contactFirstName && !contactLastName) {
-    return "Renseignez au moins le prénom ou le nom du contact.";
+  if (typeof contacts === "string") {
+    return contacts;
   }
 
-  if (!isValidEmail(email)) {
-    return "Renseignez une adresse email valide.";
+  const contactsError = validateContacts(contacts);
+
+  if (contactsError) {
+    return contactsError;
   }
+
+  const primaryContact = contacts.find((contact) => contact.isPrimary) as AdminContactInput;
 
   if (!Array.isArray(payload.solutions) || payload.solutions.length === 0) {
     return "Sélectionnez au moins une solution Fluxperf.";
@@ -255,11 +373,12 @@ export function validateAdminClientInput(
 
   return {
     companyName,
-    contactFirstName,
-    contactLastName,
-    email,
+    contactFirstName: primaryContact.firstName,
+    contactLastName: primaryContact.lastName,
+    email: primaryContact.email,
     notes,
-    notifyClient,
+    notifyClient: primaryContact.sendAccessEmail,
+    contacts,
     solutions: solutions as AdminClientInput["solutions"]
   };
 }
@@ -274,6 +393,7 @@ export function validateAdminSolutionInput(
       contactFirstName: "Admin",
       contactLastName: "",
       email: "admin@example.com",
+      contacts: [{ firstName: "Admin", lastName: "", email: "admin@example.com", role: "Contact principal", isPrimary: true, sendAccessEmail: false }],
       solutions: [payload]
     },
     solutionOptions
@@ -287,7 +407,29 @@ export function validateAdminSolutionInput(
 }
 
 export function hasExistingClientEmail(workbook: ClientWorkbookValues, email: string): boolean {
-  return findClientForEmailInWorkbook(workbook, email).status !== "not_found";
+  return Boolean(findExistingClientIdForEmail(workbook, email));
+}
+
+export function findExistingClientIdForEmail(workbook: ClientWorkbookValues, email: string): string {
+  const normalizedEmail = normalizeEmail(email);
+
+  if (!normalizedEmail) {
+    return "";
+  }
+
+  const client = parseRows(workbook.clients).find(({ record }) =>
+    normalizeEmail(recordValue(record, "email_principal", "primary_email")) === normalizedEmail
+  );
+
+  if (client) {
+    return recordValue(client.record, "client_id", "id");
+  }
+
+  const contact = parseRows(workbook.contacts).find(({ record }) =>
+    normalizeEmail(recordValue(record, "email")) === normalizedEmail
+  );
+
+  return contact ? recordValue(contact.record, "client_id") : "";
 }
 
 export function getAdminClientQualityWarnings(
@@ -366,8 +508,21 @@ export function getAdminClientQualityWarnings(
 export function buildAdminClientRows(input: AdminClientInput, now = new Date()): BuiltAdminClientRows {
   const date = formatFrenchDate(now);
   const clientId = buildId("CLI", now);
-  const contactId = buildId("CON", now);
-  const contactName = compactName(input.contactFirstName, input.contactLastName);
+  const contacts = input.contacts.length > 0
+    ? input.contacts
+    : [{
+        firstName: input.contactFirstName,
+        lastName: input.contactLastName,
+        email: input.email,
+        role: "Contact principal",
+        isPrimary: true,
+        sendAccessEmail: input.notifyClient
+      }];
+  const primaryIndex = contacts.findIndex((contact) => contact.isPrimary);
+  const primaryContact = contacts[primaryIndex] ?? contacts[0];
+  const contactIds = contacts.map(() => buildId("CON", now));
+  const contactId = contactIds[primaryIndex >= 0 ? primaryIndex : 0];
+  const contactName = compactName(primaryContact.firstName, primaryContact.lastName);
   const clientRow = [
     clientId,
     contactName || input.companyName,
@@ -375,24 +530,25 @@ export function buildAdminClientRows(input: AdminClientInput, now = new Date()):
     "Actif",
     "Oui",
     contactId,
-    input.email,
+    primaryContact.email,
     String(input.solutions.length),
     date,
     date,
     input.notes
   ];
-  const contactRow = [
-    contactId,
+  const contactRows = contacts.map((contact, index) => [
+    contactIds[index],
     clientId,
-    input.contactFirstName,
-    input.contactLastName,
-    input.email,
-    "Contact principal",
-    "Oui",
+    contact.firstName,
+    contact.lastName,
+    contact.email,
+    contactRole(contact),
+    contact.isPrimary ? "Oui" : "Non",
     "Actif",
     date,
     "Créé depuis la zone interne"
-  ];
+  ]);
+  const contactRow = contactRows[primaryIndex >= 0 ? primaryIndex : 0];
   const solutionRows = input.solutions.map((solution) => buildAdminSolutionRow(clientId, solution, now));
 
   return {
@@ -400,7 +556,33 @@ export function buildAdminClientRows(input: AdminClientInput, now = new Date()):
     contactId,
     clientRow,
     contactRow,
+    contactRows,
+    contactIds,
     solutionRows
+  };
+}
+
+export function buildAdminAdditionalContactRow(
+  clientId: string,
+  input: AdminAdditionalContactInput,
+  now = new Date()
+): { contactId: string; contactRow: string[] } {
+  const contactId = buildId("CON", now);
+
+  return {
+    contactId,
+    contactRow: [
+      contactId,
+      clientId,
+      input.firstName,
+      input.lastName,
+      input.email,
+      contactRole({ ...input, isPrimary: false }),
+      "Non",
+      "Actif",
+      formatFrenchDate(now),
+      "Ajouté depuis la zone interne"
+    ]
   };
 }
 
@@ -439,16 +621,16 @@ function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
-export async function sendClientWelcomeEmail(
+export async function sendContactWelcomeEmail(
   env: AppEnv,
   request: Request,
-  input: AdminClientInput,
+  input: { companyName: string; contact: Pick<AdminContactInput, "firstName" | "lastName" | "email" | "sendAccessEmail"> },
   fetcher: Fetcher = fetch
 ): Promise<EmailResult> {
   const brevoApiKey = env.BREVO_API_KEY?.trim();
-  const email = input.email;
+  const email = input.contact.email;
 
-  if (!input.notifyClient) {
+  if (!input.contact.sendAccessEmail) {
     return {
       status: "skipped",
       email,
@@ -469,7 +651,7 @@ export async function sendClientWelcomeEmail(
   }
 
   const accessUrl = portalUrl(env, request);
-  const name = compactName(input.contactFirstName, input.contactLastName) || input.companyName;
+  const name = compactName(input.contact.firstName, input.contact.lastName) || input.companyName;
   const htmlContent = [
     `<p>Bonjour ${escapeHtml(name)},</p>`,
     `<p>Votre espace client MyFluxperf est prêt pour ${escapeHtml(input.companyName)}.</p>`,
@@ -519,4 +701,20 @@ export async function sendClientWelcomeEmail(
     status: "sent",
     email
   };
+}
+
+export async function sendClientWelcomeEmail(
+  env: AppEnv,
+  request: Request,
+  input: AdminClientInput,
+  fetcher: Fetcher = fetch
+): Promise<EmailResult> {
+  const contact = input.contacts.find((item) => item.isPrimary) ?? {
+    firstName: input.contactFirstName,
+    lastName: input.contactLastName,
+    email: input.email,
+    sendAccessEmail: input.notifyClient
+  };
+
+  return sendContactWelcomeEmail(env, request, { companyName: input.companyName, contact }, fetcher);
 }

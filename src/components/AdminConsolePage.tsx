@@ -23,10 +23,12 @@ import {
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ApiError } from "../lib/api";
 import {
+  addAdminClientContact,
   addAdminClientSolution,
   checkAdminClientQuality,
   createAdminClient,
   deactivateAdminClient,
+  deactivateAdminClientContact,
   deactivateAdminClientSolution,
   getAdminClient,
   getAdminClients,
@@ -34,14 +36,17 @@ import {
   getAdminOptions,
   getAdminSession,
   reactivateAdminClient,
-  sendAdminClientWelcomeEmail,
+  reactivateAdminClientContact,
   reactivateAdminClientSolution,
+  sendAdminClientContactWelcomeEmail,
   updateAdminClientSolution
 } from "../lib/adminApi";
 import { fallbackSolutionOptions } from "../lib/solutionCatalog";
 import { getSupabaseClient, hasSupabaseConfig } from "../lib/supabase";
 import type {
   AdminClientDetail,
+  AdminClientContactInput,
+  AdminAddClientContactInput,
   AdminClientSolutionInput,
   AdminClientQualityWarning,
   AdminClientSummary,
@@ -74,6 +79,10 @@ type SolutionDraft = {
 
 type SolutionDraftsByType = Record<AdminSolutionType, SolutionDraft[]>;
 
+type ContactDraft = AdminClientContactInput & {
+  id: string;
+};
+
 type EditingClientSolution = AdminClientSolutionInput & {
   id: string;
 };
@@ -99,6 +108,18 @@ function createSolutionDraft(option: AdminSolutionOption): SolutionDraft {
     urlOrIndication: "",
     ga4PropertyId: "",
     googleAdsCustomerId: ""
+  };
+}
+
+function createContactDraft(isPrimary = false): ContactDraft {
+  return {
+    id: `contact-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+    firstName: "",
+    lastName: "",
+    email: "",
+    role: isPrimary ? "Contact principal" : "",
+    isPrimary,
+    sendAccessEmail: false
   };
 }
 
@@ -332,11 +353,16 @@ export function AdminConsolePage() {
   const [loadState, setLoadState] = useState<LoadState>({ status: "loading" });
   const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
   const [companyName, setCompanyName] = useState("");
-  const [contactFirstName, setContactFirstName] = useState("");
-  const [contactLastName, setContactLastName] = useState("");
-  const [email, setEmail] = useState("");
+  const [contacts, setContacts] = useState<ContactDraft[]>(() => [createContactDraft(true)]);
   const [notes, setNotes] = useState("");
-  const [notifyClient, setNotifyClient] = useState(true);
+  const [isAddingClientContact, setIsAddingClientContact] = useState(false);
+  const [newClientContact, setNewClientContact] = useState<AdminAddClientContactInput>({
+    firstName: "",
+    lastName: "",
+    email: "",
+    role: "",
+    sendAccessEmail: false
+  });
   const [solutionOptions, setSolutionOptions] = useState<AdminSolutionOption[]>(fallbackSolutionOptions);
   const [solutions, setSolutions] = useState(emptySolutions);
   const [dashboard, setDashboard] = useState<AdminDashboard | null>(null);
@@ -595,8 +621,8 @@ export function AdminConsolePage() {
     }
   }
 
-  async function handleSendWelcomeEmail(client: AdminClientDetail) {
-    if (!window.confirm(`Renvoyer l'email d'ouverture a ${client.email} ?`)) {
+  async function handleSendContactWelcomeEmail(contact: AdminClientDetail["contacts"][number]) {
+    if (!selectedClient || !window.confirm(`Envoyer l'email d'ouverture à ${contact.email} ?`)) {
       return;
     }
 
@@ -605,16 +631,84 @@ export function AdminConsolePage() {
     setIsClientActionPending(true);
 
     try {
-      const result = await sendAdminClientWelcomeEmail(client.id);
+      const result = await sendAdminClientContactWelcomeEmail(selectedClient.id, contact.id);
 
       setClientMessage(
         result.status === "sent"
           ? `Email d'ouverture envoye a ${result.notification.email}.`
           : "L'email d'ouverture n'a pas ete envoye."
       );
-      await refreshAdminData(client.id);
+      await refreshAdminData(selectedClient.id);
     } catch (error) {
       setClientError(error instanceof ApiError ? error.message : "L'email d'ouverture n'a pas pu etre envoye.");
+    } finally {
+      setIsClientActionPending(false);
+    }
+  }
+
+  async function handleAddClientContact(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedClient) {
+      return;
+    }
+
+    setClientError(null);
+    setClientMessage(null);
+    setIsClientActionPending(true);
+
+    try {
+      const result = await addAdminClientContact(selectedClient.id, newClientContact);
+      setClientMessage(
+        result.notification?.status === "sent"
+          ? `Utilisateur ajouté et email envoyé à ${newClientContact.email}.`
+          : "Utilisateur ajouté sans email d'accès."
+      );
+      setNewClientContact({ firstName: "", lastName: "", email: "", role: "", sendAccessEmail: false });
+      setIsAddingClientContact(false);
+      await refreshAdminData(selectedClient.id);
+    } catch (error) {
+      setClientError(error instanceof ApiError ? error.message : "L'utilisateur n'a pas pu être ajouté.");
+    } finally {
+      setIsClientActionPending(false);
+    }
+  }
+
+  async function handleDeactivateClientContact(contact: AdminClientDetail["contacts"][number]) {
+    if (!selectedClient || !window.confirm(`Désactiver l'accès de ${contact.email} ?`)) {
+      return;
+    }
+
+    setClientError(null);
+    setClientMessage(null);
+    setIsClientActionPending(true);
+
+    try {
+      await deactivateAdminClientContact(selectedClient.id, contact.id);
+      setClientMessage("Accès utilisateur désactivé.");
+      await refreshAdminData(selectedClient.id);
+    } catch (error) {
+      setClientError(error instanceof ApiError ? error.message : "L'accès de l'utilisateur n'a pas pu être désactivé.");
+    } finally {
+      setIsClientActionPending(false);
+    }
+  }
+
+  async function handleReactivateClientContact(contact: AdminClientDetail["contacts"][number]) {
+    if (!selectedClient || !window.confirm(`Réactiver l'accès de ${contact.email} ?`)) {
+      return;
+    }
+
+    setClientError(null);
+    setClientMessage(null);
+    setIsClientActionPending(true);
+
+    try {
+      await reactivateAdminClientContact(selectedClient.id, contact.id);
+      setClientMessage("Accès utilisateur réactivé.");
+      await refreshAdminData(selectedClient.id);
+    } catch (error) {
+      setClientError(error instanceof ApiError ? error.message : "L'accès de l'utilisateur n'a pas pu être réactivé.");
     } finally {
       setIsClientActionPending(false);
     }
@@ -799,13 +893,22 @@ export function AdminConsolePage() {
     }));
   }
 
+  function addContact() {
+    setContacts((current) => [...current, createContactDraft(false)]);
+  }
+
+  function updateContact(id: string, values: Partial<ContactDraft>) {
+    setContacts((current) => current.map((contact) => (contact.id === id ? { ...contact, ...values } : contact)));
+  }
+
+  function removeContact(id: string) {
+    setContacts((current) => current.filter((contact) => contact.id !== id || contact.isPrimary));
+  }
+
   function resetForm() {
     setCompanyName("");
-    setContactFirstName("");
-    setContactLastName("");
-    setEmail("");
+    setContacts([createContactDraft(true)]);
     setNotes("");
-    setNotifyClient(true);
     setSolutions(emptySolutions(solutionOptions));
     setCreationWarnings([]);
   }
@@ -834,11 +937,8 @@ export function AdminConsolePage() {
 
     return {
       companyName,
-      contactFirstName,
-      contactLastName,
-      email,
       notes,
-      notifyClient,
+      contacts: contacts.map(({ id: _id, ...contact }) => contact),
       solutions: selectedSolutions
     };
   }
@@ -1215,10 +1315,6 @@ export function AdminConsolePage() {
                       <Ban aria-hidden="true" />
                       Désactiver le client
                     </button>
-                    <button type="button" disabled={isClientActionPending} onClick={() => handleSendWelcomeEmail(selectedClient)}>
-                      <Mail aria-hidden="true" />
-                      Renvoyer l'email
-                    </button>
                   </>
                 ) : (
                   <button type="button" disabled={isClientActionPending} onClick={() => handleReactivateClient(selectedClient)}>
@@ -1230,22 +1326,86 @@ export function AdminConsolePage() {
 
               <div className="admin-detail-sections">
                 <section className="admin-detail-section">
-                  <h3>Contacts</h3>
+                  <div className="admin-section-title-row">
+                    <h3>Utilisateurs</h3>
+                    <button
+                      type="button"
+                      className="admin-inline-action"
+                      disabled={isClientActionPending}
+                      onClick={() => setIsAddingClientContact((current) => !current)}
+                    >
+                      <UserPlus aria-hidden="true" />
+                      Ajouter un utilisateur
+                    </button>
+                  </div>
                   {selectedClient.contacts.length > 0 ? (
                     <div className="admin-contact-list">
                       {selectedClient.contacts.map((contact) => (
                         <div key={contact.id || contact.email}>
                           <span>
                             <strong>{[contact.firstName, contact.lastName].filter(Boolean).join(" ") || contact.email}</strong>
-                            <small>{contact.email}</small>
+                            <small>{[contact.email, contact.role || "Utilisateur"].filter(Boolean).join(" · ")}</small>
                           </span>
-                          <em>{contact.isPrimary ? "Principal" : contact.role || contact.status}</em>
+                          <div className="admin-contact-meta">
+                            <em className={contact.isPrimary ? "is-primary" : contact.status.trim().toLowerCase() === "actif" ? "is-active" : "is-inactive"}>
+                              {contact.isPrimary ? "Principal" : contact.status}
+                            </em>
+                            {clientAccessIsActive(selectedClient) && contact.status.trim().toLowerCase() === "actif" ? (
+                              <button type="button" disabled={isClientActionPending} onClick={() => handleSendContactWelcomeEmail(contact)}>
+                                <Mail aria-hidden="true" />
+                                Email d'accès
+                              </button>
+                            ) : null}
+                            {!contact.isPrimary && contact.status.trim().toLowerCase() === "actif" ? (
+                              <button type="button" disabled={isClientActionPending} onClick={() => handleDeactivateClientContact(contact)}>
+                                <Ban aria-hidden="true" />
+                                Désactiver
+                              </button>
+                            ) : null}
+                            {!contact.isPrimary && contact.status.trim().toLowerCase() !== "actif" ? (
+                              <button type="button" disabled={isClientActionPending} onClick={() => handleReactivateClientContact(contact)}>
+                                <RotateCcw aria-hidden="true" />
+                                Réactiver
+                              </button>
+                            ) : null}
+                          </div>
                         </div>
                       ))}
                     </div>
                   ) : (
                     <p className="admin-empty-copy">Aucun contact enregistré.</p>
                   )}
+                  {isAddingClientContact ? (
+                    <form className="admin-contact-add-form" onSubmit={handleAddClientContact}>
+                      <label>
+                        Prénom
+                        <input value={newClientContact.firstName} onChange={(event) => setNewClientContact((current) => ({ ...current, firstName: event.target.value }))} />
+                      </label>
+                      <label>
+                        Nom
+                        <input value={newClientContact.lastName} onChange={(event) => setNewClientContact((current) => ({ ...current, lastName: event.target.value }))} />
+                      </label>
+                      <label>
+                        Email
+                        <input type="email" required value={newClientContact.email} onChange={(event) => setNewClientContact((current) => ({ ...current, email: event.target.value }))} />
+                      </label>
+                      <label>
+                        Fonction
+                        <input value={newClientContact.role} onChange={(event) => setNewClientContact((current) => ({ ...current, role: event.target.value }))} />
+                      </label>
+                      <label className="admin-checkbox-row admin-contact-email-choice">
+                        <input type="checkbox" checked={newClientContact.sendAccessEmail} onChange={(event) => setNewClientContact((current) => ({ ...current, sendAccessEmail: event.target.checked }))} />
+                        <span>
+                          <strong>Envoyer l'email d'accès</strong>
+                          <small>Décochez pour créer l'accès sans communication.</small>
+                        </span>
+                      </label>
+                      <div className="admin-contact-form-actions">
+                        <button type="submit" disabled={isClientActionPending}>Ajouter</button>
+                        <button type="button" disabled={isClientActionPending} onClick={() => setIsAddingClientContact(false)}>Annuler</button>
+                      </div>
+                    </form>
+                  ) : null}
                 </section>
                 <section className="admin-detail-section">
                   <h3>Notes internes</h3>
@@ -1560,27 +1720,59 @@ export function AdminConsolePage() {
               Organisation
               <input value={companyName} onChange={(event) => setCompanyName(event.target.value)} required />
             </label>
-            <label>
-              Email principal
-              <input
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                required
-              />
-            </label>
-            <label>
-              Prénom contact
-              <input
-                value={contactFirstName}
-                onChange={(event) => setContactFirstName(event.target.value)}
-              />
-            </label>
-            <label>
-              Nom contact
-              <input value={contactLastName} onChange={(event) => setContactLastName(event.target.value)} />
-            </label>
           </div>
+
+          <section className="admin-contact-editor" aria-labelledby="admin-users-title">
+            <div className="admin-section-title-row">
+              <div>
+                <h3 id="admin-users-title">Utilisateurs de l'organisation</h3>
+                <p>Le contact principal est requis. Ajoutez les autres personnes qui doivent accéder au portail.</p>
+              </div>
+            </div>
+            <div className="admin-contact-drafts">
+              {contacts.map((contact, index) => (
+                <article className={contact.isPrimary ? "admin-contact-draft is-primary" : "admin-contact-draft"} key={contact.id}>
+                  <div className="admin-contact-draft-heading">
+                    <strong>{contact.isPrimary ? "Contact principal" : `Utilisateur ${index + 1}`}</strong>
+                    {!contact.isPrimary ? (
+                      <button type="button" aria-label="Retirer cet utilisateur" onClick={() => removeContact(contact.id)}>
+                        <X aria-hidden="true" />
+                      </button>
+                    ) : null}
+                  </div>
+                  <div className="admin-form-grid">
+                    <label>
+                      Prénom
+                      <input value={contact.firstName} onChange={(event) => updateContact(contact.id, { firstName: event.target.value })} />
+                    </label>
+                    <label>
+                      Nom
+                      <input value={contact.lastName} onChange={(event) => updateContact(contact.id, { lastName: event.target.value })} />
+                    </label>
+                    <label>
+                      Email
+                      <input type="email" required value={contact.email} onChange={(event) => updateContact(contact.id, { email: event.target.value })} />
+                    </label>
+                    <label>
+                      Fonction
+                      <input value={contact.role} placeholder={contact.isPrimary ? "Contact principal" : "Ex. Direction, marketing"} onChange={(event) => updateContact(contact.id, { role: event.target.value })} />
+                    </label>
+                  </div>
+                  <label className="admin-checkbox-row">
+                    <input type="checkbox" checked={contact.sendAccessEmail} onChange={(event) => updateContact(contact.id, { sendAccessEmail: event.target.checked })} />
+                    <span>
+                      <strong>Envoyer l'email d'accès</strong>
+                      <small>Facultatif : l'accès est créé même sans communication.</small>
+                    </span>
+                  </label>
+                </article>
+              ))}
+            </div>
+            <button className="admin-add-contact-button" type="button" onClick={addContact}>
+              <UserPlus aria-hidden="true" />
+              Ajouter un utilisateur
+            </button>
+          </section>
 
           <label className="admin-wide-field">
             Notes internes
@@ -1687,18 +1879,6 @@ export function AdminConsolePage() {
         </section>
 
         <section className="admin-submit-panel">
-          <label className="admin-checkbox-row">
-            <input
-              type="checkbox"
-              checked={notifyClient}
-              onChange={(event) => setNotifyClient(event.target.checked)}
-            />
-            <span>
-              <strong>Envoyer l'email d'ouverture d'accès</strong>
-              <small>Le client recevra l'adresse du portail et utilisera son email pour demander son lien.</small>
-            </span>
-          </label>
-
           {submitError ? (
             <div className="admin-message error" role="alert">
               {submitError}
@@ -1732,7 +1912,7 @@ export function AdminConsolePage() {
           {success ? (
             <div className="admin-message success" role="status">
               <CheckCircle2 aria-hidden="true" />
-              Client {success.client.companyName} créé : {success.client.id}. Supabase :{" "}
+              Client {success.client.companyName} créé : {success.client.id}. {success.contactsCreated ?? 1} utilisateur(s) créé(s). Supabase :{" "}
               {success.supabaseUser.status}. {notificationLabel(success.notification)}.
               {success.notification.reason ? ` ${success.notification.reason}` : ""}
             </div>

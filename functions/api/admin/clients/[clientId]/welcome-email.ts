@@ -45,6 +45,16 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
       email: client.email,
       notes: client.notes,
       notifyClient: true,
+      contacts: [
+        {
+          firstName: contact?.firstName ?? "",
+          lastName: contact?.lastName ?? "",
+          email: client.email,
+          role: contact?.role ?? "Contact principal",
+          isPrimary: true,
+          sendAccessEmail: true
+        }
+      ],
       solutions: []
     };
 

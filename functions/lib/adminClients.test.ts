@@ -37,6 +37,48 @@ describe("admin client helpers", () => {
     }
   });
 
+  it("creates one Contacts row per user while keeping the primary contact on the client", () => {
+    const input = validateAdminClientInput({
+      companyName: "Organisation multi-utilisateurs",
+      notes: "",
+      contacts: [
+        { firstName: "Camille", lastName: "Martin", email: "camille@example.com", role: "Direction", isPrimary: true, sendAccessEmail: false },
+        { firstName: "Louis", lastName: "Durand", email: "louis@example.com", role: "Marketing", isPrimary: false, sendAccessEmail: true }
+      ],
+      solutions: [{ type: "automation_ai", name: fallbackAdminSolutionOptions[1].defaultName, urlOrIndication: "" }]
+    });
+
+    expect(typeof input).toBe("object");
+    if (typeof input !== "string") {
+      const rows = buildAdminClientRows(input, new Date("2026-09-01T10:00:00.000Z"));
+
+      expect(input.email).toBe("camille@example.com");
+      expect(rows.contactRows).toHaveLength(2);
+      expect(rows.clientRow[5]).toBe(rows.contactIds[0]);
+      expect(rows.contactRows[0].slice(2, 8)).toEqual(["Camille", "Martin", "camille@example.com", "Direction", "Oui", "Actif"]);
+      expect(rows.contactRows[1].slice(2, 8)).toEqual(["Louis", "Durand", "louis@example.com", "Marketing", "Non", "Actif"]);
+    }
+  });
+
+  it("rejects missing or duplicate primary contacts and duplicate emails", () => {
+    const base = {
+      companyName: "Organisation",
+      solutions: [{ type: "automation_ai", name: fallbackAdminSolutionOptions[1].defaultName, urlOrIndication: "" }]
+    };
+
+    expect(validateAdminClientInput({
+      ...base,
+      contacts: [{ firstName: "Camille", lastName: "Martin", email: "camille@example.com", role: "", isPrimary: false, sendAccessEmail: false }]
+    })).toBe("Un unique contact principal est requis.");
+    expect(validateAdminClientInput({
+      ...base,
+      contacts: [
+        { firstName: "Camille", lastName: "Martin", email: "camille@example.com", role: "", isPrimary: true, sendAccessEmail: false },
+        { firstName: "Louis", lastName: "Durand", email: "CAMILLE@example.com", role: "", isPrimary: false, sendAccessEmail: false }
+      ]
+    })).toBe("Une même adresse email ne peut être ajoutée qu'une fois.");
+  });
+
   it("keeps a GA4 property id for visibility solutions only", () => {
     const input = validateAdminClientInput({
       companyName: "Stats Client",

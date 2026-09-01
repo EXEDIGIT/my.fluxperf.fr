@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { onRequestPost } from "./clients";
-import { sendClientWelcomeEmail } from "../../lib/adminClients";
+import { sendContactWelcomeEmail } from "../../lib/adminClients";
 import { fallbackAdminSolutionOptions } from "../../lib/adminOptions";
 import { appendGoogleSheetValues, readGoogleParametersValues, readGoogleWorkbookValues } from "../../lib/googleSheets";
 import { createSupabaseUserForClient } from "../../lib/supabaseAdmin";
@@ -34,10 +34,11 @@ vi.mock("../../lib/adminClients", async () => {
 
   return {
     ...actual,
-    sendClientWelcomeEmail: vi.fn(async (_env: unknown, _request: Request, input: { email: string }) => ({
-      status: "sent",
-      email: input.email
-    }))
+    sendContactWelcomeEmail: vi.fn(async (_env: unknown, _request: Request, input: { contact: { email: string; sendAccessEmail: boolean } }) => (
+      input.contact.sendAccessEmail
+        ? { status: "sent" as const, email: input.contact.email }
+        : { status: "skipped" as const, email: input.contact.email, reason: "Notification client désactivée." }
+    ))
   };
 });
 
@@ -80,7 +81,7 @@ const validPayload = {
 describe("POST /api/admin/clients", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(sendClientWelcomeEmail).mockResolvedValue({
+    vi.mocked(sendContactWelcomeEmail).mockResolvedValue({
       status: "sent",
       email: "client@example.com"
     });
@@ -144,8 +145,38 @@ describe("POST /api/admin/clients", () => {
     expect(solutionRows[1][6]).toBe("hbint.com");
   });
 
+  it("creates every declared user and emails only the selected recipients", async () => {
+    vi.mocked(sendContactWelcomeEmail).mockImplementation(async (_env, _request, input) => (
+      input.contact.sendAccessEmail
+        ? { status: "sent", email: input.contact.email }
+        : { status: "skipped", email: input.contact.email, reason: "Notification client désactivée." }
+    ));
+    const response = await onRequestPost(context({
+      companyName: "Client multi-utilisateurs",
+      notes: "",
+      contacts: [
+        { firstName: "Camille", lastName: "Martin", email: "camille@example.com", role: "Direction", isPrimary: true, sendAccessEmail: false },
+        { firstName: "Louis", lastName: "Durand", email: "louis@example.com", role: "Marketing", isPrimary: false, sendAccessEmail: true }
+      ],
+      solutions: [{ type: "automation_ai", name: fallbackAdminSolutionOptions[1].defaultName, urlOrIndication: "" }]
+    }));
+    const body = await responseBody(response);
+    const contactRows = vi.mocked(appendGoogleSheetValues).mock.calls[1][2] as string[][];
+
+    expect(response.status).toBe(201);
+    expect(body).toMatchObject({ contactsCreated: 2 });
+    expect(contactRows).toHaveLength(2);
+    expect(vi.mocked(createSupabaseUserForClient)).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(sendContactWelcomeEmail)).toHaveBeenCalledTimes(2);
+    expect(vi.mocked(sendContactWelcomeEmail)).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.anything(),
+      expect.objectContaining({ contact: expect.objectContaining({ email: "louis@example.com", sendAccessEmail: true }) })
+    );
+  });
+
   it("keeps the client creation successful when Brevo fails", async () => {
-    vi.mocked(sendClientWelcomeEmail).mockRejectedValue(new Error("Brevo sender rejected"));
+    vi.mocked(sendContactWelcomeEmail).mockRejectedValue(new Error("Brevo sender rejected"));
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
     const response = await onRequestPost(context(validPayload));
@@ -164,10 +195,10 @@ describe("POST /api/admin/clients", () => {
   });
 
   it("reports a skipped notification when the email is disabled", async () => {
-    vi.mocked(sendClientWelcomeEmail).mockResolvedValue({
+    vi.mocked(sendContactWelcomeEmail).mockResolvedValue({
       status: "skipped",
       email: "client@example.com",
-      reason: "Notification client desactivee."
+      reason: "Notification client désactivée."
     });
 
     const response = await onRequestPost(context({ ...validPayload, notifyClient: false }));
@@ -176,7 +207,7 @@ describe("POST /api/admin/clients", () => {
     expect(response.status).toBe(201);
     expect(body.notification).toMatchObject({
       status: "skipped",
-      reason: "Notification client desactivee."
+      reason: "Notification client désactivée."
     });
   });
 

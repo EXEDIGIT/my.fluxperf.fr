@@ -3705,6 +3705,162 @@ svg {
   font-weight: 700;
 }
 
+.admin-contact-list > div {
+  align-items: flex-start;
+}
+
+.admin-contact-meta {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.admin-contact-meta em {
+  align-self: center;
+}
+
+.admin-contact-meta em.is-inactive {
+  color: var(--muted);
+}
+
+.admin-contact-meta button,
+.admin-inline-action,
+.admin-contact-form-actions button,
+.admin-add-contact-button {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  padding: 0 11px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.admin-contact-meta button:hover,
+.admin-inline-action:hover,
+.admin-contact-form-actions button:hover,
+.admin-add-contact-button:hover {
+  border-color: rgba(0, 111, 120, 0.42);
+  background: var(--green-soft);
+}
+
+.admin-contact-add-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 4px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.admin-contact-add-form label {
+  display: grid;
+  gap: 6px;
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.admin-contact-add-form input {
+  min-height: 40px;
+  min-width: 0;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--ink);
+}
+
+.admin-contact-add-form .admin-contact-email-choice,
+.admin-contact-add-form .admin-contact-form-actions {
+  grid-column: 1 / -1;
+}
+
+.admin-contact-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.admin-contact-editor {
+  display: grid;
+  gap: 12px;
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.admin-contact-editor .admin-section-title-row {
+  align-items: start;
+}
+
+.admin-contact-editor h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.admin-contact-editor p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.admin-contact-drafts {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-contact-draft {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.admin-contact-draft.is-primary {
+  border-color: rgba(0, 111, 120, 0.34);
+  background: var(--green-soft);
+}
+
+.admin-contact-draft-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--ink);
+}
+
+.admin-contact-draft-heading button {
+  width: 32px;
+  height: 32px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  background: #fff;
+  color: var(--green);
+  cursor: pointer;
+}
+
+.admin-add-contact-button {
+  justify-self: start;
+  min-height: 40px;
+  padding-inline: 15px;
+  border-style: dashed;
+  color: var(--green);
+}
+
 .admin-notes,
 .admin-empty-copy {
   margin: 0;

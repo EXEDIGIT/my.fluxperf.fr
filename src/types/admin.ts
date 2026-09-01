@@ -8,11 +8,8 @@ export type AdminSessionResponse = {
 
 export type AdminCreateClientInput = {
   companyName: string;
-  contactFirstName: string;
-  contactLastName: string;
-  email: string;
   notes: string;
-  notifyClient: boolean;
+  contacts: AdminClientContactInput[];
   confirmWarnings?: boolean;
   solutions: Array<{
     type: AdminSolutionType;
@@ -22,6 +19,17 @@ export type AdminCreateClientInput = {
     googleAdsCustomerId: string;
   }>;
 };
+
+export type AdminClientContactInput = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+  isPrimary: boolean;
+  sendAccessEmail: boolean;
+};
+
+export type AdminAddClientContactInput = Omit<AdminClientContactInput, "isPrimary">;
 
 export type AdminClientSolutionInput = AdminCreateClientInput["solutions"][number];
 
@@ -175,9 +183,20 @@ export type AdminClientActionResponse = {
   status: "deactivated" | "created" | "reactivated" | "updated";
   clientId: string;
   solutionId?: string;
+  contactId?: string;
   activeSolutions?: number;
   auth?: {
     status: "banned" | "unbanned" | "not_found" | "skipped" | "failed";
+    email: string;
+    reason?: string;
+  };
+  authResults?: Array<{
+    status: "banned" | "unbanned" | "not_found" | "skipped" | "failed";
+    email: string;
+    reason?: string;
+  }>;
+  notification?: {
+    status: "sent" | "skipped" | "failed";
     email: string;
     reason?: string;
   };
@@ -203,6 +222,12 @@ export type AdminCreateClientResponse = {
     email: string;
     reason?: string;
   };
+  contactsCreated?: number;
+  supabaseUsers?: Array<{
+    status: "created" | "already_exists" | "skipped";
+    email: string;
+    reason?: string;
+  }>;
   notification: {
     status: "sent" | "skipped" | "failed";
     email: string;

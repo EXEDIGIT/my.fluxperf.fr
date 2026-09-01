@@ -84,6 +84,25 @@ describe("POST /api/admin/clients/:clientId/reactivate", () => {
     expect(vi.mocked(updateGoogleSheetValues)).toHaveBeenCalled();
   });
 
+  it("reactivates every active contact but leaves individually inactive users disabled", async () => {
+    vi.mocked(readGoogleWorkbookValues).mockResolvedValue({
+      ...inactiveWorkbook,
+      contacts: [
+        ["contact_id", "client_id", "email", "statut_contact"],
+        ["CON-1", "CLI-1", "alpha@example.com", "Actif"],
+        ["CON-2", "CLI-1", "louis@example.com", "Actif"],
+        ["CON-3", "CLI-1", "inactive@example.com", "Inactif"]
+      ]
+    });
+
+    const response = await onRequestPost(context());
+
+    expect(response.status).toBe(200);
+    expect(vi.mocked(unbanSupabaseUserForClient)).toHaveBeenCalledWith(expect.any(Object), "alpha@example.com");
+    expect(vi.mocked(unbanSupabaseUserForClient)).toHaveBeenCalledWith(expect.any(Object), "louis@example.com");
+    expect(vi.mocked(unbanSupabaseUserForClient)).not.toHaveBeenCalledWith(expect.any(Object), "inactive@example.com");
+  });
+
   it("rejects an already active client", async () => {
     vi.mocked(readGoogleWorkbookValues).mockResolvedValue({
       ...inactiveWorkbook,

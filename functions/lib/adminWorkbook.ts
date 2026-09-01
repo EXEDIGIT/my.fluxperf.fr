@@ -363,6 +363,24 @@ export function adminSolutionRows(workbook: ClientWorkbookValues): RowRecord[] {
   return parseRows(workbook.solutions);
 }
 
+export function adminContactRows(workbook: ClientWorkbookValues): RowRecord[] {
+  return parseRows(workbook.contacts);
+}
+
+export function contactsForAdminClient(workbook: ClientWorkbookValues, clientIdValue: string): RowRecord[] {
+  return rowsByClient(adminContactRows(workbook), clientIdValue);
+}
+
+export function findAdminContactRow(
+  workbook: ClientWorkbookValues,
+  clientIdValue: string,
+  contactId: string
+): RowRecord | null {
+  return contactsForAdminClient(workbook, clientIdValue).find(({ record }) =>
+    getValue(record, "contact_id", "id") === contactId
+  ) ?? null;
+}
+
 export function findAdminClientRow(workbook: ClientWorkbookValues, id: string): RowRecord | null {
   return adminClientRows(workbook).find(({ record }) => clientId(record) === id) ?? null;
 }

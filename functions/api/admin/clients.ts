@@ -1,9 +1,9 @@
 import { requireAdmin } from "../../lib/adminAuth";
 import {
   buildAdminClientRows,
+  findExistingClientIdForEmail,
   getAdminClientQualityWarnings,
-  hasExistingClientEmail,
-  sendClientWelcomeEmail,
+  sendContactWelcomeEmail,
   validateAdminClientInput
 } from "../../lib/adminClients";
 import { logAdminAction } from "../../lib/adminActions";
@@ -71,8 +71,12 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
 
     const workbook = await readGoogleWorkbookValues(context.env);
 
-    if (hasExistingClientEmail(workbook, input.email)) {
-      return jsonError(409, "CLIENT_EMAIL_EXISTS", "Cette adresse email existe déjà dans la base client.");
+    const existingEmail = input.contacts
+      .map((contact) => ({ email: contact.email, clientId: findExistingClientIdForEmail(workbook, contact.email) }))
+      .find((contact) => contact.clientId);
+
+    if (existingEmail) {
+      return jsonError(409, "CLIENT_EMAIL_EXISTS", `L'adresse ${existingEmail.email} est déjà rattachée au client ${existingEmail.clientId}.`);
     }
 
     const warnings = getAdminClientQualityWarnings(workbook, input);
@@ -90,34 +94,27 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
       );
     }
 
-    const supabaseUser = await createSupabaseUserForClient(context.env, input.email);
+    const supabaseUsers = await Promise.all(
+      input.contacts.map((contact) => createSupabaseUserForClient(context.env, contact.email))
+    );
     const ranges = getGoogleWriteRanges(context.env);
     const rows = buildAdminClientRows(input);
 
     await appendGoogleSheetValues(context.env, ranges.clients, [rows.clientRow]);
-    await appendGoogleSheetValues(context.env, ranges.contacts, [rows.contactRow]);
+    await appendGoogleSheetValues(context.env, ranges.contacts, rows.contactRows);
     await appendGoogleSheetValues(context.env, ranges.solutions, rows.solutionRows);
 
-    let notification: Awaited<ReturnType<typeof sendClientWelcomeEmail>> | {
-      status: "failed";
-      email: string;
-      reason: string;
-    };
-
-    try {
-      notification = await sendClientWelcomeEmail(context.env, context.request, input);
-    } catch (error) {
-      console.error(
-        "brevo_welcome_email_failed",
-        error instanceof Error ? error.message : "Unknown Brevo error"
-      );
-
-      notification = {
-        status: "failed",
-        email: input.email,
-        reason: "Email d'ouverture non envoyé. Vérifiez Brevo."
-      };
-    }
+    const notifications = await Promise.all(
+      input.contacts.map(async (contact) => {
+        try {
+          return await sendContactWelcomeEmail(context.env, context.request, { companyName: input.companyName, contact });
+        } catch (error) {
+          console.error("brevo_welcome_email_failed", error instanceof Error ? error.message : "Unknown Brevo error");
+          return { status: "failed" as const, email: contact.email, reason: "Email d'ouverture non envoyé. Vérifiez Brevo." };
+        }
+      })
+    );
+    const notification = notifications.find((item) => item.status !== "skipped") ?? notifications[0];
 
     await logAdminAction(context.env, {
       clientId: rows.clientId,
@@ -125,19 +122,23 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
       label: "Client cree depuis la console interne",
       actorEmail: admin.email,
       status: "realisee",
-      details: `${rows.solutionRows.length} solution(s) creee(s)`
+      details: `${rows.solutionRows.length} solution(s) créée(s), ${rows.contactRows.length} utilisateur(s) ajouté(s)`
     });
 
-    if (input.notifyClient) {
-      await logAdminAction(context.env, {
-        clientId: rows.clientId,
-        type: notification.status === "sent" ? "admin_welcome_email_sent" : "admin_welcome_email_failed",
-        label: notification.status === "sent" ? "Email d'ouverture envoye" : "Email d'ouverture non envoye",
-        actorEmail: admin.email,
-        status: notification.status,
-        details: notification.status === "sent" ? "Email transmis à Brevo." : notification.reason
-      });
-    }
+    await Promise.all(
+      notifications
+        .filter((item) => item.status !== "skipped")
+        .map((item) =>
+          logAdminAction(context.env, {
+            clientId: rows.clientId,
+            type: item.status === "sent" ? "admin_welcome_email_sent" : "admin_welcome_email_failed",
+            label: item.status === "sent" ? "Email d'ouverture envoye" : "Email d'ouverture non envoye",
+            actorEmail: admin.email,
+            status: item.status,
+            details: item.status === "sent" ? `Email transmis à Brevo pour ${item.email}.` : item.reason
+          })
+        )
+    );
 
     return json(
       {
@@ -148,7 +149,9 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
           email: input.email,
           solutionsCreated: rows.solutionRows.length
         },
-        supabaseUser,
+        contactsCreated: rows.contactRows.length,
+        supabaseUser: supabaseUsers[0],
+        supabaseUsers,
         notification,
         createdBy: admin.email
       },

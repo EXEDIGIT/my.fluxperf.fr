@@ -3,6 +3,7 @@ import type {
   AdminCreateClientInput,
   AdminClientSolutionInput,
   AdminCreateClientResponse,
+  AdminAddClientContactInput,
   AdminClientActionResponse,
   AdminClientDetailResponse,
   AdminClientsResponse,
@@ -102,6 +103,37 @@ export function sendAdminClientWelcomeEmail(clientId: string): Promise<AdminWelc
   return adminFetch<AdminWelcomeEmailResponse>(`/api/admin/clients/${encodeURIComponent(clientId)}/welcome-email`, {
     method: "POST"
   });
+}
+
+export function addAdminClientContact(
+  clientId: string,
+  input: AdminAddClientContactInput
+): Promise<AdminClientActionResponse> {
+  return adminFetch<AdminClientActionResponse>(`/api/admin/clients/${encodeURIComponent(clientId)}/contacts`, {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export function deactivateAdminClientContact(clientId: string, contactId: string): Promise<AdminClientActionResponse> {
+  return adminFetch<AdminClientActionResponse>(
+    `/api/admin/clients/${encodeURIComponent(clientId)}/contacts/${encodeURIComponent(contactId)}/deactivate`,
+    { method: "POST" }
+  );
+}
+
+export function reactivateAdminClientContact(clientId: string, contactId: string): Promise<AdminClientActionResponse> {
+  return adminFetch<AdminClientActionResponse>(
+    `/api/admin/clients/${encodeURIComponent(clientId)}/contacts/${encodeURIComponent(contactId)}/reactivate`,
+    { method: "POST" }
+  );
+}
+
+export function sendAdminClientContactWelcomeEmail(clientId: string, contactId: string): Promise<AdminWelcomeEmailResponse> {
+  return adminFetch<AdminWelcomeEmailResponse>(
+    `/api/admin/clients/${encodeURIComponent(clientId)}/contacts/${encodeURIComponent(contactId)}/welcome-email`,
+    { method: "POST" }
+  );
 }
 
 export function addAdminClientSolution(
