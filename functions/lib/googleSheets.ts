@@ -16,6 +16,8 @@ const DEFAULT_CONTACTS_WRITE_RANGE = "Contacts!A:J";
 const DEFAULT_SOLUTIONS_WRITE_RANGE = "Solutions!A:K";
 const DEFAULT_ACTIONS_WRITE_RANGE = "Actions!A:J";
 const DEFAULT_CONNECTIONS_WRITE_RANGE = "Connexions!A:H";
+const GOOGLE_READ_MAX_ATTEMPTS = 3;
+const GOOGLE_READ_RETRY_DELAY_MS = 250;
 const CONNECTIONS_SHEET_NAME = "Connexions";
 const CONNECTIONS_HEADERS = [
   "connexion_id",
@@ -45,6 +47,13 @@ type GoogleSheetResponse = {
   };
 };
 
+type GoogleBatchGetResponse = {
+  valueRanges?: GoogleSheetResponse[];
+  error?: {
+    message?: string;
+  };
+};
+
 type GoogleAppendResponse = {
   updates?: {
     updatedRange?: string;
@@ -63,12 +72,105 @@ type GoogleBatchUpdateResponse = {
   };
 };
 
+type CachedGoogleAccessToken = {
+  value: string;
+  expiresAt: number;
+};
+
+const googleAccessTokenCache = new Map<string, CachedGoogleAccessToken>();
+const pendingGoogleAccessTokens = new Map<string, Promise<string>>();
+
 function isSheetsConfigured(env: AppEnv): boolean {
   return Boolean(
     env.GOOGLE_SHEET_ID &&
       env.GOOGLE_SERVICE_ACCOUNT_EMAIL &&
       env.GOOGLE_PRIVATE_KEY
   );
+}
+
+function googleErrorMessage(data: unknown, fallback: string): string {
+  if (!data || typeof data !== "object") {
+    return fallback;
+  }
+
+  const error = (data as { error?: unknown }).error;
+
+  if (typeof error === "string") {
+    return error;
+  }
+
+  if (error && typeof error === "object") {
+    const message = (error as { message?: unknown }).message;
+
+    if (typeof message === "string" && message.trim()) {
+      return message;
+    }
+  }
+
+  return fallback;
+}
+
+function shouldRetryGoogleRead(status: number, message: string): boolean {
+  return status === 429 || status >= 500 || (status === 403 && /quota|rate.?limit/i.test(message));
+}
+
+function retryDelay(response: Response, attempt: number): number {
+  const retryAfter = Number(response.headers.get("Retry-After"));
+
+  if (Number.isFinite(retryAfter) && retryAfter > 0) {
+    return retryAfter * 1000;
+  }
+
+  return GOOGLE_READ_RETRY_DELAY_MS * 2 ** attempt;
+}
+
+function waitForRetry(delay: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, delay));
+}
+
+async function fetchGoogleReadJson<T>(
+  url: string,
+  init: RequestInit,
+  fetcher: Fetcher,
+  fallbackMessage: string
+): Promise<T> {
+  let lastError = fallbackMessage;
+
+  for (let attempt = 0; attempt < GOOGLE_READ_MAX_ATTEMPTS; attempt += 1) {
+    let response: Response;
+    let data: T;
+
+    try {
+      response = await fetcher(url, init);
+      data = (await response.json().catch(() => ({}))) as T;
+    } catch (error) {
+      if (error instanceof Error) {
+        lastError = error.message;
+      }
+
+      if (attempt === GOOGLE_READ_MAX_ATTEMPTS - 1) {
+        throw error instanceof Error ? error : new Error(lastError);
+      }
+
+      await waitForRetry(GOOGLE_READ_RETRY_DELAY_MS * 2 ** attempt);
+      continue;
+    }
+
+    if (response.ok) {
+      return data;
+    }
+
+    const message = googleErrorMessage(data, fallbackMessage);
+    lastError = message;
+
+    if (!shouldRetryGoogleRead(response.status, message) || attempt === GOOGLE_READ_MAX_ATTEMPTS - 1) {
+      throw new Error(message);
+    }
+
+    await waitForRetry(retryDelay(response, attempt));
+  }
+
+  throw new Error(lastError);
 }
 
 function base64UrlEncode(input: string | ArrayBuffer): string {
@@ -149,21 +251,67 @@ export async function getGoogleAccessTokenForScope(
   scope = GOOGLE_SCOPE,
   fetcher: Fetcher = fetch
 ): Promise<string> {
+  const cacheKey = `${env.GOOGLE_SERVICE_ACCOUNT_EMAIL ?? ""}:${scope}`;
+  const canUseCache = fetcher === fetch;
+
+  if (canUseCache) {
+    const cached = googleAccessTokenCache.get(cacheKey);
+
+    if (cached && cached.expiresAt > Date.now() + 60_000) {
+      return cached.value;
+    }
+
+    const pending = pendingGoogleAccessTokens.get(cacheKey);
+
+    if (pending) {
+      return pending;
+    }
+  }
+
+  const request = requestGoogleAccessToken(env, scope, fetcher);
+
+  if (!canUseCache) {
+    return request;
+  }
+
+  pendingGoogleAccessTokens.set(cacheKey, request);
+
+  try {
+    const accessToken = await request;
+    googleAccessTokenCache.set(cacheKey, {
+      value: accessToken,
+      expiresAt: Date.now() + 3_540_000
+    });
+    return accessToken;
+  } finally {
+    pendingGoogleAccessTokens.delete(cacheKey);
+  }
+}
+
+async function requestGoogleAccessToken(
+  env: AppEnv,
+  scope: string,
+  fetcher: Fetcher
+): Promise<string> {
   const assertion = await createGoogleJwt(env, scope);
   const body = new URLSearchParams({
     grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
     assertion
   });
-  const response = await fetcher(GOOGLE_TOKEN_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded"
+  const data = await fetchGoogleReadJson<GoogleTokenResponse>(
+    GOOGLE_TOKEN_URL,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body
     },
-    body
-  });
-  const data = (await response.json()) as GoogleTokenResponse;
+    fetcher,
+    "Unable to get Google access token."
+  );
 
-  if (!response.ok || !data.access_token) {
+  if (!data.access_token) {
     throw new Error(data.error_description || data.error || "Unable to get Google access token.");
   }
 
@@ -195,21 +343,49 @@ async function readGoogleSheetRange(
 ): Promise<string[][]> {
   const sheetId = encodeURIComponent(env.GOOGLE_SHEET_ID as string);
   const range = encodeURIComponent(rangeName);
-  const response = await fetcher(
+  const data = await fetchGoogleReadJson<GoogleSheetResponse>(
     `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${range}`,
     {
       headers: {
         Authorization: `Bearer ${accessToken}`
       }
-    }
+    },
+    fetcher,
+    `Unable to read Google Sheet range ${rangeName}.`
   );
-  const data = (await response.json()) as GoogleSheetResponse;
-
-  if (!response.ok) {
-    throw new Error(data.error?.message || `Unable to read Google Sheet range ${rangeName}.`);
-  }
 
   return data.values ?? [];
+}
+
+async function readGoogleSheetRanges(
+  env: AppEnv,
+  accessToken: string,
+  rangeNames: string[],
+  fetcher: Fetcher
+): Promise<string[][][]> {
+  const sheetId = encodeURIComponent(env.GOOGLE_SHEET_ID as string);
+  const query = new URLSearchParams({ majorDimension: "ROWS" });
+
+  rangeNames.forEach((rangeName) => query.append("ranges", rangeName));
+
+  const data = await fetchGoogleReadJson<GoogleBatchGetResponse>(
+    `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values:batchGet?${query.toString()}`,
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`
+      }
+    },
+    fetcher,
+    "Unable to read Google Sheet ranges."
+  );
+
+  return rangeNames.map((_, index) => data.valueRanges?.[index]?.values ?? []);
+}
+
+function isMissingGoogleSheetRange(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : "";
+
+  return /unable to parse range|sheet.*not found|no grid with id|invalid range/i.test(message);
 }
 
 async function readOptionalGoogleSheetRange(
@@ -245,39 +421,38 @@ export async function readGoogleWorkbookValues(
   }
 
   const accessToken = await getGoogleAccessTokenForScope(env, GOOGLE_SCOPE, fetcher);
-  const [clients, contacts, solutions, actions, connections, documents] = await Promise.all([
-    readGoogleSheetRange(env, accessToken, env.GOOGLE_SHEET_RANGE || DEFAULT_RANGE, fetcher),
-    readOptionalGoogleSheetRange(
-      env,
-      accessToken,
-      env.GOOGLE_CONTACTS_RANGE || DEFAULT_CONTACTS_RANGE,
-      fetcher
-    ),
-    readOptionalGoogleSheetRange(
-      env,
-      accessToken,
-      env.GOOGLE_SOLUTIONS_RANGE || DEFAULT_SOLUTIONS_RANGE,
-      fetcher
-    ),
-    readOptionalGoogleSheetRange(
-      env,
-      accessToken,
-      env.GOOGLE_ACTIONS_RANGE || DEFAULT_ACTIONS_RANGE,
-      fetcher
-    ),
-    readOptionalGoogleSheetRange(
-      env,
-      accessToken,
-      env.GOOGLE_CONNECTIONS_RANGE || DEFAULT_CONNECTIONS_RANGE,
-      fetcher
-    ),
-    readOptionalGoogleSheetRange(
-      env,
-      accessToken,
-      env.GOOGLE_DOCUMENTS_RANGE || DEFAULT_DOCUMENTS_RANGE,
-      fetcher
-    )
-  ]);
+  const coreRanges = [
+    env.GOOGLE_SHEET_RANGE || DEFAULT_RANGE,
+    env.GOOGLE_CONTACTS_RANGE || DEFAULT_CONTACTS_RANGE,
+    env.GOOGLE_SOLUTIONS_RANGE || DEFAULT_SOLUTIONS_RANGE,
+    env.GOOGLE_ACTIONS_RANGE || DEFAULT_ACTIONS_RANGE,
+    env.GOOGLE_CONNECTIONS_RANGE || DEFAULT_CONNECTIONS_RANGE
+  ];
+  let coreValues: string[][][];
+
+  try {
+    coreValues = await readGoogleSheetRanges(env, accessToken, coreRanges, fetcher);
+  } catch (error) {
+    if (!isMissingGoogleSheetRange(error)) {
+      throw error;
+    }
+
+    coreValues = await Promise.all([
+      readGoogleSheetRange(env, accessToken, coreRanges[0], fetcher),
+      readOptionalGoogleSheetRange(env, accessToken, coreRanges[1], fetcher),
+      readOptionalGoogleSheetRange(env, accessToken, coreRanges[2], fetcher),
+      readOptionalGoogleSheetRange(env, accessToken, coreRanges[3], fetcher),
+      readOptionalGoogleSheetRange(env, accessToken, coreRanges[4], fetcher)
+    ]);
+  }
+
+  const documents = await readOptionalGoogleSheetRange(
+    env,
+    accessToken,
+    env.GOOGLE_DOCUMENTS_RANGE || DEFAULT_DOCUMENTS_RANGE,
+    fetcher
+  );
+  const [clients, contacts, solutions, actions, connections] = coreValues;
 
   return {
     clients,

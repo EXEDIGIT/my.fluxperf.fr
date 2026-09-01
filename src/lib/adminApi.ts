@@ -9,6 +9,7 @@ import type {
   AdminClientsResponse,
   AdminClientQualityResponse,
   AdminDashboardResponse,
+  AdminOverviewResponse,
   AdminOptionsResponse,
   AdminSessionResponse,
   AdminWelcomeEmailResponse
@@ -71,6 +72,12 @@ export function getAdminClient(clientId: string): Promise<AdminClientDetailRespo
 
 export function getAdminDashboard(): Promise<AdminDashboardResponse> {
   return adminFetch<AdminDashboardResponse>("/api/admin/dashboard");
+}
+
+export function getAdminOverview(clientId?: string): Promise<AdminOverviewResponse> {
+  const query = clientId ? `?clientId=${encodeURIComponent(clientId)}` : "";
+
+  return adminFetch<AdminOverviewResponse>(`/api/admin/overview${query}`);
 }
 
 export function createAdminClient(input: AdminCreateClientInput): Promise<AdminCreateClientResponse> {

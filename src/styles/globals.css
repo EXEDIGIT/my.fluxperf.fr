@@ -4275,6 +4275,30 @@ svg {
   background: var(--yellow-soft);
 }
 
+.admin-data-notice {
+  width: min(1180px, calc(100% - 36px));
+  margin: 0 auto 16px;
+  justify-content: space-between;
+}
+
+.admin-data-notice button {
+  flex: 0 0 auto;
+  min-height: 36px;
+  border: 1px solid rgba(8, 45, 66, 0.16);
+  border-radius: 999px;
+  background: var(--white);
+  color: var(--ink);
+  padding: 0 14px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-data-notice button:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
 .admin-message svg {
   flex: 0 0 auto;
   margin-top: 2px;

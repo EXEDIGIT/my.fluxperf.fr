@@ -31,9 +31,7 @@ import {
   deactivateAdminClientContact,
   deactivateAdminClientSolution,
   getAdminClient,
-  getAdminClients,
-  getAdminDashboard,
-  getAdminOptions,
+  getAdminOverview,
   getAdminSession,
   reactivateAdminClient,
   reactivateAdminClientContact,
@@ -61,7 +59,7 @@ type LoadState =
   | { status: "loading" }
   | { status: "anonymous" }
   | { status: "ready"; email: string }
-  | { status: "error"; message: string };
+  | { status: "error"; kind: "access" | "session" | "data"; message: string };
 
 type LoginState =
   | { status: "idle" }
@@ -391,6 +389,7 @@ export function AdminConsolePage() {
   const [success, setSuccess] = useState<AdminCreateClientResponse | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [sessionRetryKey, setSessionRetryKey] = useState(0);
+  const [adminDataError, setAdminDataError] = useState<string | null>(null);
   const selectedSolutionOption =
     solutionOptions.find((option) => option.type === clientSolutionType) ?? solutionOptions[0] ?? fallbackSolutionOptions[0];
   const clientSolutionStatusCounts = useMemo(() => {
@@ -451,6 +450,7 @@ export function AdminConsolePage() {
   useEffect(() => {
     let isMounted = true;
     let latestLoadId = 0;
+    let hasLoadedAdminData = false;
     const supabase = getSupabaseClient();
 
     function isLatestLoad(loadId: number) {
@@ -461,20 +461,25 @@ export function AdminConsolePage() {
       const loadId = ++latestLoadId;
 
       try {
-        const [session, options, clientsData, dashboardData] = await Promise.all([
-          getAdminSession(),
-          getAdminOptions(),
-          getAdminClients(),
-          getAdminDashboard()
-        ]);
+        const session = await getAdminSession();
 
-        if (isLatestLoad(loadId)) {
-          setSolutionOptions(options.solutionOptions);
-          setSolutions(emptySolutions(options.solutionOptions));
-          setAdminClients(clientsData.clients);
-          setDashboard(dashboardData.dashboard);
-          setLoadState({ status: "ready", email: session.admin.email });
+        if (!isLatestLoad(loadId)) {
+          return;
         }
+
+        const overview = await getAdminOverview();
+
+        if (!isLatestLoad(loadId)) {
+          return;
+        }
+
+        hasLoadedAdminData = true;
+        setAdminDataError(null);
+        setSolutionOptions(overview.solutionOptions);
+        setSolutions(emptySolutions(overview.solutionOptions));
+        setAdminClients(overview.clients);
+        setDashboard(overview.dashboard);
+        setLoadState({ status: "ready", email: session.admin.email });
       } catch (error) {
         if (!isLatestLoad(loadId)) {
           return;
@@ -493,14 +498,24 @@ export function AdminConsolePage() {
           }
         }
 
+        if (hasLoadedAdminData) {
+          console.error("admin_data_refresh_failed", error);
+          setAdminDataError(
+            "Les données de la console n'ont pas pu être actualisées. Votre session reste active : réessayez dans quelques instants."
+          );
+          return;
+        }
+
+        const isAccessError = error instanceof ApiError && error.status === 403;
         setLoadState({
           status: "error",
+          kind: isAccessError ? "access" : error instanceof ApiError && error.status === 401 ? "session" : "data",
           message:
             error instanceof ApiError && error.status === 401
               ? "Votre session n'a pas pu être vérifiée pour le moment. Réessayez dans quelques instants."
-              : error instanceof Error
+              : isAccessError
                 ? error.message
-                : "Accès interne indisponible."
+                : "Les données de la console sont temporairement indisponibles. Votre session reste active."
         });
       }
     }
@@ -509,6 +524,7 @@ export function AdminConsolePage() {
       if (!hasSupabaseConfig() || !supabase) {
         setLoadState({
           status: "error",
+          kind: "session",
           message: "La connexion sécurisée est indisponible."
         });
         return;
@@ -530,18 +546,13 @@ export function AdminConsolePage() {
 
     void bootstrap();
 
-    const listener = supabase?.auth.onAuthStateChange((event, session) => {
+    const listener = supabase?.auth.onAuthStateChange((event) => {
       if (!isMounted) {
         return;
       }
 
       if (event === "SIGNED_OUT") {
         setLoadState({ status: "anonymous" });
-        return;
-      }
-
-      if (event === "SIGNED_IN" && session) {
-        void loadAdminSession();
       }
     });
 
@@ -555,16 +566,20 @@ export function AdminConsolePage() {
     setIsAdminDataLoading(true);
 
     try {
-      const [clientsData, dashboardData] = await Promise.all([getAdminClients(), getAdminDashboard()]);
+      const overview = await getAdminOverview(clientId);
 
-      setAdminClients(clientsData.clients);
-      setDashboard(dashboardData.dashboard);
+      setAdminClients(overview.clients);
+      setDashboard(overview.dashboard);
 
-      if (clientId) {
-        const detail = await getAdminClient(clientId);
-
-        setSelectedClient(detail.client);
+      if (clientId && overview.selectedClient) {
+        setSelectedClient(overview.selectedClient);
       }
+      setAdminDataError(null);
+    } catch (error) {
+      console.error("admin_data_manual_refresh_failed", error);
+      setAdminDataError(
+        "Les données de la console n'ont pas pu être actualisées. Votre session reste active : réessayez dans quelques instants."
+      );
     } finally {
       setIsAdminDataLoading(false);
     }
@@ -1048,11 +1063,18 @@ export function AdminConsolePage() {
   }
 
   if (loadState.status === "error") {
+    const title =
+      loadState.kind === "access"
+        ? "Accès refusé"
+        : loadState.kind === "session"
+          ? "Connexion à vérifier"
+          : "Données temporairement indisponibles";
+
     return (
       <main className="center-state error-center">
         <img src="/assets/img/logo-fluxperf.svg" alt="Fluxperf" />
         <LockKeyhole aria-hidden="true" />
-        <h1>Accès refusé</h1>
+        <h1>{title}</h1>
         <p>{loadState.message}</p>
         <button type="button" onClick={() => setSessionRetryKey((current) => current + 1)}>
           Réessayer
@@ -1087,6 +1109,15 @@ export function AdminConsolePage() {
         <span>Supabase Auth</span>
         <span>Brevo</span>
       </section>
+
+      {adminDataError ? (
+        <div className="admin-message error admin-data-notice" role="status">
+          <span>{adminDataError}</span>
+          <button type="button" onClick={() => void refreshAdminData()} disabled={isAdminDataLoading}>
+            {isAdminDataLoading ? "Actualisation..." : "Actualiser"}
+          </button>
+        </div>
+      ) : null}
 
       <nav className="admin-tabs" aria-label="Navigation admin">
         <button type="button" className={activeTab === "dashboard" ? "is-active" : ""} onClick={() => setActiveTab("dashboard")}>

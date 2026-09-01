@@ -179,6 +179,13 @@ export type AdminDashboardResponse = {
   dashboard: AdminDashboard;
 };
 
+export type AdminOverviewResponse = {
+  solutionOptions: AdminSolutionOption[];
+  clients: AdminClientSummary[];
+  dashboard: AdminDashboard;
+  selectedClient: AdminClientDetail | null;
+};
+
 export type AdminClientActionResponse = {
   status: "deactivated" | "created" | "reactivated" | "updated";
   clientId: string;
