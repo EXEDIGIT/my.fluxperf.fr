@@ -2850,6 +2850,19 @@ svg {
   font-weight: 700;
 }
 
+.error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+.error-center .error-secondary-action {
+  border: 1px solid var(--line-strong);
+  background: var(--white);
+  color: var(--green);
+}
+
 .error-center button:disabled {
   cursor: wait;
   opacity: 0.66;
@@ -4615,6 +4628,18 @@ svg {
   }
 
   .support-band button {
+    width: 100%;
+  }
+
+  .error-actions {
+    width: min(100%, 360px);
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .error-center .error-actions a,
+  .error-center .error-actions button {
+    justify-content: center;
     width: 100%;
   }
 

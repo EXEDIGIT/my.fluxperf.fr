@@ -3,6 +3,7 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import { ActionCard } from "./components/ActionCard";
 import { AccountPage } from "./components/AccountPage";
 import { AdminConsolePage } from "./components/AdminConsolePage";
+import { AccessRequestModal } from "./components/AccessRequestModal";
 import { AuthCallbackPage } from "./components/AuthCallbackPage";
 import { AuthConfirmPage } from "./components/AuthConfirmPage";
 import { ErrorState } from "./components/ErrorState";
@@ -47,6 +48,7 @@ export function App() {
   const [isLoginTransitionExiting, setIsLoginTransitionExiting] = useState(false);
   const [isRequestOpen, setIsRequestOpen] = useState(false);
   const [isSupportOpen, setIsSupportOpen] = useState(false);
+  const [isAccessRequestOpen, setIsAccessRequestOpen] = useState(false);
   const [isSolutionsOpen, setIsSolutionsOpen] = useState(false);
   const [statisticsSolutionId, setStatisticsSolutionId] = useState<string | null>(null);
   const [navigationTarget, setNavigationTarget] = useState<string | null>(null);
@@ -184,6 +186,23 @@ export function App() {
     setStatisticsSolutionId(null);
   }
 
+  async function handleRetryLogin() {
+    const supabase = getSupabaseClient();
+
+    try {
+      if (supabase) {
+        await supabase.auth.signOut();
+      }
+    } finally {
+      setIsLoginTransitionVisible(false);
+      setIsLoginTransitionExiting(false);
+      setStatisticsSolutionId(null);
+      setNavigationTarget(null);
+      setState({ status: "anonymous" });
+      window.history.replaceState({}, "", "/login");
+    }
+  }
+
   function openSupportRequest(preset?: Partial<Omit<SupportPreset, "key">>) {
     setSupportPreset((current) => ({
       key: current.key + 1,
@@ -257,7 +276,19 @@ export function App() {
   }
 
   if (state.status === "error") {
-    return <ErrorState error={state.error} />;
+    return (
+      <>
+        <ErrorState
+          error={state.error}
+          onRetryLogin={handleRetryLogin}
+          onRequestAccess={() => setIsAccessRequestOpen(true)}
+        />
+        <AccessRequestModal
+          isOpen={isAccessRequestOpen}
+          onClose={() => setIsAccessRequestOpen(false)}
+        />
+      </>
+    );
   }
 
   const { client, user } = state.data;

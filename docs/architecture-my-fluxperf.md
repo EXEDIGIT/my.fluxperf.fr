@@ -143,7 +143,7 @@ Ce qui protege les donnees :
 | Message | Signification | Action |
 | --- | --- | --- |
 | `AUTH_REQUIRED` | L'API ne recoit pas l'identite Cloudflare Access | Verifier Access, le domaine protege, le deploiement du correctif JWT |
-| `CLIENT_NOT_CONFIGURED` | L'utilisateur est connecte mais aucun client actif ne correspond | Verifier `email_principal`, `Contacts.email`, `statut_client`, `espace_client_actif` |
+| `CLIENT_NOT_CONFIGURED` | L'utilisateur est connecte, parfois via une session navigateur persistante, mais aucun client actif ne correspond | Verifier `email_principal`, `Contacts.email`, `statut_client`, `espace_client_actif`; l'utilisateur peut se deconnecter puis demander un nouveau lien |
 | `DATA_UNAVAILABLE` | L'API n'arrive pas a lire Google Sheets | Verifier variables Cloudflare, cle privee, partage du Sheet au Service Account, onglets/ranges |
 | `WEBHOOK_FAILED` | n8n n'a pas accepte une demande | Verifier le workflow n8n, l'URL webhook et le secret partage |
 | `THUMBNAIL_UNAVAILABLE` | Une vignette n'est pas prete ou le Worker ne repond pas | Verifier R2, Worker, secret interne et premiere capture |
