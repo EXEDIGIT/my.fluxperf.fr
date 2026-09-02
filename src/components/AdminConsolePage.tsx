@@ -39,7 +39,7 @@ import {
   sendAdminClientContactWelcomeEmail,
   updateAdminClientSolution
 } from "../lib/adminApi";
-import { fallbackSolutionOptions } from "../lib/solutionCatalog";
+import { fallbackSolutionOptions, isWebsiteSolutionName } from "../lib/solutionCatalog";
 import { getSupabaseClient, hasSupabaseConfig } from "../lib/supabase";
 import type {
   AdminClientDetail,
@@ -128,12 +128,6 @@ function normalizedSolutionName(value: string): string {
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[_-]+/g, " ");
-}
-
-function isWebsiteSolutionName(value: string): boolean {
-  const normalized = normalizedSolutionName(value);
-
-  return normalized.includes("site web") || normalized.includes("site e-shop") || normalized.includes("site eshop");
 }
 
 function isGoogleAdsSolutionName(value: string): boolean {
