@@ -1,5 +1,5 @@
 import { BadgeCheck, Building2, CircleAlert, FileText, Loader2, RefreshCw, UploadCloud } from "lucide-react";
-import { useState, type ChangeEvent, type FormEvent } from "react";
+import { useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { ApiError, submitRibDocument } from "../lib/api";
 import type { Client } from "../types/client";
 
@@ -55,12 +55,19 @@ function clientFileError(file: File): string | null {
 }
 
 export function AccountPage({ client, onRibSubmitted }: AccountPageProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [inputKey, setInputKey] = useState(0);
   const isComplete = client.account.rib.status === "complete";
   const submittedAt = formatSubmittedAt(client.account.rib.submittedAt);
+
+  function openFilePicker() {
+    if (!isSubmitting) {
+      fileInputRef.current?.click();
+    }
+  }
 
   function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
     const selectedFile = event.currentTarget.files?.[0] ?? null;
@@ -146,7 +153,9 @@ export function AccountPage({ client, onRibSubmitted }: AccountPageProps) {
             <h3>{isComplete ? "Dossier administratif complet" : "Action requise"}</h3>
             <p>
               {isComplete
-                ? `Votre dernier RIB a été enregistré${submittedAt ? ` le ${submittedAt}` : ""}.`
+                ? submittedAt
+                  ? `Votre dernier RIB a été enregistré le ${submittedAt}.`
+                  : "Votre RIB est indiqué comme complet."
                 : "Un RIB est nécessaire pour finaliser votre dossier et activer vos abonnements."}
             </p>
           </div>
@@ -161,6 +170,7 @@ export function AccountPage({ client, onRibSubmitted }: AccountPageProps) {
             </span>
             <input
               key={inputKey}
+              ref={fileInputRef}
               type="file"
               accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png"
               aria-describedby="rib-upload-help"
@@ -180,9 +190,20 @@ export function AccountPage({ client, onRibSubmitted }: AccountPageProps) {
             </p>
           ) : null}
 
-          <button className="rib-submit-button" type="submit" disabled={!file || isSubmitting}>
+          <button
+            className="rib-submit-button"
+            type={isComplete && !file ? "button" : "submit"}
+            onClick={isComplete && !file ? openFilePicker : undefined}
+            disabled={isSubmitting || (!isComplete && !file)}
+          >
             {isSubmitting ? <Loader2 className="loading-icon" aria-hidden="true" /> : isComplete ? <RefreshCw aria-hidden="true" /> : <FileText aria-hidden="true" />}
-            {isSubmitting ? "Enregistrement…" : isComplete ? "Remplacer mon RIB" : "Envoyer mon RIB"}
+            {isSubmitting
+              ? "Enregistrement…"
+              : isComplete
+                ? file
+                  ? "Enregistrer le nouveau RIB"
+                  : "Remplacer mon RIB"
+                : "Envoyer mon RIB"}
           </button>
         </form>
       </div>

@@ -16,7 +16,7 @@ vi.mock("../../lib/googleSheets", () => ({
   })),
   readGoogleParametersValues: vi.fn(async () => []),
   getGoogleWriteRanges: vi.fn(() => ({
-    clients: "Clients!A:K",
+    clients: "Clients!A:L",
     contacts: "Contacts!A:J",
     solutions: "Solutions!A:K"
   })),
@@ -156,6 +156,7 @@ describe("POST /api/admin/clients", () => {
     expect(response.status).toBe(201);
     expect(body.client).toMatchObject({ solutionsCreated: 2 });
     expect(clientRows[0][7]).toBe("2");
+    expect(clientRows[0][11]).toBe("NON");
     expect(solutionRows).toHaveLength(2);
     expect(solutionRows[0][5]).toBe("");
     expect(solutionRows[0][6]).toBe("Centralisation donnees");

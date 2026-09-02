@@ -254,7 +254,7 @@ describe("admin client helpers", () => {
       expect(rows.clientId).toMatch(/^CLI-17072026-[A-F0-9]{4}$/);
       expect(rows.contactId).toMatch(/^CON-17072026-[A-F0-9]{4}$/);
       expect(rows.solutionRows[0][0]).toMatch(/^SOL-17072026-[A-F0-9]{4}$/);
-      expect(rows.clientRow.slice(2, 11)).toEqual([
+      expect(rows.clientRow.slice(2, 12)).toEqual([
         "A2-CM",
         "Actif",
         "Oui",
@@ -263,7 +263,8 @@ describe("admin client helpers", () => {
         "2",
         "17/07/2026",
         "17/07/2026",
-        "Premier client"
+        "Premier client",
+        "NON"
       ]);
       expect(rows.contactRow.slice(2, 8)).toEqual([
         "Anthony",

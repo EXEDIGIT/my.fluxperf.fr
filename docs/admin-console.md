@@ -32,7 +32,7 @@ Les protections attendues sont :
 ADMIN_EMAILS=tristan@fluxperf.fr,david@fluxperf.fr
 SUPABASE_SERVICE_ROLE_KEY=
 APP_PUBLIC_URL=https://my.fluxperf.fr
-GOOGLE_CLIENTS_WRITE_RANGE=Clients!A:K
+GOOGLE_CLIENTS_WRITE_RANGE=Clients!A:L
 GOOGLE_CONTACTS_WRITE_RANGE=Contacts!A:J
 GOOGLE_SOLUTIONS_WRITE_RANGE=Solutions!A:K
 GOOGLE_CONNECTIONS_RANGE=Connexions!A1:H1000

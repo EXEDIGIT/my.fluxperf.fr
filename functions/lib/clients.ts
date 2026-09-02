@@ -351,10 +351,14 @@ function latestActionsFromActionRows(
     });
 }
 
-function ribAccountForClient(clientId: string, documents: string[][] | undefined): ClientDto["account"] {
+function ribAccountForClient(
+  clientId: string,
+  clients: string[][],
+  documents: string[][] | undefined
+): ClientDto["account"] {
   const normalizedClientId = normalizeId(clientId);
 
-  if (!normalizedClientId || !documents || documents.length < 2) {
+  if (!normalizedClientId) {
     return {
       rib: {
         status: "missing",
@@ -363,7 +367,7 @@ function ribAccountForClient(clientId: string, documents: string[][] | undefined
     };
   }
 
-  const latestRib = parseRecords(documents)
+  const latestRib = parseRecords(documents ?? [])
     .map((document, index) => {
       const submittedAt = getValue(document, "submitted_at", "date_depot", "date");
 
@@ -386,24 +390,33 @@ function ribAccountForClient(clientId: string, documents: string[][] | undefined
     })
     .sort((left, right) => right.timestamp - left.timestamp || right.index - left.index)[0];
 
-  if (!latestRib) {
+  if (latestRib) {
     return {
       rib: {
-        status: "missing",
-        submittedAt: null
+        status: "complete",
+        submittedAt: latestRib.submittedAt || null
       }
     };
   }
 
+  const client = parseRecords(clients).find(
+    (record) => normalizeId(getValue(record, "client_id", "id")) === normalizedClientId
+  );
+  const manualRibStatus = normalizeAlias(getValue(client ?? {}, "rib_status"));
+
   return {
     rib: {
-      status: "complete",
-      submittedAt: latestRib.submittedAt || null
+      status: manualRibStatus === "ok" ? "complete" : "missing",
+      submittedAt: null
     }
   };
 }
 
-function withRibAccount(result: ClientLookupResult, documents: string[][] | undefined): ClientLookupResult {
+function withRibAccount(
+  result: ClientLookupResult,
+  clients: string[][],
+  documents: string[][] | undefined
+): ClientLookupResult {
   if (result.status !== "ok") {
     return result;
   }
@@ -412,7 +425,7 @@ function withRibAccount(result: ClientLookupResult, documents: string[][] | unde
     status: "ok",
     client: {
       ...result.client,
-      account: ribAccountForClient(result.client.id, documents)
+      account: ribAccountForClient(result.client.id, clients, documents)
     }
   };
 }
@@ -1297,17 +1310,17 @@ export function findClientForEmailInWorkbook(
             ...client,
             latestActions: actionHistory
           }
-        }, workbook.documents);
+        }, workbook.clients, workbook.documents);
       }
 
       return withRibAccount({
         status: "ok",
         client
-      }, workbook.documents);
+      }, workbook.clients, workbook.documents);
     }
 
     return legacyResult;
   }
 
-  return withRibAccount(findStructuredClientForEmail(workbook, email), workbook.documents);
+  return withRibAccount(findStructuredClientForEmail(workbook, email), workbook.clients, workbook.documents);
 }

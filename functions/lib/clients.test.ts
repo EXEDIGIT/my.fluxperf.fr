@@ -776,6 +776,83 @@ describe("client sheet parsing", () => {
     }
   });
 
+  it("uses the manual RIB status when the client has no completed RIB document", () => {
+    const workbook = {
+      ...structuredWorkbook,
+      clients: [
+        [...structuredWorkbook.clients[0], "rib_status"],
+        [...structuredWorkbook.clients[1], "OK"],
+        [...structuredWorkbook.clients[2], "NON"]
+      ],
+      documents: [["document_id", "client_id", "document_type", "status"]]
+    };
+
+    const result = findClientForEmailInWorkbook(workbook, "tdacunha@exedigit.fr");
+
+    expect(result.status).toBe("ok");
+    if (result.status === "ok") {
+      expect(result.client.account).toEqual({
+        rib: {
+          status: "complete",
+          submittedAt: null
+        }
+      });
+    }
+  });
+
+  it("keeps the RIB status missing when the manual status is NON or empty", () => {
+    ["NON", ""].forEach((ribStatus) => {
+      const workbook = {
+        ...structuredWorkbook,
+        clients: [
+          [...structuredWorkbook.clients[0], "rib_status"],
+          [...structuredWorkbook.clients[1], ribStatus],
+          [...structuredWorkbook.clients[2], "NON"]
+        ],
+        documents: [["document_id", "client_id", "document_type", "status"]]
+      };
+
+      const result = findClientForEmailInWorkbook(workbook, "tdacunha@exedigit.fr");
+
+      expect(result.status).toBe("ok");
+      if (result.status === "ok") {
+        expect(result.client.account).toEqual({
+          rib: {
+            status: "missing",
+            submittedAt: null
+          }
+        });
+      }
+    });
+  });
+
+  it("keeps a completed RIB document as the priority over a manual NON status", () => {
+    const workbook = {
+      ...structuredWorkbook,
+      clients: [
+        [...structuredWorkbook.clients[0], "rib_status"],
+        [...structuredWorkbook.clients[1], "NON"],
+        [...structuredWorkbook.clients[2], "NON"]
+      ],
+      documents: [
+        ["document_id", "client_id", "document_type", "submitted_at", "status"],
+        ["RIB-NEW", "CLI-0001", "rib_iban", "2026-09-02T14:38:59.677Z", "complete"]
+      ]
+    };
+
+    const result = findClientForEmailInWorkbook(workbook, "tdacunha@exedigit.fr");
+
+    expect(result.status).toBe("ok");
+    if (result.status === "ok") {
+      expect(result.client.account).toEqual({
+        rib: {
+          status: "complete",
+          submittedAt: "2026-09-02T14:38:59.677Z"
+        }
+      });
+    }
+  });
+
   it("counts an active automation solution even when the client has no site", () => {
     const workbook = {
       ...structuredWorkbook,

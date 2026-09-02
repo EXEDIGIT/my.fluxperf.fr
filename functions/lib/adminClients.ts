@@ -534,7 +534,8 @@ export function buildAdminClientRows(input: AdminClientInput, now = new Date()):
     String(input.solutions.length),
     date,
     date,
-    input.notes
+    input.notes,
+    "NON"
   ];
   const contactRows = contacts.map((contact, index) => [
     contactIds[index],
