@@ -367,6 +367,20 @@ function ribAccountForClient(
     };
   }
 
+  const client = parseRecords(clients).find(
+    (record) => normalizeId(getValue(record, "client_id", "id")) === normalizedClientId
+  );
+  const manualRibStatus = normalizeAlias(getValue(client ?? {}, "rib_status"));
+
+  if (manualRibStatus === "non") {
+    return {
+      rib: {
+        status: "missing",
+        submittedAt: null
+      }
+    };
+  }
+
   const latestRib = parseRecords(documents ?? [])
     .map((document, index) => {
       const submittedAt = getValue(document, "submitted_at", "date_depot", "date");
@@ -398,11 +412,6 @@ function ribAccountForClient(
       }
     };
   }
-
-  const client = parseRecords(clients).find(
-    (record) => normalizeId(getValue(record, "client_id", "id")) === normalizedClientId
-  );
-  const manualRibStatus = normalizeAlias(getValue(client ?? {}, "rib_status"));
 
   return {
     rib: {

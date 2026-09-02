@@ -826,7 +826,7 @@ describe("client sheet parsing", () => {
     });
   });
 
-  it("keeps a completed RIB document as the priority over a manual NON status", () => {
+  it("uses a manual NON status to block a completed RIB document", () => {
     const workbook = {
       ...structuredWorkbook,
       clients: [
@@ -846,8 +846,8 @@ describe("client sheet parsing", () => {
     if (result.status === "ok") {
       expect(result.client.account).toEqual({
         rib: {
-          status: "complete",
-          submittedAt: "2026-09-02T14:38:59.677Z"
+          status: "missing",
+          submittedAt: null
         }
       });
     }
