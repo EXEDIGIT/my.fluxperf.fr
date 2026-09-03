@@ -6,13 +6,12 @@ export type StatisticsSupportPreset = {
 };
 
 export function statisticsSupportPreset(solution: ClientSolution): StatisticsSupportPreset {
-  const provider = solution.statistics.provider === "google_ads" ? "Google Ads" : "GA4";
   const solutionLabel = solution.domain || solution.name || solution.typeLabel || "cette solution";
 
   return {
-    subject: `Aide au raccordement des statistiques ${provider}`,
+    subject: "Aide pour mes statistiques",
     message:
       `Bonjour,\n\nLes statistiques de ${solutionLabel} sont actuellement indiquées comme « en cours de raccordement » dans mon espace client.\n\n` +
-      `Pouvez-vous vérifier le raccordement ${provider} ainsi que l'affectation de cette solution ?\n\nMerci.`
+      "Pouvez-vous vérifier que la configuration de cette solution permet bien l'affichage de mes statistiques ?\n\nMerci."
   };
 }

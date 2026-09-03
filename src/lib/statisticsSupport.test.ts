@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { statisticsSupportPreset } from "./statisticsSupport";
 
 describe("statisticsSupportPreset", () => {
-  it("prepares a contextual GA4 support request", () => {
+  it("prepares a clear support request without technical provider names", () => {
     const preset = statisticsSupportPreset({
       id: "SOL-1",
       type: "visibility_acquisition",
@@ -23,12 +23,13 @@ describe("statisticsSupportPreset", () => {
       }
     });
 
-    expect(preset.subject).toBe("Aide au raccordement des statistiques GA4");
+    expect(preset.subject).toBe("Aide pour mes statistiques");
     expect(preset.message).toContain("example.fr");
-    expect(preset.message).toContain("raccordement GA4");
+    expect(preset.message).toContain("l'affichage de mes statistiques");
+    expect(preset.message).not.toContain("GA4");
   });
 
-  it("names Google Ads when it is the pending provider", () => {
+  it("uses the same generic support wording for other statistics providers", () => {
     const preset = statisticsSupportPreset({
       id: "SOL-2",
       type: "visibility_acquisition",
@@ -49,7 +50,7 @@ describe("statisticsSupportPreset", () => {
       }
     });
 
-    expect(preset.subject).toBe("Aide au raccordement des statistiques Google Ads");
-    expect(preset.message).toContain("raccordement Google Ads");
+    expect(preset.subject).toBe("Aide pour mes statistiques");
+    expect(preset.message).toContain("l'affichage de mes statistiques");
   });
 });

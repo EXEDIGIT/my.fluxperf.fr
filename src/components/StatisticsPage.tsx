@@ -618,7 +618,7 @@ export function StatisticsPage({ solution, onBack, onSupportRequest }: Statistic
           <BarChart3 aria-hidden="true" />
           <h3>Statistiques en cours de raccordement</h3>
           <p>
-            Notre équipe termine le lien avec {readyData.provider === "google_ads" ? "Google Ads" : "GA4"} pour {readyData.solution.domain || readyData.solution.name || "cette solution"}.
+            Notre équipe finalise la mise en place de vos statistiques pour {readyData.solution.domain || readyData.solution.name || "cette solution"}.
           </p>
           <button type="button" className="secondary-action statistics-support-action" onClick={onSupportRequest}>
             <MessageCircle aria-hidden="true" />
@@ -631,7 +631,7 @@ export function StatisticsPage({ solution, onBack, onSupportRequest }: Statistic
         <>
           <div className="statistics-meta">
             <span>{readyData.period.label}</span>
-            <span>{displayDate(readyData.generatedAt) ? `Mis a jour le ${displayDate(readyData.generatedAt)}` : "Donnees GA4"}</span>
+            <span>{displayDate(readyData.generatedAt) ? `Mis a jour le ${displayDate(readyData.generatedAt)}` : "Donnees statistiques"}</span>
           </div>
 
           <div className="statistics-kpi-grid">

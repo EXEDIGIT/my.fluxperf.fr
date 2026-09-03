@@ -31,6 +31,8 @@ describe("StatisticsPage", () => {
     );
 
     expect(html).toContain("Statistiques en cours de raccordement");
+    expect(html).toContain("mise en place de vos statistiques");
     expect(html).toContain("Contacter le support");
+    expect(html).not.toContain("GA4");
   });
 });
