@@ -21,6 +21,7 @@ import { SolutionsModal } from "./components/SolutionsModal";
 import { SupportRequestModal } from "./components/SupportRequestModal";
 import { ApiError, getMe } from "./lib/api";
 import { consumeLoginTransition } from "./lib/loginTransition";
+import { statisticsSupportPreset } from "./lib/statisticsSupport";
 import { getSupabaseClient, hasSupabaseConfig } from "./lib/supabase";
 import type { MeResponse } from "./types/client";
 
@@ -329,6 +330,7 @@ export function App() {
             <StatisticsPage
               solution={selectedStatisticsSolution}
               onBack={() => setStatisticsSolutionId(null)}
+              onSupportRequest={() => openSupportRequest(statisticsSupportPreset(selectedStatisticsSolution))}
             />
           </Suspense>
         ) : (

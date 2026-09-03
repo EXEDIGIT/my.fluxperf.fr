@@ -7,6 +7,7 @@ import {
   Loader2,
   MapPin,
   Megaphone,
+  MessageCircle,
   MousePointerClick,
   Search,
   Target,
@@ -45,6 +46,7 @@ import type { ClientSolution } from "../types/client";
 type StatisticsPageProps = {
   solution: ClientSolution;
   onBack: () => void;
+  onSupportRequest: () => void;
 };
 
 type LoadState =
@@ -504,9 +506,8 @@ function GoogleAdsBreakdownList({ rows }: { rows: StatisticsGoogleAdsBreakdownRo
   );
 }
 
-export function StatisticsPage({ solution, onBack }: StatisticsPageProps) {
+export function StatisticsPage({ solution, onBack, onSupportRequest }: StatisticsPageProps) {
   const [period, setPeriod] = useState<StatisticsPeriodId>("30d");
-  const [state, setState] = useState<LoadState>({ status: "idle" });
   const canFetchStatistics = solution.statistics.status === "available";
   const pendingResponse = useMemo<StatisticsResponse>(
     () => ({
@@ -525,6 +526,9 @@ export function StatisticsPage({ solution, onBack }: StatisticsPageProps) {
       }
     }),
     [period, solution]
+  );
+  const [state, setState] = useState<LoadState>(() =>
+    canFetchStatistics ? { status: "idle" } : { status: "ready", data: pendingResponse }
   );
 
   useEffect(() => {
@@ -616,6 +620,10 @@ export function StatisticsPage({ solution, onBack }: StatisticsPageProps) {
           <p>
             Notre équipe termine le lien avec {readyData.provider === "google_ads" ? "Google Ads" : "GA4"} pour {readyData.solution.domain || readyData.solution.name || "cette solution"}.
           </p>
+          <button type="button" className="secondary-action statistics-support-action" onClick={onSupportRequest}>
+            <MessageCircle aria-hidden="true" />
+            Contacter le support
+          </button>
         </div>
       ) : null}
 

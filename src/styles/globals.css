@@ -1227,6 +1227,11 @@ svg {
   font-size: 1.25rem;
 }
 
+.statistics-support-action svg {
+  color: currentColor;
+  font-size: 1rem;
+}
+
 .statistics-meta {
   display: flex;
   flex-wrap: wrap;
