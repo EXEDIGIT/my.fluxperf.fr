@@ -26,6 +26,7 @@ type Env = {
   MONTHLY_REPORT_INTERNAL_SECRET: string;
   MONTHLY_REPORT_BATCH_SIZE?: string;
   MONTHLY_REPORTS_ENABLED?: string;
+  MONTHLY_REPORT_ALLOWED_CLIENT_IDS?: string;
 };
 
 type SheetRecord = Record<string, string>;
@@ -44,7 +45,7 @@ const SHEETS_SCOPE = "https://www.googleapis.com/auth/spreadsheets.readonly";
 const ANALYTICS_SCOPE = "https://www.googleapis.com/auth/analytics.readonly";
 const HIDDEN_KEY_EVENTS = new Set(["page_view", "session_start", "first_visit", "user_engagement"]);
 const BREVO_ENDPOINT = "https://api.brevo.com/v3/smtp/email";
-const TEMPLATE_VERSION = "v1";
+const TEMPLATE_VERSION = "v2";
 
 function nowIso(): string { return new Date().toISOString(); }
 function value(record: SheetRecord, ...keys: string[]): string { return keys.map((key) => record[key.toLowerCase()] || "").find(Boolean)?.trim() || ""; }
@@ -147,19 +148,24 @@ function expiresAt(now: Date): string {
   return expiry.toISOString();
 }
 
-function eligibleClients(data: Awaited<ReturnType<typeof workbook>>) {
+function allowedClientIds(value: string | undefined): Set<string> {
+  return new Set((value || "").split(",").map((entry) => entry.trim()).filter(Boolean));
+}
+
+function eligibleClients(data: Awaited<ReturnType<typeof workbook>>, allowedIds = new Set<string>()) {
   return data.clients.flatMap((client) => {
     const clientId = value(client, "client_id", "id");
-    if (!clientId || !active(value(client, "statut_client", "status")) || (value(client, "espace_client_actif") && !affirmative(value(client, "espace_client_actif")))) return [];
-    const properties = data.solutions.filter((solution) => {
+    if (!clientId || (allowedIds.size > 0 && !allowedIds.has(clientId)) || !active(value(client, "statut_client", "status")) || (value(client, "espace_client_actif") && !affirmative(value(client, "espace_client_actif")))) return [];
+    const solutions = data.solutions.filter((solution) => value(solution, "client_id") === clientId && active(value(solution, "statut_solution", "status", "statut")));
+    const properties = solutions.filter((solution) => {
       const name = normalize(value(solution, "nom_solution", "name"));
       const property = value(solution, "ga4_property_id").replace(/^properties\//i, "");
-      return value(solution, "client_id") === clientId && active(value(solution, "statut_solution", "status", "statut")) && ["site web", "site e shop"].includes(name) && /^\d+$/.test(property);
+      return ["site web", "site e shop"].includes(name) && /^\d+$/.test(property);
     }).map((solution) => ({ propertyId: value(solution, "ga4_property_id").replace(/^properties\//i, ""), solutionId: value(solution, "solution_id", "id") }));
     const uniqueProperties = Array.from(new Map(properties.map((entry) => [entry.propertyId, entry])).values());
     const contacts = data.contacts.filter((contact) => value(contact, "client_id") === clientId && activeContact(value(contact, "statut_contact", "status")) && emailValid(value(contact, "email")) && normalize(value(contact, "bilan_mensuel_actif")) !== "non");
-    if (!uniqueProperties.length || !contacts.length) return [];
-    return [{ client, clientId, contacts, properties: uniqueProperties, solutions: data.solutions.filter((solution) => value(solution, "client_id") === clientId && active(value(solution, "statut_solution", "status", "statut"))) }];
+    if (!solutions.length || !contacts.length) return [];
+    return [{ client, clientId, contacts, properties: uniqueProperties, solutions }];
   });
 }
 
@@ -174,7 +180,7 @@ async function seedReports(env: Env, data: Awaited<ReturnType<typeof workbook>>,
   const period = reportPeriod(now);
   const created = now.toISOString();
   const expiry = expiresAt(now);
-  for (const entry of eligibleClients(data)) {
+  for (const entry of eligibleClients(data, allowedClientIds(env.MONTHLY_REPORT_ALLOWED_CLIENT_IDS))) {
     const companyName = value(entry.client, "organisation", "company_name", "nom_compte") || "Client Fluxperf";
     const id = uuid();
     const result = await env.MONTHLY_REPORTS_DB.prepare("INSERT OR IGNORE INTO monthly_reports (id, client_id, company_name, period_key, period_start, period_end, status, source_properties_json, created_at, updated_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)")
@@ -235,6 +241,11 @@ function insight(report: ReturnType<typeof aggregate>): string {
   return "Votre site continue d’assurer votre présence digitale et d’accueillir vos visiteurs.";
 }
 
+function serviceInsight(impact: { monthlyHours: number }): string {
+  if (impact.monthlyHours > 0) return "Vos services Fluxperf® restent actifs à vos côtés et contribuent à vous libérer du temps au quotidien.";
+  return "Vos services Fluxperf® restent actifs à vos côtés pour accompagner votre présence digitale et vos opérations.";
+}
+
 function formatNumber(value: number): string { return new Intl.NumberFormat("fr-FR").format(Math.round(value)); }
 function percentage(value: number): string { return `${Math.round(value * 1000) / 10}%`; }
 function delta(current: number, previous: number, sessionsCurrent: number, sessionsPrevious: number): string {
@@ -246,25 +257,34 @@ function delta(current: number, previous: number, sessionsCurrent: number, sessi
 function renderEmail(report: Record<string, unknown>, recipientName: string, appUrl: string): { subject: string; htmlContent: string; textContent: string } {
   const current = report.current as { sessions: number; activeUsers: number; views: number; engagementRate: number };
   const previous = report.previous as typeof current;
+  const hasAnalytics = Boolean(report.hasAnalytics);
   const multiProperty = Boolean(report.multiProperty);
   const impact = report.impact as { monthlyHours: number; items: Array<{ label: string; monthlyHours: number }> };
   const events = report.keyEvents as Array<{ name: string; count: number }>;
   const channels = report.channels as Array<{ label: string; sessions: number }>;
   const label = String(report.periodLabel);
   const principalChannel = channels.find((item) => item.label && !["(not set)", "Unassigned", "Other"].includes(item.label));
-  const rows = [
+  const rows = hasAnalytics ? [
     ["Sessions", formatNumber(current.sessions), delta(current.sessions, previous.sessions, current.sessions, previous.sessions)],
     [multiProperty ? "Utilisateurs actifs cumulés sur vos sites" : "Utilisateurs actifs", formatNumber(current.activeUsers), delta(current.activeUsers, previous.activeUsers, current.sessions, previous.sessions)],
     ["Vues", formatNumber(current.views), delta(current.views, previous.views, current.sessions, previous.sessions)],
     ["Taux d’engagement", percentage(current.engagementRate), Math.min(current.sessions, previous.sessions) >= 20 ? `${Math.round((current.engagementRate - previous.engagementRate) * 1000) / 10} point${Math.abs(current.engagementRate - previous.engagementRate) * 100 >= 2 ? "s" : ""} vs M-1` : ""],
     ...(principalChannel ? [["Canal principal", principalChannel.label, ""]] : [])
-  ];
-  const keyEvents = events.length ? `<p><strong>Actions clés :</strong> ${events.map((item) => `${escapeHtml(item.name.replace(/[_-]+/g, " "))} (${formatNumber(item.count)})`).join(" · ")}</p>` : "";
-  const serviceDetail = impact.items.map((item) => `<li>${escapeHtml(item.label)} : ${item.monthlyHours.toLocaleString("fr-FR")} h / mois</li>`).join("");
+  ] : [];
+  const keyEvents = hasAnalytics && events.length ? `<p><strong>Actions clés :</strong> ${events.map((item) => `${escapeHtml(item.name.replace(/[_-]+/g, " "))} (${formatNumber(item.count)})`).join(" · ")}</p>` : "";
+  const serviceDetail = impact.items.length
+    ? impact.items.map((item) => `<li>${escapeHtml(item.label)} : ${item.monthlyHours.toLocaleString("fr-FR")} h / mois</li>`).join("")
+    : "<li>Services Fluxperf® actifs et suivis ce mois-ci.</li>";
   const htmlRows = rows.map(([name, metric, change]) => `<tr><td style="padding:10px 0;color:#5c6170">${escapeHtml(name)}</td><td style="padding:10px 0;text-align:right;font-weight:700;color:#17213c">${escapeHtml(metric)}</td><td style="padding:10px 0 10px 12px;text-align:right;color:#5c6170;font-size:12px">${escapeHtml(change)}</td></tr>`).join("");
   const preferenceUrl = `${appUrl.replace(/\/+$/, "")}/#mon-compte`;
-  const htmlContent = `<div style="max-width:620px;margin:0 auto;font-family:Arial,sans-serif;color:#17213c;line-height:1.5"><p style="font-size:12px;letter-spacing:.08em;color:#5c6170">BILAN FLUXPERF®</p><h1 style="font-size:26px;margin:0 0 20px">Votre bilan Fluxperf® — ${escapeHtml(label)}</h1><p>Bonjour ${escapeHtml(recipientName || "")},</p><p>Voici l’essentiel de votre activité digitale et des services pris en charge par Fluxperf®.</p><h2 style="font-size:18px;margin-top:28px">Performance digitale</h2><table style="width:100%;border-collapse:collapse">${htmlRows}</table>${keyEvents}<h2 style="font-size:18px;margin-top:28px">À retenir</h2><p style="background:#f2f6ff;padding:16px;border-radius:10px">${escapeHtml(String(report.insight))}</p><h2 style="font-size:18px;margin-top:28px">Votre temps libéré</h2><p style="font-size:22px;font-weight:700;margin:0">≈ ${impact.monthlyHours.toLocaleString("fr-FR")} heures libérées ce mois-ci</p><ul>${serviceDetail}</ul><p style="margin-top:28px"><a style="display:inline-block;background:#17213c;color:#fff;padding:12px 18px;border-radius:8px;text-decoration:none" href="${escapeHtml(appUrl)}">Voir mon espace MyFluxperf</a></p><p style="color:#5c6170">Et si Fluxperf® pouvait vous libérer encore plus de temps ? Retrouvez les services disponibles dans votre espace.</p><p style="font-size:12px;color:#5c6170"><a href="${escapeHtml(preferenceUrl)}">Gérer la réception de mes bilans mensuels</a></p></div>`;
-  const textContent = [`Votre bilan Fluxperf® — ${label}`, "", `Bonjour ${recipientName},`, "", `Sessions : ${formatNumber(current.sessions)}`, `${multiProperty ? "Utilisateurs actifs cumulés sur vos sites" : "Utilisateurs actifs"} : ${formatNumber(current.activeUsers)}`, `Vues : ${formatNumber(current.views)}`, `Taux d’engagement : ${percentage(current.engagementRate)}`, ...(principalChannel ? [`Canal principal : ${principalChannel.label}`] : []), "", `À retenir : ${String(report.insight)}`, "", `Temps libéré : environ ${impact.monthlyHours.toLocaleString("fr-FR")} heures ce mois-ci.`, `Mon espace : ${appUrl}`, `Préférences : ${preferenceUrl}`].join("\n");
+  const performanceHtml = hasAnalytics
+    ? `<h2 style="font-size:18px;margin-top:28px">Performance digitale</h2><table style="width:100%;border-collapse:collapse">${htmlRows}</table>${keyEvents}`
+    : "<h2 style=\"font-size:18px;margin-top:28px\">Vos services en action</h2><p>Ce bilan met à l’honneur les services Fluxperf® actifs à vos côtés.</p>";
+  const performanceText = hasAnalytics
+    ? [`Sessions : ${formatNumber(current.sessions)}`, `${multiProperty ? "Utilisateurs actifs cumulés sur vos sites" : "Utilisateurs actifs"} : ${formatNumber(current.activeUsers)}`, `Vues : ${formatNumber(current.views)}`, `Taux d’engagement : ${percentage(current.engagementRate)}`, ...(principalChannel ? [`Canal principal : ${principalChannel.label}`] : [])]
+    : ["Vos services Fluxperf® sont actifs à vos côtés ce mois-ci."];
+  const htmlContent = `<div style="max-width:620px;margin:0 auto;font-family:Arial,sans-serif;color:#17213c;line-height:1.5"><p style="font-size:12px;letter-spacing:.08em;color:#5c6170">BILAN FLUXPERF®</p><h1 style="font-size:26px;margin:0 0 20px">Votre bilan Fluxperf® — ${escapeHtml(label)}</h1><p>Bonjour ${escapeHtml(recipientName || "")},</p><p>${hasAnalytics ? "Voici l’essentiel de votre activité digitale et des services pris en charge par Fluxperf®." : "Voici l’essentiel des services Fluxperf® actifs à vos côtés."}</p>${performanceHtml}<h2 style="font-size:18px;margin-top:28px">À retenir</h2><p style="background:#f2f6ff;padding:16px;border-radius:10px">${escapeHtml(String(report.insight))}</p><h2 style="font-size:18px;margin-top:28px">Votre temps libéré</h2><p style="font-size:22px;font-weight:700;margin:0">≈ ${impact.monthlyHours.toLocaleString("fr-FR")} heures libérées ce mois-ci</p><ul>${serviceDetail}</ul><p style="margin-top:28px"><a style="display:inline-block;background:#17213c;color:#fff;padding:12px 18px;border-radius:8px;text-decoration:none" href="${escapeHtml(appUrl)}">Voir mon espace MyFluxperf</a></p><p style="color:#5c6170">Et si Fluxperf® pouvait vous libérer encore plus de temps ? Retrouvez les services disponibles dans votre espace.</p><p style="font-size:12px;color:#5c6170"><a href="${escapeHtml(preferenceUrl)}">Gérer la réception de mes bilans mensuels</a></p></div>`;
+  const textContent = [`Votre bilan Fluxperf® — ${label}`, "", `Bonjour ${recipientName},`, "", ...performanceText, "", `À retenir : ${String(report.insight)}`, "", `Temps libéré : environ ${impact.monthlyHours.toLocaleString("fr-FR")} heures ce mois-ci.`, `Mon espace : ${appUrl}`, `Préférences : ${preferenceUrl}`].join("\n");
   return { subject: `Votre bilan Fluxperf® — ${label}`, htmlContent, textContent };
 }
 
@@ -290,23 +310,18 @@ async function generateReports(env: Env, data: Awaited<ReturnType<typeof workboo
       });
       const usable = settled.flatMap((item) => item.result ? [item.result] : []);
       for (const item of settled.filter((entry) => !entry.result)) await event(env, id, null, clientId, "property_unavailable", "warning", item.error || "Accès GA4 indisponible.", { propertyId: item.propertyId });
-      if (!usable.length) {
-        if (settled.some((item) => item.transient)) throw new Error("Toutes les propriétés GA4 sont temporairement indisponibles.");
-        await env.MONTHLY_REPORTS_DB.prepare("UPDATE monthly_reports SET status = 'skipped', error_message = ?, updated_at = ? WHERE id = ?").bind("Aucune propriété GA4 n'est accessible.", nowIso(), id).run();
-        await event(env, id, null, clientId, "report_skipped", "skipped", "Aucune propriété GA4 accessible.");
-        continue;
-      }
       const aggregated = aggregate(usable);
       const currentSolutions = data.solutions.filter((solution) => value(solution, "client_id") === clientId && active(value(solution, "statut_solution", "status", "statut")));
       const impact = calculateImpact(currentSolutions.map((solution) => ({ type: value(solution, "type_solution", "type"), name: value(solution, "nom_solution", "name") })));
-      const payload = { ...aggregated, periodLabel: period.label, multiProperty: usable.length > 1, insight: insight(aggregated), impact, properties: settled.map((item) => ({ propertyId: item.propertyId, status: item.result ? "available" : "unavailable" })) };
+      const hasAnalytics = usable.length > 0;
+      const payload = { ...aggregated, hasAnalytics, periodLabel: period.label, multiProperty: usable.length > 1, insight: hasAnalytics ? insight(aggregated) : serviceInsight(impact), impact, properties: settled.map((item) => ({ propertyId: item.propertyId, status: item.result ? "available" : "unavailable" })) };
       await env.MONTHLY_REPORTS_DB.prepare("UPDATE monthly_reports SET status = 'ready', report_json = ?, insight = ?, impact_json = ?, template_version = ?, generated_at = ?, updated_at = ?, error_message = NULL WHERE id = ?").bind(json(payload), payload.insight, json(impact), TEMPLATE_VERSION, nowIso(), nowIso(), id).run();
       const contacts = data.contacts.filter((contact) => value(contact, "client_id") === clientId && activeContact(value(contact, "statut_contact", "status")) && emailValid(value(contact, "email")) && normalize(value(contact, "bilan_mensuel_actif")) !== "non");
       for (const contact of contacts) {
         const recipientName = [value(contact, "prenom", "first_name"), value(contact, "nom", "last_name")].filter(Boolean).join(" ");
         await env.MONTHLY_REPORTS_DB.prepare("INSERT OR IGNORE INTO monthly_report_deliveries (id, report_id, contact_id, recipient_email, recipient_name, status, idempotency_key, created_at, updated_at, expires_at) VALUES (?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?)").bind(uuid(), id, contactIdentifier(contact), value(contact, "email").toLowerCase(), recipientName, uuid(), nowIso(), nowIso(), expiresAt(now)).run();
       }
-      await event(env, id, null, clientId, "report_generated", "ready", "Bilan généré.", { availableProperties: usable.length, unavailableProperties: settled.length - usable.length, recipientCount: contacts.length });
+      await event(env, id, null, clientId, "report_generated", "ready", "Bilan généré.", { analyticsAvailable: hasAnalytics, availableProperties: usable.length, unavailableProperties: settled.length - usable.length, recipientCount: contacts.length });
     } catch (error) {
       const attempts = Number(row.attempts || 0) + 1; const retry = attempts < 3;
       await env.MONTHLY_REPORTS_DB.prepare("UPDATE monthly_reports SET status = ?, next_attempt_at = ?, error_message = ?, updated_at = ? WHERE id = ?").bind(retry ? "pending" : "failed", retry ? new Date(Date.now() + 5 * 60 * 1000).toISOString() : null, error instanceof Error ? error.message.slice(0, 1000) : "GA4 unavailable", nowIso(), id).run();
@@ -386,4 +401,4 @@ export default {
   }
 };
 
-export { aggregate, delta, expiresAt, insight, isSchedulingWindow, reportPeriod, reportPeriodFromStart };
+export { aggregate, allowedClientIds, delta, eligibleClients, expiresAt, insight, isSchedulingWindow, renderEmail, reportPeriod, reportPeriodFromStart };

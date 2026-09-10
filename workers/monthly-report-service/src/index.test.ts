@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aggregate, delta, expiresAt, insight, isSchedulingWindow, reportPeriod, reportPeriodFromStart } from "./index";
+import { aggregate, allowedClientIds, delta, eligibleClients, expiresAt, insight, isSchedulingWindow, renderEmail, reportPeriod, reportPeriodFromStart } from "./index";
 
 describe("monthly-report service", () => {
   it("schedules from 09:00 Paris on the first Monday-to-Friday day, across DST", () => {
@@ -59,5 +59,38 @@ describe("monthly-report service", () => {
 
     expect(insight(report)).toContain("Organic Search");
     expect(insight(report).toLowerCase()).not.toContain("baisse");
+  });
+
+  it("includes active clients with Fluxperf services even when no GA4 property is configured", () => {
+    const entries = eligibleClients({
+      clients: [{ client_id: "client-1", statut_client: "Actif", espace_client_actif: "Oui" }],
+      contacts: [{ client_id: "client-1", contact_id: "contact-1", email: "contact@example.com", statut_contact: "Actif", bilan_mensuel_actif: "Oui" }],
+      solutions: [{ client_id: "client-1", solution_id: "solution-1", nom_solution: "Réseaux sociaux", statut_solution: "Actif" }]
+    } as never);
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0].properties).toEqual([]);
+  });
+
+  it("can restrict a preproduction run to explicit client identifiers", () => {
+    expect(Array.from(allowedClientIds(" client-1, client-2 ,"))).toEqual(["client-1", "client-2"]);
+  });
+
+  it("renders a service-only email without invented analytics metrics", () => {
+    const email = renderEmail({
+      hasAnalytics: false,
+      current: { sessions: 0, activeUsers: 0, views: 0, engagementRate: 0 },
+      previous: { sessions: 0, activeUsers: 0, views: 0, engagementRate: 0 },
+      channels: [],
+      keyEvents: [],
+      periodLabel: "Août 2026",
+      insight: "Vos services Fluxperf® restent actifs à vos côtés.",
+      impact: { monthlyHours: 12, items: [{ label: "Automatisation & IA", monthlyHours: 12 }] }
+    }, "Camille", "https://my.fluxperf.fr");
+
+    expect(email.htmlContent).toContain("Vos services en action");
+    expect(email.htmlContent).not.toContain("Performance digitale");
+    expect(email.textContent).not.toContain("Sessions :");
+    expect(email.textContent).toContain("Temps libéré : environ 12 heures");
   });
 });

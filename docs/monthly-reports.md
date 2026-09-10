@@ -89,9 +89,11 @@ y compris aux changements d’heure. Les jours fériés ne modifient pas la règ
 ## Fonctionnement et sécurité d’envoi
 
 - Un rapport couvre le mois civil précédent et le compare au mois M-1.
-- Toutes les propriétés GA4 accessibles d’une même organisation sont agrégées.
-  Une propriété inaccessible est tracée ; si elles sont toutes indisponibles,
-  le rapport est ignoré sans email.
+- Chaque client actif ayant au moins un service Fluxperf actif reçoit un bilan.
+  Les propriétés GA4 accessibles d’une même organisation sont agrégées lorsqu’elles
+  existent. Une propriété inaccessible est tracée ; si aucune donnée GA4 n’est
+  disponible, le client reçoit tout de même un bilan centré sur ses services actifs
+  et son temps libéré, sans métrique analytique inventée.
 - Chaque contact actif avec une adresse valide et `bilan_mensuel_actif != Non`
   reçoit son propre email. La préférence est relue juste avant l’envoi.
 - La clé d’idempotence stockée dans D1 est conservée lors des reprises courtes.
@@ -116,3 +118,7 @@ Avant production, tester une organisation de préproduction avec :
 2. deux propriétés, dont une accessible pour l’identité GA4 existante et une sans accès GA4 ;
 3. un échec Brevo simulé puis une relance `failed` ;
 4. une tentative d’accès à l’onglet ou aux API admin avec une adresse absente de `ADMIN_EMAILS`.
+
+Pour une recette contrôlée, renseigner temporairement `MONTHLY_REPORT_ALLOWED_CLIENT_IDS`
+avec le seul `client_id` de test, puis activer `MONTHLY_REPORTS_ENABLED`. Retirer la
+liste d’autorisation et repasser l’interrupteur à `false` après la recette.
