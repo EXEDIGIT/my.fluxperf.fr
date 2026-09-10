@@ -12,7 +12,10 @@ import type {
   AdminOverviewResponse,
   AdminOptionsResponse,
   AdminSessionResponse,
-  AdminWelcomeEmailResponse
+  AdminWelcomeEmailResponse,
+  AdminMonthlyReportsResponse,
+  AdminMonthlyReportDetailResponse,
+  AdminMonthlyReportRetryResponse
 } from "../types/admin";
 import { ApiError } from "./api";
 import { getSupabaseAccessToken } from "./supabase";
@@ -78,6 +81,21 @@ export function getAdminOverview(clientId?: string): Promise<AdminOverviewRespon
   const query = clientId ? `?clientId=${encodeURIComponent(clientId)}` : "";
 
   return adminFetch<AdminOverviewResponse>(`/api/admin/overview${query}`);
+}
+
+export function getAdminMonthlyReports(): Promise<AdminMonthlyReportsResponse> {
+  return adminFetch<AdminMonthlyReportsResponse>("/api/admin/monthly-reports");
+}
+
+export function getAdminMonthlyReport(reportId: string): Promise<AdminMonthlyReportDetailResponse> {
+  return adminFetch<AdminMonthlyReportDetailResponse>(`/api/admin/monthly-reports/${encodeURIComponent(reportId)}`);
+}
+
+export function retryAdminMonthlyReport(reportId: string, deliveryId?: string): Promise<AdminMonthlyReportRetryResponse> {
+  return adminFetch<AdminMonthlyReportRetryResponse>(`/api/admin/monthly-reports/${encodeURIComponent(reportId)}/retry`, {
+    method: "POST",
+    body: JSON.stringify(deliveryId ? { deliveryId } : {})
+  });
 }
 
 export function createAdminClient(input: AdminCreateClientInput): Promise<AdminCreateClientResponse> {

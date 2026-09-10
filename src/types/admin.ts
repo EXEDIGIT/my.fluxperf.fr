@@ -190,6 +190,43 @@ export type AdminOverviewResponse = {
   selectedClient: AdminClientDetail | null;
 };
 
+export type AdminMonthlyReportListItem = {
+  id: string;
+  clientId: string;
+  companyName: string;
+  periodKey: string;
+  status: string;
+  generationStatus: string;
+  generatedAt: string | null;
+  sentAt: string | null;
+  deliveryCount: number;
+  sentCount: number;
+  failedCount: number;
+  unknownCount: number;
+  errorMessage: string | null;
+};
+
+export type AdminMonthlyReportDetail = AdminMonthlyReportListItem & {
+  periodStart: string;
+  periodEnd: string;
+  insight: string | null;
+  report: Record<string, unknown> | null;
+  deliveries: Array<{
+    id: string;
+    contactId: string;
+    recipientEmail: string;
+    recipientName: string;
+    status: string;
+    attempts: number;
+    sentAt: string | null;
+    errorMessage: string | null;
+  }>;
+};
+
+export type AdminMonthlyReportsResponse = { reports: AdminMonthlyReportListItem[] };
+export type AdminMonthlyReportDetailResponse = { report: AdminMonthlyReportDetail };
+export type AdminMonthlyReportRetryResponse = { status: "queued" };
+
 export type AdminClientActionResponse = {
   status: "deactivated" | "created" | "reactivated" | "updated" | "synced" | "unlinked" | "failed";
   clientId: string;

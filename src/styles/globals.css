@@ -482,6 +482,105 @@ svg {
   font-size: 0.95rem;
 }
 
+.monthly-report-preference-card {
+  align-items: flex-start;
+}
+
+.monthly-report-preference-card p {
+  margin: 0.4rem 0 0.75rem;
+  color: var(--text-muted, #5c6170);
+}
+
+.account-preference-toggle {
+  display: inline-flex;
+  gap: 0.55rem;
+  align-items: center;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.account-preference-toggle input {
+  inline-size: 1.1rem;
+  block-size: 1.1rem;
+}
+
+.admin-monthly-reports,
+.admin-monthly-report-detail {
+  display: grid;
+  gap: 1rem;
+}
+
+.admin-monthly-report-list,
+.admin-monthly-deliveries {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.admin-monthly-report-row,
+.admin-monthly-deliveries > div {
+  display: grid;
+  grid-template-columns: minmax(10rem, 1.5fr) auto minmax(9rem, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(22, 33, 60, 0.12);
+  border-radius: 0.75rem;
+}
+
+.admin-monthly-report-row > div,
+.admin-monthly-deliveries > div {
+  min-width: 0;
+}
+
+.admin-monthly-report-row small,
+.admin-monthly-deliveries small {
+  color: var(--text-muted, #5c6170);
+}
+
+.admin-monthly-report-row button,
+.admin-monthly-deliveries button {
+  border: 0;
+  background: transparent;
+  color: var(--primary, #17213c);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-monthly-insight {
+  margin: 0;
+  padding: 0.9rem 1rem;
+  border-radius: 0.75rem;
+  background: #f2f6ff;
+}
+
+.admin-monthly-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.admin-monthly-kpis span {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.8rem;
+  border: 1px solid rgba(22, 33, 60, 0.12);
+  border-radius: 0.65rem;
+}
+
+.admin-monthly-kpis small { color: var(--text-muted, #5c6170); }
+.admin-monthly-extra { margin: 0; color: var(--text-muted, #5c6170); }
+
+@media (max-width: 760px) {
+  .admin-monthly-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 760px) {
+  .admin-monthly-report-row,
+  .admin-monthly-deliveries > div {
+    grid-template-columns: 1fr;
+  }
+}
+
 .rib-card {
   padding: 22px;
   border: 1px solid var(--line);

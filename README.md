@@ -69,7 +69,7 @@ GOOGLE_DOCUMENTS_RANGE=Documents!A1:J1000
 GOOGLE_CONNECTIONS_RANGE=Connexions!A1:H1000
 GOOGLE_PARAMETERS_RANGE=Parametres!A1:B1000
 GOOGLE_CLIENTS_WRITE_RANGE=Clients!A:L
-GOOGLE_CONTACTS_WRITE_RANGE=Contacts!A:P
+GOOGLE_CONTACTS_WRITE_RANGE=Contacts!A:Q
 GOOGLE_SOLUTIONS_WRITE_RANGE=Solutions!A:K
 GOOGLE_CONNECTIONS_WRITE_RANGE=Connexions!A:H
 GOOGLE_SERVICE_ACCOUNT_EMAIL=
@@ -121,6 +121,19 @@ La liste des redirects autorises doit contenir `https://my.fluxperf.fr/auth/call
 7. Pour la console interne, partager le Google Sheet avec l'email du Service Account en edition.
 
 Le Google Sheet n'est jamais expose cote navigateur. `/api/me` lit la feuille cote serveur et retourne uniquement la fiche du client connecte.
+
+## Bilans mensuels Fluxperf®
+
+Google Sheets reste la source de vérité des clients, contacts, services et
+propriétés GA4. La D1 `fluxperf-monthly-reports` ne contient que les bilans générés,
+leurs livraisons, erreurs et traces d’exécution. Elle n’est jamais liée au
+navigateur ni à Supabase.
+
+La mise en service et la recette sont détaillées dans
+[`docs/monthly-reports.md`](docs/monthly-reports.md). En bref, le Worker crée
+un bilan agrégé par organisation le premier jour ouvré à partir de 09:00 Paris,
+conserve les données 24 mois, et envoie individuellement les contacts actifs
+qui n’ont pas désactivé cette préférence dans Mon compte.
 
 ## Console interne
 
@@ -325,7 +338,7 @@ reception simulee avec une reference `ACC-JJMMAAAA-XXXX`.
 
 - Dashboard unique, sans sous-pages applicatives.
 - Ressources statiques.
-- Pas encore de base SQL metier.
+- D1 est limitée à l’historique d’exécution des bilans ; Google Sheets reste la base métier.
 - Les comptes autorises doivent etre crees dans Supabase Auth.
 - Pas de section contenus.
 

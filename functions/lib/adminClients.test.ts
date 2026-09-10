@@ -57,6 +57,7 @@ describe("admin client helpers", () => {
       expect(rows.clientRow[5]).toBe(rows.contactIds[0]);
       expect(rows.contactRows[0].slice(2, 8)).toEqual(["Camille", "Martin", "camille@example.com", "Direction", "Oui", "Actif"]);
       expect(rows.contactRows[1].slice(2, 8)).toEqual(["Louis", "Durand", "louis@example.com", "Marketing", "Non", "Actif"]);
+      expect(rows.contactRows.every((row) => row[16] === "Oui")).toBe(true);
     }
   });
 
@@ -275,6 +276,7 @@ describe("admin client helpers", () => {
         "Actif"
       ]);
       expect(rows.contactRow[8]).toBe("17/07/2026");
+      expect(rows.contactRow[16]).toBe("Oui");
       expect(rows.solutionRows).toHaveLength(2);
       expect(rows.solutionRows[0].slice(1, 8)).toEqual([
         rows.clientId,

@@ -46,6 +46,21 @@ Imagine le portail comme une agence FluxPerf avec plusieurs personnes a l'accuei
 10. L'API renvoie uniquement la fiche de ce client.
 11. React affiche le dashboard.
 
+## Cas de recuperation auth
+
+Supabase conserve volontairement la session dans le navigateur. Apres un long onglet ouvert,
+un redemarrage ou un `Ctrl+F5`, ce n'est donc pas uniquement un cache classique : React peut
+encore voir une session locale et tenter de preparer l'espace client via `/api/me`.
+
+Les garde-fous cote frontend :
+
+- `/login` est une route publique immediate, meme si une ancienne session existe encore.
+- Les boutons "Demander un nouveau lien" des ecrans de lien invalide nettoient la session
+  Supabase avant de revenir a `/login`.
+- La recuperation de session Supabase et l'appel `/api/me` ont un timeout client.
+- Si la preparation de l'espace client dure trop longtemps, l'ecran affiche une action
+  "Revenir a la connexion" qui nettoie la session locale et permet de demander un nouveau lien.
+
 ## Schema visuel
 
 Voir le fichier [schema-my-fluxperf.svg](schema-my-fluxperf.svg).

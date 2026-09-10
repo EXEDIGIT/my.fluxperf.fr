@@ -103,6 +103,7 @@ brevo_marketing_eligible_at
 brevo_marketing_status
 brevo_marketing_synced_at
 brevo_marketing_last_error
+bilan_mensuel_actif
 ```
 
 ## Onglet `Solutions`
@@ -291,3 +292,9 @@ user_agent
 
 Une seule ligne est ajoutee par client et par jour. Ces donnees alimentent les
 statistiques de connexion du tableau de bord admin.
+
+## Préférence bilan mensuel
+
+La colonne `Contacts.bilan_mensuel_actif` pilote le bilan Fluxperf® : `Oui` ou
+vide active l'envoi de service, `Non` le désactive pour ce contact. Elle reste
+distincte de l'éligibilité e-marketing Brevo.

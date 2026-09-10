@@ -55,6 +55,9 @@ export type ClientAccount = {
     status: ClientRibStatus;
     submittedAt: string | null;
   };
+  monthlyReport: {
+    enabled: boolean;
+  };
 };
 
 export type Client = {

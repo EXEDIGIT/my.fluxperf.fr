@@ -18,6 +18,10 @@ export type RibSubmissionResponse = {
   submittedAt: string;
 };
 
+export type MonthlyReportPreferenceResponse = {
+  enabled: boolean;
+};
+
 const demoResponse: MeResponse = {
   user: {
     email: "contact@a2-cm.fr"
@@ -168,7 +172,8 @@ const demoResponse: MeResponse = {
       rib: {
         status: "missing",
         submittedAt: null
-      }
+      },
+      monthlyReport: { enabled: true }
     }
   }
 };
@@ -689,6 +694,22 @@ export async function submitRibDocument(file: File): Promise<RibSubmissionRespon
 
     throw error;
   }
+}
+
+export async function updateMonthlyReportPreference(enabled: boolean): Promise<MonthlyReportPreferenceResponse> {
+  const accessToken = await getSupabaseAccessToken();
+  const headers: HeadersInit = { Accept: "application/json", "Content-Type": "application/json" };
+  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+  const response = await fetch("/api/account/monthly-report-preference", {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ enabled })
+  });
+  const data = (await response.json().catch(() => ({}))) as MonthlyReportPreferenceResponse & ApiErrorResponse;
+  if (!response.ok) {
+    throw new ApiError(response.status, data.error?.code || "API_ERROR", data.error?.message || "Une erreur est survenue.");
+  }
+  return data;
 }
 
 export async function submitSupportRequest(

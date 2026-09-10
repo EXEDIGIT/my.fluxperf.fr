@@ -256,6 +256,25 @@ export function App() {
     });
   }
 
+  function handleMonthlyReportPreferenceChanged(enabled: boolean) {
+    setState((current) => {
+      if (current.status !== "ready") return current;
+      return {
+        status: "ready",
+        data: {
+          ...current.data,
+          client: {
+            ...current.data.client,
+            account: {
+              ...current.data.client.account,
+              monthlyReport: { enabled }
+            }
+          }
+        }
+      };
+    });
+  }
+
   if (isAuthCallback) {
     return <AuthCallbackPage />;
   }
@@ -413,7 +432,11 @@ export function App() {
 
         <Resources resourcesUrl={client.links.resources} />
 
-        <AccountPage client={client} onRibSubmitted={handleRibSubmitted} />
+        <AccountPage
+          client={client}
+          onRibSubmitted={handleRibSubmitted}
+          onMonthlyReportPreferenceChanged={handleMonthlyReportPreferenceChanged}
+        />
 
         <section className="support-band" id="support">
           <div>

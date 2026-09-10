@@ -769,7 +769,8 @@ describe("client sheet parsing", () => {
         rib: {
           status: "complete",
           submittedAt: "2026-07-23T09:00:00.000Z"
-        }
+        },
+        monthlyReport: { enabled: true }
       });
       expect(JSON.stringify(result.client)).not.toContain("file-3");
       expect(JSON.stringify(result.client)).not.toContain("HBINT_RIB-IBAN");
@@ -795,7 +796,8 @@ describe("client sheet parsing", () => {
         rib: {
           status: "complete",
           submittedAt: null
-        }
+        },
+        monthlyReport: { enabled: true }
       });
     }
   });
@@ -820,7 +822,8 @@ describe("client sheet parsing", () => {
           rib: {
             status: "missing",
             submittedAt: null
-          }
+          },
+          monthlyReport: { enabled: true }
         });
       }
     });
@@ -848,7 +851,8 @@ describe("client sheet parsing", () => {
         rib: {
           status: "missing",
           submittedAt: null
-        }
+        },
+        monthlyReport: { enabled: true }
       });
     }
   });

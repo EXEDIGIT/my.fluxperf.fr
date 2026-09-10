@@ -1,0 +1,22 @@
+name = "myfluxperf-monthly-report-service"
+main = "src/index.ts"
+compatibility_date = "2026-09-10"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+[vars]
+APP_PUBLIC_URL = "https://my.fluxperf.fr"
+GOOGLE_SHEET_RANGE = "Clients!A1:Z1000"
+GOOGLE_CONTACTS_RANGE = "Contacts!A1:Z1000"
+GOOGLE_SOLUTIONS_RANGE = "Solutions!A1:Z1000"
+MONTHLY_REPORT_BATCH_SIZE = "10"
+MONTHLY_REPORTS_ENABLED = "false"
+
+[[d1_databases]]
+binding = "MONTHLY_REPORTS_DB"
+database_name = "fluxperf-monthly-reports"
+database_id = "93d42087-8d0a-406f-b3c0-40d644d146d4"
+migrations_dir = "migrations"
+
+[triggers]
+crons = ["*/15 * * * *"]

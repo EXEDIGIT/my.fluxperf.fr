@@ -1,11 +1,12 @@
-import { BadgeCheck, Building2, CircleAlert, FileText, Loader2, RefreshCw, UploadCloud } from "lucide-react";
+import { BadgeCheck, Bell, Building2, CircleAlert, FileText, Loader2, RefreshCw, UploadCloud } from "lucide-react";
 import { useRef, useState, type ChangeEvent, type FormEvent } from "react";
-import { ApiError, submitRibDocument } from "../lib/api";
+import { ApiError, submitRibDocument, updateMonthlyReportPreference } from "../lib/api";
 import type { Client } from "../types/client";
 
 type AccountPageProps = {
   client: Client;
   onRibSubmitted: (submittedAt: string) => void;
+  onMonthlyReportPreferenceChanged?: (enabled: boolean) => void;
 };
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
@@ -54,12 +55,14 @@ function clientFileError(file: File): string | null {
   return null;
 }
 
-export function AccountPage({ client, onRibSubmitted }: AccountPageProps) {
+export function AccountPage({ client, onRibSubmitted, onMonthlyReportPreferenceChanged = () => undefined }: AccountPageProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [inputKey, setInputKey] = useState(0);
+  const [isUpdatingMonthlyReport, setIsUpdatingMonthlyReport] = useState(false);
+  const [monthlyReportError, setMonthlyReportError] = useState<string | null>(null);
   const isComplete = client.account.rib.status === "complete";
   const submittedAt = formatSubmittedAt(client.account.rib.submittedAt);
 
@@ -87,6 +90,19 @@ export function AccountPage({ client, onRibSubmitted }: AccountPageProps) {
 
     setFile(selectedFile);
     setFormError(null);
+  }
+
+  async function handleMonthlyReportChange(enabled: boolean) {
+    setIsUpdatingMonthlyReport(true);
+    setMonthlyReportError(null);
+    try {
+      const result = await updateMonthlyReportPreference(enabled);
+      onMonthlyReportPreferenceChanged(result.enabled);
+    } catch (error) {
+      setMonthlyReportError(error instanceof ApiError ? error.message : "La préférence n'a pas pu être enregistrée.");
+    } finally {
+      setIsUpdatingMonthlyReport(false);
+    }
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -131,6 +147,25 @@ export function AccountPage({ client, onRibSubmitted }: AccountPageProps) {
         <p className="section-subtitle">
           Retrouvez les éléments administratifs nécessaires à votre accompagnement Fluxperf.
         </p>
+      </div>
+
+      <div className="account-company-card monthly-report-preference-card">
+        <span className="account-company-icon" aria-hidden="true"><Bell /></span>
+        <div>
+          <span>BILAN MENSUEL FLUXPERF®</span>
+          <strong>{client.account.monthlyReport.enabled ? "Réception activée" : "Réception désactivée"}</strong>
+          <p>Recevez chaque mois un point synthétique sur votre activité digitale et les services pris en charge.</p>
+          <label className="account-preference-toggle">
+            <input
+              type="checkbox"
+              checked={client.account.monthlyReport.enabled}
+              disabled={isUpdatingMonthlyReport}
+              onChange={(event) => void handleMonthlyReportChange(event.currentTarget.checked)}
+            />
+            <span>{isUpdatingMonthlyReport ? "Enregistrement…" : "Recevoir mon bilan mensuel"}</span>
+          </label>
+          {monthlyReportError ? <p className="rib-form-error" role="alert">{monthlyReportError}</p> : null}
+        </div>
       </div>
 
       <div className="account-company-card">

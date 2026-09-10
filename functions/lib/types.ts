@@ -33,6 +33,21 @@ export type AppEnv = {
   N8N_RIB_WEBHOOK_SECRET?: string;
   BREVO_API_KEY?: string;
   BREVO_MARKETING_LIST_ID?: string;
+  MONTHLY_REPORTS_DB?: D1DatabaseLike;
+  MONTHLY_REPORT_WORKER_URL?: string;
+  MONTHLY_REPORT_INTERNAL_SECRET?: string;
+};
+
+export type D1PreparedStatementLike = {
+  bind(...values: unknown[]): D1PreparedStatementLike;
+  first<T = Record<string, unknown>>(): Promise<T | null>;
+  all<T = Record<string, unknown>>(): Promise<{ results: T[] }>;
+  run(): Promise<{ success: boolean; meta?: { changes?: number } }>;
+};
+
+export type D1DatabaseLike = {
+  prepare(query: string): D1PreparedStatementLike;
+  batch(statements: D1PreparedStatementLike[]): Promise<unknown>;
 };
 
 export type PagesContext = {
@@ -107,6 +122,9 @@ export type ClientAccountDto = {
   rib: {
     status: ClientRibStatusDto;
     submittedAt: string | null;
+  };
+  monthlyReport: {
+    enabled: boolean;
   };
 };
 

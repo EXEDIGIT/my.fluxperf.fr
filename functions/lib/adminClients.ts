@@ -554,7 +554,8 @@ export function buildAdminClientRows(input: AdminClientInput, now = new Date()):
     "Actif",
     date,
     "Créé depuis la zone interne",
-    ...buildBrevoMarketingColumns(contact.brevoMarketingEligible, "myfluxperf_admin", now)
+    ...buildBrevoMarketingColumns(contact.brevoMarketingEligible, "myfluxperf_admin", now),
+    "Oui"
   ]);
   const contactRow = contactRows[primaryIndex >= 0 ? primaryIndex : 0];
   const solutionRows = input.solutions.map((solution) => buildAdminSolutionRow(clientId, solution, now));
@@ -590,7 +591,8 @@ export function buildAdminAdditionalContactRow(
       "Actif",
       formatFrenchDate(now),
       "Ajouté depuis la zone interne",
-      ...buildBrevoMarketingColumns(input.brevoMarketingEligible, "myfluxperf_admin", now)
+      ...buildBrevoMarketingColumns(input.brevoMarketingEligible, "myfluxperf_admin", now),
+      "Oui"
     ]
   };
 }

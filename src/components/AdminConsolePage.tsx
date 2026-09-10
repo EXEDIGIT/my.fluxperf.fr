@@ -42,6 +42,7 @@ import {
 } from "../lib/adminApi";
 import { fallbackSolutionOptions, isWebsiteSolutionName } from "../lib/solutionCatalog";
 import { getSupabaseClient, hasSupabaseConfig } from "../lib/supabase";
+import { MonthlyReportsPanel } from "./MonthlyReportsPanel";
 import type {
   AdminClientDetail,
   AdminClientContactInput,
@@ -92,7 +93,7 @@ type SolutionEditFeedback = {
   message: string;
 };
 
-type AdminTab = "dashboard" | "clients" | "create";
+type AdminTab = "dashboard" | "clients" | "monthly-reports" | "create";
 
 const consolePath = "/fp-console";
 
@@ -1145,6 +1146,10 @@ export function AdminConsolePage() {
           <Users aria-hidden="true" />
           Clients
         </button>
+        <button type="button" className={activeTab === "monthly-reports" ? "is-active" : ""} onClick={() => setActiveTab("monthly-reports")}>
+          <BarChart3 aria-hidden="true" />
+          Bilans mensuels
+        </button>
         <button type="button" className={activeTab === "create" ? "is-active" : ""} onClick={() => setActiveTab("create")}>
           <UserPlus aria-hidden="true" />
           Nouveau client
@@ -1792,6 +1797,8 @@ export function AdminConsolePage() {
           )}
         </section>
       ) : null}
+
+      {activeTab === "monthly-reports" ? <MonthlyReportsPanel /> : null}
 
       {activeTab === "create" ? (
       <form className="admin-client-form" onSubmit={handleSubmit}>

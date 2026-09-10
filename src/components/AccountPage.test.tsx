@@ -33,7 +33,8 @@ const completeClient: Client = {
     rib: {
       status: "complete",
       submittedAt: null
-    }
+    },
+    monthlyReport: { enabled: true }
   }
 };
 

@@ -9,6 +9,7 @@ import type {
   RawClientRow,
   ThumbnailSourceDto
 } from "./types";
+import { calculateImpact } from "./impact";
 
 const expectedColumns: Array<keyof RawClientRow> = [
   "client_id",
@@ -150,21 +151,6 @@ export type ClientStatisticsSource =
       provider: "ga4" | "google_ads" | null;
       solution: ClientSolutionDto;
     };
-
-const impactRules: Record<ClientImpactKey, { label: string; defaultWeeklyHoursPerUnit: number }> = {
-  visibility_acquisition: {
-    label: "Visibilité & Acquisition",
-    defaultWeeklyHoursPerUnit: 1.5
-  },
-  automation_ai: {
-    label: "Automatisation & IA",
-    defaultWeeklyHoursPerUnit: 1
-  },
-  assistant_ai: {
-    label: "Assistant IA",
-    defaultWeeklyHoursPerUnit: 2
-  }
-};
 
 const solutionImpactKeys: ClientImpactKey[] = ["visibility_acquisition", "automation_ai", "assistant_ai"];
 
@@ -363,7 +349,8 @@ function ribAccountForClient(
       rib: {
         status: "missing",
         submittedAt: null
-      }
+      },
+      monthlyReport: { enabled: true }
     };
   }
 
@@ -377,7 +364,8 @@ function ribAccountForClient(
       rib: {
         status: "missing",
         submittedAt: null
-      }
+      },
+      monthlyReport: { enabled: true }
     };
   }
 
@@ -409,7 +397,8 @@ function ribAccountForClient(
       rib: {
         status: "complete",
         submittedAt: latestRib.submittedAt || null
-      }
+      },
+      monthlyReport: { enabled: true }
     };
   }
 
@@ -417,7 +406,8 @@ function ribAccountForClient(
     rib: {
       status: manualRibStatus === "ok" ? "complete" : "missing",
       submittedAt: null
-    }
+    },
+    monthlyReport: { enabled: true }
   };
 }
 
@@ -434,7 +424,10 @@ function withRibAccount(
     status: "ok",
     client: {
       ...result.client,
-      account: ribAccountForClient(result.client.id, clients, documents)
+      account: {
+        ...result.client.account,
+        ...ribAccountForClient(result.client.id, clients, documents)
+      }
     }
   };
 }
@@ -596,14 +589,6 @@ function isActiveStatus(value: string): boolean {
   return ["active", "actif"].includes(normalizeToken(value));
 }
 
-function roundToHalfHour(value: number): number {
-  return Math.round(value * 2) / 2;
-}
-
-function monthlyHoursFromWeekly(weeklyHours: number): number {
-  return roundToHalfHour((weeklyHours * 52) / 12);
-}
-
 function solutionImpactKey(solution: SheetRecord): ClientImpactKey | null {
   const type = normalizeAlias(getValue(solution, "type_solution", "type", "solution_type"));
 
@@ -630,20 +615,6 @@ function isWebsiteVisibilitySolution(type: ClientImpactKey | null, solution: She
   return type === "visibility_acquisition" && !isGoogleAdsSolution(solution) && !isSocialMediaSolution(solution);
 }
 
-function weeklyHoursForSolution(solution: SheetRecord): number {
-  const type = solutionImpactKey(solution);
-
-  if (!type) {
-    return 0;
-  }
-
-  if (type === "visibility_acquisition" && (isGoogleAdsSolution(solution) || isSocialMediaSolution(solution))) {
-    return 2;
-  }
-
-  return impactRules[type].defaultWeeklyHoursPerUnit;
-}
-
 function emptyImpact(): ClientImpactDto {
   return {
     weeklyHours: 0,
@@ -654,56 +625,10 @@ function emptyImpact(): ClientImpactDto {
 }
 
 function buildImpact(activeSolutions: SheetRecord[] = []): ClientImpactDto {
-  const quantities: Record<ClientImpactKey, number> = {
-    visibility_acquisition: 0,
-    automation_ai: 0,
-    assistant_ai: 0
-  };
-  const weeklyHoursByType: Record<ClientImpactKey, number> = {
-    visibility_acquisition: 0,
-    automation_ai: 0,
-    assistant_ai: 0
-  };
-
-  activeSolutions.forEach((solution) => {
-    const type = solutionImpactKey(solution);
-
-    if (type) {
-      quantities[type] += 1;
-      weeklyHoursByType[type] += weeklyHoursForSolution(solution);
-    }
-  });
-
-  const items = (Object.keys(impactRules) as ClientImpactKey[])
-    .map((key) => {
-      const quantity = quantities[key];
-      const rule = impactRules[key];
-      const weeklyHours = roundToHalfHour(weeklyHoursByType[key]);
-
-      return {
-        key,
-        label: rule.label,
-        quantity,
-        weeklyHours,
-        monthlyHours: monthlyHoursFromWeekly(weeklyHours)
-      };
-    })
-    .filter((item) => item.quantity > 0);
-
-  if (items.length === 0) {
-    return emptyImpact();
-  }
-
-  const weeklyHours = roundToHalfHour(
-    items.reduce((total, item) => total + item.weeklyHours, 0)
-  );
-
-  return {
-    weeklyHours,
-    monthlyHours: monthlyHoursFromWeekly(weeklyHours),
-    items,
-    isEstimated: true
-  };
+  return calculateImpact(activeSolutions.map((solution) => ({
+    type: getValue(solution, "type_solution", "type", "solution_type"),
+    name: solutionName(solution)
+  }))) as ClientImpactDto;
 }
 
 function hasStructuredClientHeaders(values: string[][]): boolean {
@@ -791,7 +716,8 @@ export function toClientDto(row: RawClientRow): ClientDto {
       rib: {
         status: "missing",
         submittedAt: null
-      }
+      },
+      monthlyReport: { enabled: true }
     }
   };
 }
@@ -1254,6 +1180,9 @@ function structuredClientToDto(
       rib: {
         status: "missing",
         submittedAt: null
+      },
+      monthlyReport: {
+        enabled: !["non", "no", "false", "0"].includes(normalizeToken(getValue(contact ?? {}, "bilan_mensuel_actif")))
       }
     }
   };
