@@ -1,7 +1,7 @@
 import { AlertTriangle, CheckCircle2, ChevronRight, Loader2, RefreshCw } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ApiError } from "../lib/api";
-import { getAdminMonthlyReport, getAdminMonthlyReports, retryAdminMonthlyReport } from "../lib/adminApi";
+import { getAdminMonthlyReport, getAdminMonthlyReports, retryAdminMonthlyReport, sendAdminMonthlyReportTest } from "../lib/adminApi";
 import type { AdminMonthlyReportDetail, AdminMonthlyReportListItem } from "../types/admin";
 
 function date(value: string | null): string {
@@ -40,6 +40,9 @@ export function MonthlyReportsPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [retrying, setRetrying] = useState<string | null>(null);
+  const [testClientId, setTestClientId] = useState("");
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<string | null>(null);
 
   async function load() {
     setLoading(true); setError(null);
@@ -64,6 +67,22 @@ export function MonthlyReportsPanel() {
     finally { setRetrying(null); }
   }
 
+  async function sendTest() {
+    const clientId = testClientId.trim();
+    if (!clientId) { setError("Saisissez l’identifiant du client de test."); return; }
+    if (!window.confirm(`Envoyer un bilan de test aux contacts éligibles du client ${clientId} ?`)) return;
+    setTesting(true); setError(null); setTestResult(null);
+    try {
+      const result = await sendAdminMonthlyReportTest(clientId);
+      const analytics = result.analyticsStatus === "available" || result.analyticsStatus === "partial"
+        ? `${result.availableProperties} propriété${result.availableProperties > 1 ? "s" : ""} GA4 exploitée${result.availableProperties > 1 ? "s" : ""}`
+        : "version sans statistiques GA4";
+      setTestResult(`Test ${result.status === "sent" ? "envoyé" : "terminé"} : ${result.sentCount}/${result.recipientCount} destinataire${result.recipientCount > 1 ? "s" : ""} · ${analytics}.`);
+    } catch (reason) {
+      setError(reason instanceof ApiError ? reason.message : "Le bilan de test n’a pas pu être envoyé.");
+    } finally { setTesting(false); }
+  }
+
   useEffect(() => { void load(); }, []);
 
   return <section className="admin-monthly-reports">
@@ -71,6 +90,12 @@ export function MonthlyReportsPanel() {
       <div><h2>Bilans mensuels</h2><p>Suivi des générations et des envois Brevo. Les états « À vérifier » ne sont jamais relancés automatiquement.</p></div>
       <button type="button" className="admin-secondary-button" onClick={() => void load()} disabled={loading}><RefreshCw aria-hidden="true" /> Actualiser</button>
     </div>
+    <div className="admin-monthly-test">
+      <div><strong>Envoyer un bilan de test</strong><small>Le test est clairement identifié et reste séparé des bilans mensuels réels.</small></div>
+      <label>Identifiant client<input value={testClientId} onChange={(event) => setTestClientId(event.target.value)} placeholder="CLI-…" autoComplete="off" /></label>
+      <button type="button" className="admin-secondary-button" onClick={() => void sendTest()} disabled={testing}>{testing ? <Loader2 className="loading-icon" /> : null} Envoyer le test</button>
+    </div>
+    {testResult ? <p className="admin-monthly-test-result" role="status">{testResult}</p> : null}
     {error ? <p className="admin-form-error" role="alert">{error}</p> : null}
     {loading ? <p className="admin-empty-copy"><Loader2 className="loading-icon" aria-hidden="true" /> Chargement des bilans…</p> : null}
     {!loading && reports.length === 0 ? <p className="admin-empty-copy">Aucun bilan mensuel n’a encore été généré.</p> : null}

@@ -226,6 +226,13 @@ export type AdminMonthlyReportDetail = AdminMonthlyReportListItem & {
 export type AdminMonthlyReportsResponse = { reports: AdminMonthlyReportListItem[] };
 export type AdminMonthlyReportDetailResponse = { report: AdminMonthlyReportDetail };
 export type AdminMonthlyReportRetryResponse = { status: "queued" };
+export type AdminMonthlyReportTestResponse = {
+  status: "sent" | "partial" | "failed";
+  recipientCount: number;
+  sentCount: number;
+  analyticsStatus: string;
+  availableProperties: number;
+};
 
 export type AdminClientActionResponse = {
   status: "deactivated" | "created" | "reactivated" | "updated" | "synced" | "unlinked" | "failed";

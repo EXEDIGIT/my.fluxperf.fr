@@ -15,7 +15,8 @@ import type {
   AdminWelcomeEmailResponse,
   AdminMonthlyReportsResponse,
   AdminMonthlyReportDetailResponse,
-  AdminMonthlyReportRetryResponse
+  AdminMonthlyReportRetryResponse,
+  AdminMonthlyReportTestResponse
 } from "../types/admin";
 import { ApiError } from "./api";
 import { getSupabaseAccessToken } from "./supabase";
@@ -95,6 +96,13 @@ export function retryAdminMonthlyReport(reportId: string, deliveryId?: string): 
   return adminFetch<AdminMonthlyReportRetryResponse>(`/api/admin/monthly-reports/${encodeURIComponent(reportId)}/retry`, {
     method: "POST",
     body: JSON.stringify(deliveryId ? { deliveryId } : {})
+  });
+}
+
+export function sendAdminMonthlyReportTest(clientId: string): Promise<AdminMonthlyReportTestResponse> {
+  return adminFetch<AdminMonthlyReportTestResponse>("/api/admin/monthly-reports/test", {
+    method: "POST",
+    body: JSON.stringify({ clientId })
   });
 }
 

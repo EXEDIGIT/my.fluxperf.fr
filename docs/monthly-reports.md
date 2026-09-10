@@ -24,8 +24,10 @@ contact. Les créations depuis la console renseignent `Oui`. Configurer
 `GOOGLE_CONTACTS_WRITE_RANGE=Contacts!A:Q` dans Pages.
 
 Les propriétés GA4 doivent être renseignées dans `Solutions!ga4_property_id`
-sur les solutions actives `Site web` ou `Site e-shop`. L’identifiant est
-numérique, avec ou sans préfixe `properties/`.
+sur les solutions actives concernées. L’identifiant est numérique, avec ou
+sans préfixe `properties/`. Le Worker ne dépend plus du libellé exact de la
+solution : une propriété correctement renseignée reste exploitable pour un
+site vitrine, une boutique ou tout autre nom de solution.
 
 ## 2. Créer et relier la D1
 
@@ -103,7 +105,8 @@ y compris aux changements d’heure. Les jours fériés ne modifient pas la règ
   événements techniques et ceux à zéro ne sont pas mis en avant.
 
 La purge quotidienne enlève rapports, livraisons et événements expirés après
-24 mois.
+24 mois. Les envois de test sont stockés dans des tables distinctes, jamais
+mélangées à l’historique réel, puis purgés après 14 jours.
 
 ## Console et recette
 
@@ -120,5 +123,8 @@ Avant production, tester une organisation de préproduction avec :
 4. une tentative d’accès à l’onglet ou aux API admin avec une adresse absente de `ADMIN_EMAILS`.
 
 Pour une recette contrôlée, renseigner temporairement `MONTHLY_REPORT_ALLOWED_CLIENT_IDS`
-avec le seul `client_id` de test, puis activer `MONTHLY_REPORTS_ENABLED`. Retirer la
-liste d’autorisation et repasser l’interrupteur à `false` après la recette.
+avec le seul `client_id` de test, en conservant `MONTHLY_REPORTS_ENABLED=false`.
+Dans **Bilans mensuels**, saisir ensuite cet identifiant dans **Envoyer un bilan
+de test**. Le Worker envoie un e-mail `[TEST]` aux contacts éligibles, dans un
+historique séparé, sans créer ni relancer le bilan mensuel réel. Retirer la
+liste d’autorisation après la recette.

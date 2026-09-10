@@ -510,6 +510,55 @@ svg {
   gap: 1rem;
 }
 
+.admin-monthly-test {
+  display: grid;
+  grid-template-columns: minmax(14rem, 1fr) minmax(10rem, 0.45fr) auto;
+  gap: 0.8rem;
+  align-items: end;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(0, 119, 128, 0.2);
+  border-radius: 0.75rem;
+  background: #eef7f7;
+}
+
+.admin-monthly-test strong,
+.admin-monthly-test small,
+.admin-monthly-test label {
+  display: block;
+}
+
+.admin-monthly-test small {
+  margin-top: 0.25rem;
+  color: var(--text-muted, #5c6170);
+}
+
+.admin-monthly-test label {
+  color: var(--text-muted, #5c6170);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.admin-monthly-test input {
+  display: block;
+  width: 100%;
+  min-height: 2.5rem;
+  margin-top: 0.3rem;
+  padding: 0.5rem 0.65rem;
+  border: 1px solid rgba(22, 33, 60, 0.18);
+  border-radius: 0.5rem;
+  background: #fff;
+  color: var(--ink, #17213c);
+  font: inherit;
+}
+
+.admin-monthly-test-result {
+  margin: 0;
+  padding: 0.8rem 1rem;
+  border-radius: 0.7rem;
+  color: #17666c;
+  background: #e8f5f5;
+}
+
 .admin-monthly-report-list,
 .admin-monthly-deliveries {
   display: grid;
@@ -572,6 +621,7 @@ svg {
 
 @media (max-width: 760px) {
   .admin-monthly-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-monthly-test { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 760px) {

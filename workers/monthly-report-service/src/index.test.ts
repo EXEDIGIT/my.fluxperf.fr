@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { aggregate, allowedClientIds, delta, eligibleClients, expiresAt, insight, isSchedulingWindow, renderEmail, reportPeriod, reportPeriodFromStart } from "./index";
+import { aggregate, allowedClientIds, configuredProperties, delta, eligibleClients, expiresAt, insight, isSchedulingWindow, renderEmail, reportPeriod, reportPeriodFromStart, summarizeServices } from "./index";
 
 describe("monthly-report service", () => {
   it("schedules from 09:00 Paris on the first Monday-to-Friday day, across DST", () => {
@@ -88,9 +88,52 @@ describe("monthly-report service", () => {
       impact: { monthlyHours: 12, items: [{ label: "Automatisation & IA", monthlyHours: 12 }] }
     }, "Camille", "https://my.fluxperf.fr");
 
-    expect(email.htmlContent).toContain("Vos services en action");
+    expect(email.htmlContent).toContain("Vos services actifs");
     expect(email.htmlContent).not.toContain("Performance digitale");
     expect(email.textContent).not.toContain("Sessions :");
     expect(email.textContent).toContain("Temps libéré : environ 12 heures");
+  });
+
+  it("uses every active numeric GA4 property, whatever the solution label", () => {
+    const properties = configuredProperties([
+      { solution_id: "SOL-1", nom_solution: "Site vitrine", ga4_property_id: "properties/123" },
+      { solution_id: "SOL-2", nom_solution: "Boutique en ligne", ga4_property_id: "456" },
+      { solution_id: "SOL-3", nom_solution: "Autre", ga4_property_id: "not-a-property" }
+    ]);
+
+    expect(properties.properties).toEqual([{ solutionId: "SOL-1", propertyId: "123" }, { solutionId: "SOL-2", propertyId: "456" }]);
+    expect(properties.invalidPropertySolutions).toEqual(["SOL-3"]);
+  });
+
+  it("renders the branded analytics email with detailed services and a distinct test subject", () => {
+    const report = {
+      hasAnalytics: true,
+      analyticsStatus: "partial",
+      availablePropertyCount: 2,
+      unavailablePropertyCount: 1,
+      periodLabel: "août 2026",
+      multiProperty: true,
+      current: { sessions: 120, activeUsers: 90, views: 240, engagementRate: 0.62 },
+      previous: { sessions: 100, activeUsers: 80, views: 200, engagementRate: 0.55 },
+      channels: [{ label: "Organic Search", sessions: 60 }],
+      keyEvents: [{ name: "generate_lead", count: 4 }],
+      insight: "Belle dynamique ce mois-ci.",
+      impact: { monthlyHours: 50, items: [{ label: "Visibilité & Acquisition", monthlyHours: 41 }] },
+      services: summarizeServices([
+        { type_solution: "Flux Visibilité & Acquisition", nom_solution: "Site vitrine", domaine: "exemple.fr" },
+        { type_solution: "Flux Automatisation & IA", nom_solution: "Automatisation commerciale" }
+      ])
+    };
+
+    const email = renderEmail(report, "Laura", "https://my.fluxperf.fr", { test: true });
+
+    expect(email.subject).toBe("[TEST] Votre bilan Fluxperf® — août 2026");
+    expect(email.htmlContent).toContain("logo-fluxperf-email.png");
+    expect(email.htmlContent).toContain("background-color:#f7f4ee");
+    expect(email.htmlContent).toContain("BILAN DE TEST");
+    expect(email.htmlContent).toContain("Performance digitale");
+    expect(email.htmlContent).toContain("Données consolidées sur 2 sites analysés.");
+    expect(email.htmlContent).toContain("Site vitrine — exemple.fr");
+    expect(email.htmlContent).toContain("v:roundrect");
   });
 });
