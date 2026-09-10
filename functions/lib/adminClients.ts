@@ -13,6 +13,7 @@ import {
 import { parseRows } from "./adminWorkbook";
 import { findClientForEmailInWorkbook, type ClientWorkbookValues } from "./clients";
 import { formatCompactFrenchDate, formatFrenchDate } from "./dateFormats";
+import { buildBrevoMarketingColumns } from "./brevoMarketing";
 import type { AppEnv } from "./types";
 
 export type AdminClientInput = {
@@ -39,6 +40,7 @@ export type AdminContactInput = {
   role: string;
   isPrimary: boolean;
   sendAccessEmail: boolean;
+  brevoMarketingEligible: boolean;
 };
 
 export type AdminAdditionalContactInput = Omit<AdminContactInput, "isPrimary">;
@@ -201,7 +203,8 @@ function contactsFromPayload(payload: Record<string, unknown>, notifyClient: boo
         email: normalizeEmail(asText(payload.email)),
         role: "Contact principal",
         isPrimary: true,
-        sendAccessEmail: notifyClient
+        sendAccessEmail: notifyClient,
+        brevoMarketingEligible: payload.brevoMarketingEligible === true
       }
     ];
   }
@@ -221,7 +224,8 @@ function contactsFromPayload(payload: Record<string, unknown>, notifyClient: boo
       email: normalizeEmail(asText(value.email)),
       role: asText(value.role) || asText(value.fonction),
       isPrimary: value.isPrimary === true,
-      sendAccessEmail: value.sendAccessEmail === true || value.notifyClient === true
+      sendAccessEmail: value.sendAccessEmail === true || value.notifyClient === true,
+      brevoMarketingEligible: value.brevoMarketingEligible === true
     };
   });
   const error = contacts.find((value): value is string => typeof value === "string");
@@ -256,7 +260,8 @@ export function validateAdminAdditionalContactInput(payload: unknown): AdminAddi
     lastName,
     email,
     role,
-    sendAccessEmail: payload.sendAccessEmail === true || payload.notifyClient === true
+    sendAccessEmail: payload.sendAccessEmail === true || payload.notifyClient === true,
+    brevoMarketingEligible: payload.brevoMarketingEligible === true
   };
 }
 
@@ -516,7 +521,8 @@ export function buildAdminClientRows(input: AdminClientInput, now = new Date()):
         email: input.email,
         role: "Contact principal",
         isPrimary: true,
-        sendAccessEmail: input.notifyClient
+        sendAccessEmail: input.notifyClient,
+        brevoMarketingEligible: false
       }];
   const primaryIndex = contacts.findIndex((contact) => contact.isPrimary);
   const primaryContact = contacts[primaryIndex] ?? contacts[0];
@@ -547,7 +553,8 @@ export function buildAdminClientRows(input: AdminClientInput, now = new Date()):
     contact.isPrimary ? "Oui" : "Non",
     "Actif",
     date,
-    "Créé depuis la zone interne"
+    "Créé depuis la zone interne",
+    ...buildBrevoMarketingColumns(contact.brevoMarketingEligible, "myfluxperf_admin", now)
   ]);
   const contactRow = contactRows[primaryIndex >= 0 ? primaryIndex : 0];
   const solutionRows = input.solutions.map((solution) => buildAdminSolutionRow(clientId, solution, now));
@@ -582,7 +589,8 @@ export function buildAdminAdditionalContactRow(
       "Non",
       "Actif",
       formatFrenchDate(now),
-      "Ajouté depuis la zone interne"
+      "Ajouté depuis la zone interne",
+      ...buildBrevoMarketingColumns(input.brevoMarketingEligible, "myfluxperf_admin", now)
     ]
   };
 }

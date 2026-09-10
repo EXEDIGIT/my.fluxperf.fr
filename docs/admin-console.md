@@ -33,7 +33,7 @@ ADMIN_EMAILS=tristan@fluxperf.fr,david@fluxperf.fr
 SUPABASE_SERVICE_ROLE_KEY=
 APP_PUBLIC_URL=https://my.fluxperf.fr
 GOOGLE_CLIENTS_WRITE_RANGE=Clients!A:L
-GOOGLE_CONTACTS_WRITE_RANGE=Contacts!A:J
+GOOGLE_CONTACTS_WRITE_RANGE=Contacts!A:P
 GOOGLE_SOLUTIONS_WRITE_RANGE=Solutions!A:K
 GOOGLE_CONNECTIONS_RANGE=Connexions!A1:H1000
 GOOGLE_CONNECTIONS_WRITE_RANGE=Connexions!A:H
@@ -74,6 +74,19 @@ date_mise_a_jour
 notes
 ```
 
+## Synchronisation e-marketing Brevo
+
+La case « Ajouter à la liste e-marketing B2B Fluxperf » est indépendante de
+l'envoi de l'email d'accès et reste décochée par défaut. Lorsqu'elle est cochée,
+la console synchronise le contact avec la liste Brevo configurée par
+`BREVO_MARKETING_LIST_ID`. Un échec Brevo ne bloque pas la création de l'accès :
+son statut est affiché sur la fiche du contact et le bouton « Synchroniser Brevo »
+permet une relance manuelle.
+
+Les colonnes marketing de `Contacts` conservent la décision, sa source et le
+dernier résultat. Brevo reste l'autorité pour les désinscriptions ; aucune relance
+ne force un réabonnement.
+
 `Contacts`
 
 ```text
@@ -87,6 +100,12 @@ contact_principal
 statut_contact
 date_creation
 notes
+brevo_marketing_eligible
+brevo_marketing_source
+brevo_marketing_eligible_at
+brevo_marketing_status
+brevo_marketing_synced_at
+brevo_marketing_last_error
 ```
 
 `Solutions`

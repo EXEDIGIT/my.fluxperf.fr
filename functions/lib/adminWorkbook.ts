@@ -47,6 +47,9 @@ export type AdminClientDetail = AdminClientSummary & {
     role: string;
     status: string;
     isPrimary: boolean;
+    brevoMarketingEligible: boolean;
+    brevoMarketingStatus: string;
+    brevoMarketingLastError: string;
   }>;
   solutions: Array<{
     id: string;
@@ -465,7 +468,10 @@ export function buildAdminClientDetail(workbook: ClientWorkbookValues, id: strin
       email: normalizeEmail(getValue(record, "email")),
       role: getValue(record, "role_contact"),
       status: getValue(record, "statut_contact", "status") || "Actif",
-      isPrimary: isAffirmative(getValue(record, "contact_principal"))
+      isPrimary: isAffirmative(getValue(record, "contact_principal")),
+      brevoMarketingEligible: isAffirmative(getValue(record, "brevo_marketing_eligible")),
+      brevoMarketingStatus: getValue(record, "brevo_marketing_status") || "not_eligible",
+      brevoMarketingLastError: getValue(record, "brevo_marketing_last_error")
     })),
     solutions: clientSolutions.map(({ record }) => ({
       id: getValue(record, "solution_id", "id"),

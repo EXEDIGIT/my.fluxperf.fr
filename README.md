@@ -69,7 +69,7 @@ GOOGLE_DOCUMENTS_RANGE=Documents!A1:J1000
 GOOGLE_CONNECTIONS_RANGE=Connexions!A1:H1000
 GOOGLE_PARAMETERS_RANGE=Parametres!A1:B1000
 GOOGLE_CLIENTS_WRITE_RANGE=Clients!A:L
-GOOGLE_CONTACTS_WRITE_RANGE=Contacts!A:J
+GOOGLE_CONTACTS_WRITE_RANGE=Contacts!A:P
 GOOGLE_SOLUTIONS_WRITE_RANGE=Solutions!A:K
 GOOGLE_CONNECTIONS_WRITE_RANGE=Connexions!A:H
 GOOGLE_SERVICE_ACCOUNT_EMAIL=
@@ -83,6 +83,7 @@ N8N_INTERVENTION_WEBHOOK_SECRET=
 N8N_RIB_WEBHOOK_URL=
 N8N_RIB_WEBHOOK_SECRET=
 BREVO_API_KEY=
+BREVO_MARKETING_LIST_ID=
 ```
 
 `DEV_AUTH_EMAIL` ne doit pas etre renseigne en production.
@@ -132,6 +133,7 @@ Elle permet de creer rapidement :
 - une ou plusieurs lignes `Solutions` actives ;
 - l'utilisateur correspondant dans Supabase Auth ;
 - l'email d'ouverture d'acces via Brevo.
+- l'inscription facultative de chaque utilisateur à la liste e-marketing B2B Brevo.
 
 Le catalogue des solutions est défini par l'application et reproduit dans
 `Parametres`. Cette feuille ne peut pas ajouter de libellé libre ; consultez

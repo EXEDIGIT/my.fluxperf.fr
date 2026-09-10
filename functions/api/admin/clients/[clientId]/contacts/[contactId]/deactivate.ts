@@ -4,6 +4,8 @@ import { findAdminContactRow } from "../../../../../../lib/adminWorkbook";
 import { readGoogleWorkbookValues, updateGoogleSheetValues } from "../../../../../../lib/googleSheets";
 import { json, jsonError } from "../../../../../../lib/response";
 import { banSupabaseUserForClient } from "../../../../../../lib/supabaseAdmin";
+import { unlinkBrevoMarketingContact } from "../../../../../../lib/brevo";
+import { isBrevoMarketingEligible, persistBrevoMarketingStatus } from "../../../../../../lib/brevoMarketing";
 import type { PagesContext } from "../../../../../../lib/types";
 
 function valueFromContext(context: PagesContext, key: "clientId" | "contactId"): string {
@@ -34,6 +36,13 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
 
     await updateGoogleSheetValues(context.env, `Contacts!H${contact.rowNumber}:H${contact.rowNumber}`, [["Inactif"]]);
     const auth = await banSupabaseUserForClient(context.env, contact.record.email || "");
+    const brevoMarketing = isBrevoMarketingEligible(contact.record)
+      ? await unlinkBrevoMarketingContact(context.env, contact.record.email || "")
+      : undefined;
+
+    if (brevoMarketing) {
+      await persistBrevoMarketingStatus(context.env, contact.rowNumber, brevoMarketing);
+    }
 
     await logAdminAction(context.env, {
       clientId,
@@ -42,10 +51,10 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
       actorEmail: admin.email,
       reference: contactId,
       status: auth.status === "failed" ? "partiel" : "realisee",
-      details: auth.status === "failed" ? auth.reason : contact.record.email || ""
+      details: auth.status === "failed" ? auth.reason : brevoMarketing?.status === "failed" ? brevoMarketing.reason : contact.record.email || ""
     });
 
-    return json({ status: "deactivated", clientId, contactId, auth, updatedBy: admin.email });
+    return json({ status: "deactivated", clientId, contactId, auth, brevoMarketing, updatedBy: admin.email });
   } catch {
     return jsonError(500, "ADMIN_CONTACT_DEACTIVATE_FAILED", "L'accès de l'utilisateur n'a pas pu être désactivé.");
   }

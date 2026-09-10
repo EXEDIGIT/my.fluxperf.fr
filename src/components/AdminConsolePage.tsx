@@ -37,6 +37,7 @@ import {
   reactivateAdminClientContact,
   reactivateAdminClientSolution,
   sendAdminClientContactWelcomeEmail,
+  syncAdminClientContactWithBrevo,
   updateAdminClientSolution
 } from "../lib/adminApi";
 import { fallbackSolutionOptions, isWebsiteSolutionName } from "../lib/solutionCatalog";
@@ -117,7 +118,8 @@ function createContactDraft(isPrimary = false): ContactDraft {
     email: "",
     role: isPrimary ? "Contact principal" : "",
     isPrimary,
-    sendAccessEmail: false
+    sendAccessEmail: false,
+    brevoMarketingEligible: false
   };
 }
 
@@ -353,7 +355,8 @@ export function AdminConsolePage() {
     lastName: "",
     email: "",
     role: "",
-    sendAccessEmail: false
+    sendAccessEmail: false,
+    brevoMarketingEligible: false
   });
   const [solutionOptions, setSolutionOptions] = useState<AdminSolutionOption[]>(fallbackSolutionOptions);
   const [solutions, setSolutions] = useState(emptySolutions);
@@ -692,11 +695,13 @@ export function AdminConsolePage() {
     try {
       const result = await addAdminClientContact(selectedClient.id, newClientContact);
       setClientMessage(
-        result.notification?.status === "sent"
-          ? `Utilisateur ajouté et email envoyé à ${newClientContact.email}.`
-          : "Utilisateur ajouté sans email d'accès."
+        result.brevoMarketing?.status === "failed"
+          ? `Utilisateur ajouté. Synchronisation Brevo à relancer : ${result.brevoMarketing.reason || newClientContact.email}.`
+          : result.notification?.status === "sent"
+            ? `Utilisateur ajouté et email envoyé à ${newClientContact.email}.`
+            : "Utilisateur ajouté sans email d'accès."
       );
-      setNewClientContact({ firstName: "", lastName: "", email: "", role: "", sendAccessEmail: false });
+      setNewClientContact({ firstName: "", lastName: "", email: "", role: "", sendAccessEmail: false, brevoMarketingEligible: false });
       setIsAddingClientContact(false);
       await refreshAdminData(selectedClient.id);
     } catch (error) {
@@ -741,6 +746,24 @@ export function AdminConsolePage() {
       await refreshAdminData(selectedClient.id);
     } catch (error) {
       setClientError(error instanceof ApiError ? error.message : "L'accès de l'utilisateur n'a pas pu être réactivé.");
+    } finally {
+      setIsClientActionPending(false);
+    }
+  }
+
+  async function handleSyncClientContactWithBrevo(contact: AdminClientDetail["contacts"][number]) {
+    if (!selectedClient) return;
+
+    setClientError(null);
+    setClientMessage(null);
+    setIsClientActionPending(true);
+
+    try {
+      const result = await syncAdminClientContactWithBrevo(selectedClient.id, contact.id);
+      setClientMessage(result.status === "synced" ? `Contact synchronisé avec Brevo : ${contact.email}.` : result.brevoMarketing?.reason || "Synchronisation Brevo à relancer.");
+      await refreshAdminData(selectedClient.id);
+    } catch (error) {
+      setClientError(error instanceof ApiError ? error.message : "La synchronisation Brevo n'a pas pu être exécutée.");
     } finally {
       setIsClientActionPending(false);
     }
@@ -1396,6 +1419,8 @@ export function AdminConsolePage() {
                           <span>
                             <strong>{[contact.firstName, contact.lastName].filter(Boolean).join(" ") || contact.email}</strong>
                             <small>{[contact.email, contact.role || "Utilisateur"].filter(Boolean).join(" · ")}</small>
+                            {contact.brevoMarketingEligible ? <small>Brevo : {contact.brevoMarketingStatus === "synced" ? "synchronisé" : contact.brevoMarketingStatus}</small> : null}
+                            {contact.brevoMarketingLastError ? <small>Brevo : {contact.brevoMarketingLastError}</small> : null}
                           </span>
                           <div className="admin-contact-meta">
                             <em className={contact.isPrimary ? "is-primary" : contact.status.trim().toLowerCase() === "actif" ? "is-active" : "is-inactive"}>
@@ -1405,6 +1430,12 @@ export function AdminConsolePage() {
                               <button type="button" disabled={isClientActionPending} onClick={() => handleSendContactWelcomeEmail(contact)}>
                                 <Mail aria-hidden="true" />
                                 Email d'accès
+                              </button>
+                            ) : null}
+                            {clientAccessIsActive(selectedClient) && contact.status.trim().toLowerCase() === "actif" && contact.brevoMarketingEligible ? (
+                              <button type="button" disabled={isClientActionPending} onClick={() => handleSyncClientContactWithBrevo(contact)}>
+                                <RotateCcw aria-hidden="true" />
+                                Synchroniser Brevo
                               </button>
                             ) : null}
                             {!contact.isPrimary && contact.status.trim().toLowerCase() === "actif" ? (
@@ -1449,6 +1480,13 @@ export function AdminConsolePage() {
                         <span>
                           <strong>Envoyer l'email d'accès</strong>
                           <small>Décochez pour créer l'accès sans communication.</small>
+                        </span>
+                      </label>
+                      <label className="admin-checkbox-row admin-contact-email-choice">
+                        <input type="checkbox" checked={newClientContact.brevoMarketingEligible} onChange={(event) => setNewClientContact((current) => ({ ...current, brevoMarketingEligible: event.target.checked }))} />
+                        <span>
+                          <strong>Ajouter à la liste e-marketing B2B Fluxperf</strong>
+                          <small>Communications liées aux services Fluxperf ; désinscription gérée dans Brevo.</small>
                         </span>
                       </label>
                       <div className="admin-contact-form-actions">
@@ -1816,6 +1854,13 @@ export function AdminConsolePage() {
                       <small>Facultatif : l'accès est créé même sans communication.</small>
                     </span>
                   </label>
+                  <label className="admin-checkbox-row">
+                    <input type="checkbox" checked={contact.brevoMarketingEligible} onChange={(event) => updateContact(contact.id, { brevoMarketingEligible: event.target.checked })} />
+                    <span>
+                      <strong>Ajouter à la liste e-marketing B2B Fluxperf</strong>
+                      <small>Communications liées aux services Fluxperf ; désinscription gérée dans Brevo.</small>
+                    </span>
+                  </label>
                 </article>
               ))}
             </div>
@@ -1966,6 +2011,9 @@ export function AdminConsolePage() {
               Client {success.client.companyName} créé : {success.client.id}. {success.contactsCreated ?? 1} utilisateur(s) créé(s). Supabase :{" "}
               {success.supabaseUser.status}. {notificationLabel(success.notification)}.
               {success.notification.reason ? ` ${success.notification.reason}` : ""}
+              {success.marketingSyncs?.map((sync) => (
+                <span key={sync.contactId}> Brevo {sync.email} : {sync.status === "synced" ? "synchronisé." : `à relancer (${sync.reason || "erreur inconnue"}).`}</span>
+              ))}
             </div>
           ) : null}
 

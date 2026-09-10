@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { onRequestPost } from "./clients";
 import { sendContactWelcomeEmail } from "../../lib/adminClients";
 import { fallbackAdminSolutionOptions } from "../../lib/adminOptions";
-import { appendGoogleSheetValues, readGoogleParametersValues, readGoogleWorkbookValues } from "../../lib/googleSheets";
+import { appendGoogleSheetValues, readGoogleParametersValues, readGoogleWorkbookValues, updateGoogleSheetValues } from "../../lib/googleSheets";
 import { createSupabaseUserForClient } from "../../lib/supabaseAdmin";
 import { refreshWebsiteThumbnail } from "../../lib/thumbnailRefresh";
 import type { PagesContext } from "../../lib/types";
@@ -20,7 +20,8 @@ vi.mock("../../lib/googleSheets", () => ({
     contacts: "Contacts!A:J",
     solutions: "Solutions!A:K"
   })),
-  appendGoogleSheetValues: vi.fn(async () => ({ updatedRows: 1 }))
+  appendGoogleSheetValues: vi.fn(async () => ({ updatedRows: 1 })),
+  updateGoogleSheetValues: vi.fn(async () => ({ updatedRows: 1 }))
 }));
 
 vi.mock("../../lib/supabaseAdmin", () => ({
@@ -211,6 +212,30 @@ describe("POST /api/admin/clients", () => {
     expect(consoleError).toHaveBeenCalledWith("brevo_welcome_email_failed", "Brevo sender rejected");
 
     consoleError.mockRestore();
+  });
+
+  it("keeps a marketing-eligible client when Brevo marketing is not configured", async () => {
+    const response = await onRequestPost(context({
+      ...validPayload,
+      contacts: [{
+        firstName: "Camille",
+        lastName: "Martin",
+        email: "client@example.com",
+        role: "Direction",
+        isPrimary: true,
+        sendAccessEmail: false,
+        brevoMarketingEligible: true
+      }]
+    }));
+    const body = await responseBody(response);
+    const contactRows = vi.mocked(appendGoogleSheetValues).mock.calls[1][2] as string[][];
+
+    expect(response.status).toBe(201);
+    expect(contactRows[0].slice(10, 14)).toEqual(["Oui", "myfluxperf_admin", expect.any(String), "pending"]);
+    expect(body.marketingSyncs).toEqual([expect.objectContaining({ status: "failed", reason: "Configuration Brevo marketing absente." })]);
+    expect(vi.mocked(updateGoogleSheetValues)).toHaveBeenCalledWith(expect.anything(), "Contacts!N2:P2", [
+      ["failed", "", "Configuration Brevo marketing absente."]
+    ]);
   });
 
   it("reports a skipped notification when the email is disabled", async () => {

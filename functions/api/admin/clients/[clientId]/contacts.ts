@@ -10,6 +10,8 @@ import { findAdminClientRow } from "../../../../lib/adminWorkbook";
 import { appendGoogleSheetValues, getGoogleWriteRanges, readGoogleWorkbookValues } from "../../../../lib/googleSheets";
 import { json, jsonError } from "../../../../lib/response";
 import { createSupabaseUserForClient } from "../../../../lib/supabaseAdmin";
+import { persistBrevoMarketingStatus, syncEligibleBrevoMarketingContact } from "../../../../lib/brevoMarketing";
+import { parseRows } from "../../../../lib/adminWorkbook";
 import type { PagesContext } from "../../../../lib/types";
 
 function clientIdFromContext(context: PagesContext): string {
@@ -63,7 +65,7 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
     const supabaseUser = await createSupabaseUserForClient(context.env, input.email);
     const contact = buildAdminAdditionalContactRow(clientId, input);
 
-    await appendGoogleSheetValues(context.env, getGoogleWriteRanges(context.env).contacts, [contact.contactRow]);
+    const appended = await appendGoogleSheetValues(context.env, getGoogleWriteRanges(context.env).contacts, [contact.contactRow]);
 
     await logAdminAction(context.env, {
       clientId,
@@ -86,6 +88,38 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
       notification = { status: "failed", email: input.email, reason: "Email d'ouverture non envoyé. Vérifiez Brevo." };
     }
 
+    let brevoMarketing: Awaited<ReturnType<typeof syncEligibleBrevoMarketingContact>> | undefined;
+
+    if (input.brevoMarketingEligible) {
+      brevoMarketing = await syncEligibleBrevoMarketingContact(
+        context.env,
+        client.record,
+        {
+          contact_id: contact.contactId,
+          client_id: clientId,
+          prenom: input.firstName,
+          nom: input.lastName,
+          email: input.email,
+          role_contact: input.role,
+          statut_contact: "Actif"
+        },
+        parseRows(workbook.solutions).map((item) => item.record)
+      );
+      const rowFromRange = appended?.updatedRange?.match(/!\D*(\d+):/)?.[1];
+      const rowNumber = Number(rowFromRange) || Math.max(2, (workbook.contacts?.length ?? 0) + 1);
+
+      await persistBrevoMarketingStatus(context.env, rowNumber, brevoMarketing);
+      await logAdminAction(context.env, {
+        clientId,
+        type: brevoMarketing.status === "synced" ? "brevo_marketing_synced" : "brevo_marketing_sync_failed",
+        label: brevoMarketing.status === "synced" ? "Contact synchronisé avec Brevo" : "Synchronisation Brevo à relancer",
+        actorEmail: admin.email,
+        reference: contact.contactId,
+        status: brevoMarketing.status,
+        details: brevoMarketing.status === "failed" ? brevoMarketing.reason : input.email
+      });
+    }
+
     if (notification.status !== "skipped") {
       await logAdminAction(context.env, {
         clientId,
@@ -104,6 +138,7 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
       contactId: contact.contactId,
       supabaseUser,
       notification,
+      brevoMarketing,
       createdBy: admin.email
     }, { status: 201 });
   } catch {

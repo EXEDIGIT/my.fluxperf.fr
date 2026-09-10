@@ -136,6 +136,13 @@ export function reactivateAdminClientContact(clientId: string, contactId: string
   );
 }
 
+export function syncAdminClientContactWithBrevo(clientId: string, contactId: string): Promise<AdminClientActionResponse> {
+  return adminFetch<AdminClientActionResponse>(
+    `/api/admin/clients/${encodeURIComponent(clientId)}/contacts/${encodeURIComponent(contactId)}/brevo-sync`,
+    { method: "POST" }
+  );
+}
+
 export function sendAdminClientContactWelcomeEmail(clientId: string, contactId: string): Promise<AdminWelcomeEmailResponse> {
   return adminFetch<AdminWelcomeEmailResponse>(
     `/api/admin/clients/${encodeURIComponent(clientId)}/contacts/${encodeURIComponent(contactId)}/welcome-email`,

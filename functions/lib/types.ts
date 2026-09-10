@@ -32,6 +32,7 @@ export type AppEnv = {
   N8N_RIB_WEBHOOK_URL?: string;
   N8N_RIB_WEBHOOK_SECRET?: string;
   BREVO_API_KEY?: string;
+  BREVO_MARKETING_LIST_ID?: string;
 };
 
 export type PagesContext = {

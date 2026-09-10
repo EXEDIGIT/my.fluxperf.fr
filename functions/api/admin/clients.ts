@@ -18,6 +18,8 @@ import {
 import { json, jsonError } from "../../lib/response";
 import { createSupabaseUserForClient } from "../../lib/supabaseAdmin";
 import { refreshWebsiteThumbnail } from "../../lib/thumbnailRefresh";
+import { persistBrevoMarketingStatus } from "../../lib/brevoMarketing";
+import { syncBrevoMarketingContact } from "../../lib/brevo";
 import type { PagesContext } from "../../lib/types";
 
 function warningsConfirmed(payload: unknown): boolean {
@@ -102,7 +104,7 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
     const rows = buildAdminClientRows(input);
 
     await appendGoogleSheetValues(context.env, ranges.clients, [rows.clientRow]);
-    await appendGoogleSheetValues(context.env, ranges.contacts, rows.contactRows);
+    const appendedContacts = await appendGoogleSheetValues(context.env, ranges.contacts, rows.contactRows);
     await appendGoogleSheetValues(context.env, ranges.solutions, rows.solutionRows);
 
     const thumbnailRefreshes = await Promise.all(
@@ -128,6 +130,37 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
       })
     );
     const notification = notifications.find((item) => item.status !== "skipped") ?? notifications[0];
+
+    const firstContactRow = Number(appendedContacts?.updatedRange?.match(/!\D*(\d+):/)?.[1]) || Math.max(2, (workbook.contacts?.length ?? 0) + 1);
+    const marketingSyncs = await Promise.all(
+      input.contacts.map(async (contact, index) => {
+        if (!contact.brevoMarketingEligible) return null;
+
+        const result = await syncBrevoMarketingContact(context.env, {
+          email: contact.email,
+          firstName: contact.firstName,
+          lastName: contact.lastName,
+          clientId: rows.clientId,
+          companyName: input.companyName,
+          role: contact.role,
+          activeServices: input.solutions.map((solution) => solution.name),
+          source: "myfluxperf_admin"
+        });
+
+        await persistBrevoMarketingStatus(context.env, firstContactRow + index, result);
+        await logAdminAction(context.env, {
+          clientId: rows.clientId,
+          type: result.status === "synced" ? "brevo_marketing_synced" : "brevo_marketing_sync_failed",
+          label: result.status === "synced" ? "Contact synchronisé avec Brevo" : "Synchronisation Brevo à relancer",
+          actorEmail: admin.email,
+          reference: rows.contactIds[index],
+          status: result.status,
+          details: result.status === "failed" ? result.reason : result.email
+        });
+
+        return { contactId: rows.contactIds[index], ...result };
+      })
+    );
 
     await logAdminAction(context.env, {
       clientId: rows.clientId,
@@ -167,6 +200,7 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
         supabaseUser: supabaseUsers[0],
         supabaseUsers,
         notification,
+        marketingSyncs: marketingSyncs.filter((item): item is NonNullable<typeof item> => Boolean(item)),
         createdBy: admin.email
       },
       { status: 201 }

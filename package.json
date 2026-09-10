@@ -17,7 +17,8 @@
     "prepare:client-import": "node scripts/prepare-client-import.mjs",
     "retire:client": "node scripts/retire-client.mjs",
     "reset:test-clients": "node scripts/reset-test-clients.mjs",
-    "normalize:solutions": "node scripts/normalize-solutions.mjs"
+    "normalize:solutions": "node scripts/normalize-solutions.mjs",
+    "sync:brevo-contacts": "node scripts/sync-brevo-contacts.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

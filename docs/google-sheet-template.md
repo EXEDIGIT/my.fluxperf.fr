@@ -81,6 +81,30 @@ last_action_3_date: Il y a 2j
 - `jotform_request_url` est conserve pour compatibilite, mais la demande d'intervention utilise maintenant le formulaire natif.
 - Si `jotform_support_url` est vide, la carte Support est desactivee.
 
+## Onglet `Contacts`
+
+Le schéma structuré utilise un onglet `Contacts` ; les six dernières colonnes
+servent à tracer l’éligibilité et le résultat de synchronisation e-marketing.
+
+```text
+contact_id
+client_id
+prenom
+nom
+email
+role_contact
+contact_principal
+statut_contact
+date_creation
+notes
+brevo_marketing_eligible
+brevo_marketing_source
+brevo_marketing_eligible_at
+brevo_marketing_status
+brevo_marketing_synced_at
+brevo_marketing_last_error
+```
+
 ## Onglet `Solutions`
 
 Creer un onglet nomme `Solutions` pour declarer toutes les solutions Fluxperf

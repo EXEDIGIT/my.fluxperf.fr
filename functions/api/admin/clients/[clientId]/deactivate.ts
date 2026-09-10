@@ -8,6 +8,8 @@ import {
 import { json, jsonError } from "../../../../lib/response";
 import { banSupabaseUserForClient } from "../../../../lib/supabaseAdmin";
 import { formatFrenchDate } from "../../../../lib/dateFormats";
+import { unlinkBrevoMarketingContact } from "../../../../lib/brevo";
+import { isBrevoMarketingEligible, persistBrevoMarketingStatus } from "../../../../lib/brevoMarketing";
 import type { PagesContext } from "../../../../lib/types";
 
 function clientIdFromContext(context: PagesContext): string {
@@ -42,12 +44,22 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
     await updateGoogleSheetValues(context.env, `Clients!D${client.rowNumber}:E${client.rowNumber}`, [["Inactif", "Non"]]);
     await updateGoogleSheetValues(context.env, `Clients!J${client.rowNumber}:J${client.rowNumber}`, [[formatFrenchDate()]]);
 
-    const contactEmails = contactsForAdminClient(workbook, decodeURIComponent(clientIdFromContext(context)))
-      .filter(({ record }) => contactIsActive(record))
+    const activeContacts = contactsForAdminClient(workbook, decodeURIComponent(clientIdFromContext(context)))
+      .filter(({ record }) => contactIsActive(record));
+    const contactEmails = activeContacts
       .map(({ record }) => record.email || "")
       .filter(Boolean);
     const emails = Array.from(new Set(contactEmails.length > 0 ? contactEmails : [emailFromClient(client.record)].filter(Boolean)));
     const authResults = await Promise.all(emails.map((email) => banSupabaseUserForClient(context.env, email)));
+    const brevoMarketingResults = await Promise.all(
+      activeContacts
+        .filter(({ record }) => isBrevoMarketingEligible(record))
+        .map(async (contact) => {
+          const result = await unlinkBrevoMarketingContact(context.env, contact.record.email || "");
+          await persistBrevoMarketingStatus(context.env, contact.rowNumber, result);
+          return result;
+        })
+    );
     const auth = authResults.find((result) => result.status === "failed") ?? authResults[0] ?? {
       status: "skipped" as const,
       email: "",
@@ -68,6 +80,7 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
       clientId: decodeURIComponent(clientIdFromContext(context)),
       auth,
       authResults,
+      brevoMarketingResults,
       updatedBy: admin.email
     });
   } catch {

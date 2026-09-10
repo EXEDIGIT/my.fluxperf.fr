@@ -52,7 +52,8 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
           email: client.email,
           role: contact?.role ?? "Contact principal",
           isPrimary: true,
-          sendAccessEmail: true
+          sendAccessEmail: true,
+          brevoMarketingEligible: false
         }
       ],
       solutions: []

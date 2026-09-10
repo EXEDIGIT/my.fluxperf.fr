@@ -27,6 +27,7 @@ export type AdminClientContactInput = {
   role: string;
   isPrimary: boolean;
   sendAccessEmail: boolean;
+  brevoMarketingEligible: boolean;
 };
 
 export type AdminAddClientContactInput = Omit<AdminClientContactInput, "isPrimary">;
@@ -85,6 +86,9 @@ export type AdminClientDetail = AdminClientSummary & {
     role: string;
     status: string;
     isPrimary: boolean;
+    brevoMarketingEligible: boolean;
+    brevoMarketingStatus: string;
+    brevoMarketingLastError: string;
   }>;
   solutions: Array<{
     id: string;
@@ -187,7 +191,7 @@ export type AdminOverviewResponse = {
 };
 
 export type AdminClientActionResponse = {
-  status: "deactivated" | "created" | "reactivated" | "updated";
+  status: "deactivated" | "created" | "reactivated" | "updated" | "synced" | "unlinked" | "failed";
   clientId: string;
   solutionId?: string;
   contactId?: string;
@@ -204,6 +208,11 @@ export type AdminClientActionResponse = {
   }>;
   notification?: {
     status: "sent" | "skipped" | "failed";
+    email: string;
+    reason?: string;
+  };
+  brevoMarketing?: {
+    status: "synced" | "unlinked" | "failed";
     email: string;
     reason?: string;
   };
@@ -240,5 +249,11 @@ export type AdminCreateClientResponse = {
     email: string;
     reason?: string;
   };
+  marketingSyncs?: Array<{
+    contactId: string;
+    status: "synced" | "failed";
+    email: string;
+    reason?: string;
+  }>;
   createdBy: string;
 };

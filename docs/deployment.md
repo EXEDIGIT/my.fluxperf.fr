@@ -22,6 +22,7 @@ GOOGLE_SOLUTIONS_RANGE=Solutions!A1:Z1000
 GOOGLE_ACTIONS_RANGE=Actions!A1:J1000
 GOOGLE_CONNECTIONS_RANGE=Connexions!A1:H1000
 GOOGLE_PARAMETERS_RANGE=Parametres!A1:B1000
+GOOGLE_CONTACTS_WRITE_RANGE=Contacts!A:P
 GOOGLE_SOLUTIONS_WRITE_RANGE=Solutions!A:K
 GOOGLE_CONNECTIONS_WRITE_RANGE=Connexions!A:H
 GOOGLE_SERVICE_ACCOUNT_EMAIL=
@@ -33,6 +34,7 @@ THUMBNAIL_INTERNAL_SECRET=
 N8N_INTERVENTION_WEBHOOK_URL=
 N8N_INTERVENTION_WEBHOOK_SECRET=
 BREVO_API_KEY=
+BREVO_MARKETING_LIST_ID=
 ```
 
 Configurer `GOOGLE_PRIVATE_KEY`, `GOOGLE_ADS_DEVELOPER_TOKEN`, `BREVO_API_KEY` et `THUMBNAIL_INTERNAL_SECRET`
@@ -68,6 +70,14 @@ comme secrets Cloudflare Pages. Ces cles doivent rester cote serveur.
 4. Envoi email Brevo configure depuis `notifications@fluxperf.fr`.
 5. Secret partage configure dans `N8N_INTERVENTION_WEBHOOK_SECRET`.
 6. Procedure detaillee : `docs/n8n/intervention-workflow-setup.md`.
+
+## Checklist e-marketing Brevo
+
+1. Créer la liste `MyFluxperf — Contacts B2B` puis renseigner son identifiant numérique dans le secret `BREVO_MARKETING_LIST_ID`.
+2. Créer les attributs texte `MFP_CLIENT_ID`, `MFP_COMPANY`, `MFP_ROLE`, `MFP_ACTIVE_SERVICES` et `MFP_SOURCE` dans Brevo.
+3. Vérifier que `Contacts` contient les six colonnes marketing documentées dans `docs/admin-console.md` et que `GOOGLE_CONTACTS_WRITE_RANGE=Contacts!A:P` est configuré.
+4. Lancer `pnpm sync:brevo-contacts -- --mode dry-run --env-file .\\production.env`, contrôler le rapport, puis seulement lancer `--mode apply`.
+5. Envoyer une campagne de test et vérifier le lien de désinscription Brevo ; ne jamais réactiver manuellement une adresse désinscrite.
 
 ## Checklist Support MyFluxperf
 

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { onRequestPost } from "./deactivate";
 import { readGoogleWorkbookValues, updateGoogleSheetValues } from "../../../../../../lib/googleSheets";
 import { banSupabaseUserForClient } from "../../../../../../lib/supabaseAdmin";
+import { unlinkBrevoMarketingContact } from "../../../../../../lib/brevo";
 
 vi.mock("../../../../../../lib/googleSheets", () => ({
   readGoogleWorkbookValues: vi.fn(),
@@ -10,6 +11,10 @@ vi.mock("../../../../../../lib/googleSheets", () => ({
 
 vi.mock("../../../../../../lib/supabaseAdmin", () => ({
   banSupabaseUserForClient: vi.fn(async (_env: unknown, email: string) => ({ status: "banned", email }))
+}));
+
+vi.mock("../../../../../../lib/brevo", () => ({
+  unlinkBrevoMarketingContact: vi.fn(async (_env: unknown, email: string) => ({ status: "unlinked", email }))
 }));
 
 vi.mock("../../../../../../lib/adminActions", () => ({
@@ -57,5 +62,22 @@ describe("POST /api/admin/clients/:clientId/contacts/:contactId/deactivate", () 
     expect(response.status).toBe(200);
     expect(vi.mocked(updateGoogleSheetValues)).toHaveBeenCalledWith(expect.anything(), "Contacts!H3:H3", [["Inactif"]]);
     expect(vi.mocked(banSupabaseUserForClient)).toHaveBeenCalledWith(expect.anything(), "louis@alpha.test");
+  });
+
+  it("removes a marketing-eligible contact from the Brevo list", async () => {
+    vi.mocked(readGoogleWorkbookValues).mockResolvedValue({
+      ...workbook,
+      contacts: [
+        ["contact_id", "client_id", "email", "contact_principal", "statut_contact", "brevo_marketing_eligible"],
+        ["CON-1", "CLI-1", "alice@alpha.test", "Oui", "Actif", "Non"],
+        ["CON-2", "CLI-1", "louis@alpha.test", "Non", "Actif", "Oui"]
+      ]
+    });
+
+    const response = await onRequestPost(context("CON-2"));
+
+    expect(response.status).toBe(200);
+    expect(vi.mocked(unlinkBrevoMarketingContact)).toHaveBeenCalledWith(expect.anything(), "louis@alpha.test");
+    expect(vi.mocked(updateGoogleSheetValues)).toHaveBeenCalledWith(expect.anything(), "Contacts!N3:P3", [["unlinked", expect.any(String), ""]]);
   });
 });
