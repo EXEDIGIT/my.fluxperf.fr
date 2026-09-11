@@ -5,6 +5,8 @@ describe("monthly-report service", () => {
   it("schedules from 09:00 Paris on the first Monday-to-Friday day, across DST", () => {
     expect(isSchedulingWindow(new Date("2026-08-03T06:59:00.000Z"))).toBe(false);
     expect(isSchedulingWindow(new Date("2026-08-03T07:00:00.000Z"))).toBe(true);
+    expect(isSchedulingWindow(new Date("2026-09-11T11:00:00.000Z"))).toBe(false);
+    expect(isSchedulingWindow(new Date("2026-10-01T07:00:00.000Z"))).toBe(true);
     expect(isSchedulingWindow(new Date("2026-11-02T07:59:00.000Z"))).toBe(false);
     expect(isSchedulingWindow(new Date("2026-11-02T08:00:00.000Z"))).toBe(true);
   });

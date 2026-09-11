@@ -150,7 +150,7 @@ function reportPeriod(now: Date): ReportPeriod {
 
 function isSchedulingWindow(now: Date): boolean {
   const local = paris(now);
-  return local.day >= firstBusinessDay(local.year, local.month) && local.hour >= 9;
+  return local.day === firstBusinessDay(local.year, local.month) && local.hour >= 9;
 }
 
 function expiresAt(now: Date): string {
