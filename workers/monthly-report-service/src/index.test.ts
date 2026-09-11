@@ -85,13 +85,16 @@ describe("monthly-report service", () => {
       keyEvents: [],
       periodLabel: "Août 2026",
       insight: "Vos services Fluxperf® restent actifs à vos côtés.",
-      impact: { monthlyHours: 12, items: [{ label: "Automatisation & IA", monthlyHours: 12 }] }
+      impact: { weeklyHours: 3, monthlyHours: 12, items: [{ label: "Automatisation & IA", weeklyHours: 3, monthlyHours: 12 }] }
     }, "Camille", "https://my.fluxperf.fr");
 
     expect(email.htmlContent).toContain("Vos services actifs");
     expect(email.htmlContent).not.toContain("Performance digitale");
     expect(email.textContent).not.toContain("Sessions :");
-    expect(email.textContent).toContain("Temps libéré : environ 12 heures");
+    expect(email.htmlContent).toContain("La promesse Fluxperf®");
+    expect(email.htmlContent).toContain("Soit environ 3 h chaque semaine.");
+    expect(email.htmlContent).toContain("12 h / mois");
+    expect(email.textContent).toContain("≈ 12 h libérées ce mois-ci.");
   });
 
   it("uses every active numeric GA4 property, whatever the solution label", () => {
@@ -118,7 +121,14 @@ describe("monthly-report service", () => {
       channels: [{ label: "Organic Search", sessions: 60 }],
       keyEvents: [{ name: "generate_lead", count: 4 }],
       insight: "Belle dynamique ce mois-ci.",
-      impact: { monthlyHours: 50, items: [{ label: "Visibilité & Acquisition", monthlyHours: 41 }] },
+      impact: {
+        weeklyHours: 11.5,
+        monthlyHours: 50,
+        items: [
+          { label: "Visibilité & Acquisition", weeklyHours: 9.5, monthlyHours: 41 },
+          { label: "Assistant IA", weeklyHours: 2, monthlyHours: 8.5 }
+        ]
+      },
       services: summarizeServices([
         { type_solution: "Flux Visibilité & Acquisition", nom_solution: "Site vitrine", domaine: "exemple.fr" },
         { type_solution: "Flux Automatisation & IA", nom_solution: "Automatisation commerciale" }
@@ -134,6 +144,23 @@ describe("monthly-report service", () => {
     expect(email.htmlContent).toContain("Performance digitale");
     expect(email.htmlContent).toContain("Données consolidées sur 2 sites analysés.");
     expect(email.htmlContent).toContain("Site vitrine — exemple.fr");
+    expect(email.htmlContent).toContain("≈ 50 h");
+    expect(email.htmlContent).toContain("Soit environ 11 h 30 chaque semaine.");
+    expect(email.htmlContent).toContain("8,5 h / mois");
+    expect(email.htmlContent).toContain("≈ 9 h 30 / semaine");
     expect(email.htmlContent).toContain("v:roundrect");
+  });
+
+  it("keeps the time-release section useful when no service family has an estimate", () => {
+    const email = renderEmail({
+      hasAnalytics: false,
+      analyticsStatus: "not_configured",
+      impact: { weeklyHours: 0, monthlyHours: 0, items: [] }
+    }, "Camille", "https://my.fluxperf.fr");
+
+    expect(email.htmlContent).toContain("Votre temps libéré");
+    expect(email.htmlContent).toContain("Vos services Fluxperf® restent actifs à vos côtés");
+    expect(email.htmlContent).not.toContain("≈ 0 h");
+    expect(email.textContent).toContain("Vos services Fluxperf® restent actifs à vos côtés");
   });
 });
