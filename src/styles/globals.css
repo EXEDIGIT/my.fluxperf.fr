@@ -3845,23 +3845,31 @@ svg {
   display: grid;
 }
 
-.admin-contact-list > div {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 9px 0;
+.admin-contact-row {
+  display: grid;
+  gap: 10px;
+  padding: 12px 0;
   border-top: 1px solid var(--line);
 }
 
-.admin-contact-list > div:first-child {
+.admin-detail-section .admin-section-title-row {
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.admin-contact-row:first-child {
   border-top: 0;
 }
 
-.admin-contact-list span {
+.admin-contact-identity {
   min-width: 0;
   display: grid;
   gap: 3px;
+}
+
+.admin-contact-identity strong,
+.admin-contact-identity small {
+  overflow-wrap: anywhere;
 }
 
 .admin-contact-list em {
@@ -3872,15 +3880,11 @@ svg {
   font-weight: 700;
 }
 
-.admin-contact-list > div {
-  align-items: flex-start;
-}
-
 .admin-contact-meta {
   display: flex;
-  flex: 0 0 auto;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: flex-start;
   gap: 7px;
 }
 
@@ -5010,6 +5014,14 @@ svg {
   .admin-detail-actions button,
   .admin-quality-actions button {
     flex: 1 1 180px;
+  }
+
+  .admin-detail-section .admin-section-title-row .admin-inline-action {
+    width: 100%;
+  }
+
+  .admin-contact-meta button {
+    flex: 1 1 154px;
   }
 
   .admin-chart {

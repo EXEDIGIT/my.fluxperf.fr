@@ -1420,13 +1420,13 @@ export function AdminConsolePage() {
                   {selectedClient.contacts.length > 0 ? (
                     <div className="admin-contact-list">
                       {selectedClient.contacts.map((contact) => (
-                        <div key={contact.id || contact.email}>
-                          <span>
+                        <div className="admin-contact-row" key={contact.id || contact.email}>
+                          <div className="admin-contact-identity">
                             <strong>{[contact.firstName, contact.lastName].filter(Boolean).join(" ") || contact.email}</strong>
                             <small>{[contact.email, contact.role || "Utilisateur"].filter(Boolean).join(" · ")}</small>
                             {contact.brevoMarketingEligible ? <small>Brevo : {contact.brevoMarketingStatus === "synced" ? "synchronisé" : contact.brevoMarketingStatus}</small> : null}
                             {contact.brevoMarketingLastError ? <small>Brevo : {contact.brevoMarketingLastError}</small> : null}
-                          </span>
+                          </div>
                           <div className="admin-contact-meta">
                             <em className={contact.isPrimary ? "is-primary" : contact.status.trim().toLowerCase() === "actif" ? "is-active" : "is-inactive"}>
                               {contact.isPrimary ? "Principal" : contact.status}
