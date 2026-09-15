@@ -12,12 +12,7 @@ import {
 } from "../../../../lib/interventionRequests";
 import { json, jsonError } from "../../../../lib/response";
 import type { PagesContext } from "../../../../lib/types";
-
-const serviceLabels: Record<string, string> = {
-  visibility_acquisition: "Flux Visibilité & Acquisition",
-  automation_ai: "Flux Automatisation & IA",
-  assistant_ai: "Flux Assistant IA"
-};
+import { canonicalSolutionCatalogType, solutionLabels } from "../../../../../src/lib/solutionCatalog";
 
 function clientIdFromContext(context: PagesContext): string {
   const value = context.params?.clientId;
@@ -91,14 +86,20 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
 
     const activeSolutions = client.solutions
       .filter((solution) => isActive(solution.status))
-      .map((solution) => ({
-        id: solution.id,
-        type: solution.type,
-        typeLabel: serviceLabels[solution.type] || solution.type,
-        name: solution.name,
-        domain: solution.domain,
-        url: solution.urlOrIndication
-      }));
+      .flatMap((solution) => {
+        const type = canonicalSolutionCatalogType(solution.type);
+
+        return type
+          ? [{
+              id: solution.id,
+              type,
+              typeLabel: solutionLabels[type],
+              name: solution.name,
+              domain: solution.domain,
+              url: solution.urlOrIndication
+            }]
+          : [];
+      });
     const validated = validateInterventionRequest(payload, activeSolutions);
 
     if (validated instanceof Response) {

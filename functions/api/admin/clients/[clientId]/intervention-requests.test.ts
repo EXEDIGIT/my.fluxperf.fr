@@ -107,6 +107,32 @@ describe("POST /api/admin/clients/:clientId/intervention-requests", () => {
     );
   });
 
+  it("accepts an active solution stored with its Google Sheet display label", async () => {
+    const webhookFetch = vi.fn(async () => Response.json({ status: "accepted" }));
+    vi.stubGlobal("fetch", webhookFetch);
+    vi.mocked(readGoogleWorkbookValues).mockResolvedValue({
+      ...workbook,
+      solutions: [
+        workbook.solutions?.[0] ?? [],
+        ["SOL-1", "CLI-1", "Flux Visibilité & Acquisition", "Actif", "Site web", "villa-dcm.fr", "villa-dcm.fr"]
+      ]
+    });
+
+    const response = await onRequestPost(context({
+      ...validPayload,
+      service: "visibility_acquisition",
+      needs: ["content_update"]
+    }));
+    const body = await response.json() as Record<string, unknown>;
+
+    expect(response.status).toBe(202);
+    expect(body).toMatchObject({ status: "received" });
+    const init = (webhookFetch.mock.calls as unknown as Array<[RequestInfo | URL, RequestInit]>)[0][1];
+    const forwarded = JSON.parse(String((init.body as FormData).get("payload"))) as { request: { service: string } };
+
+    expect(forwarded.request.service).toBe("visibility_acquisition");
+  });
+
   it("rejects an inactive contact", async () => {
     const response = await onRequestPost(context({ ...validPayload, requesterContactId: "CON-2" }));
     const body = await response.json() as Record<string, unknown>;

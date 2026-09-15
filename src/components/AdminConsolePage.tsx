@@ -41,7 +41,11 @@ import {
   syncAdminClientContactWithBrevo,
   updateAdminClientSolution
 } from "../lib/adminApi";
-import { fallbackSolutionOptions, isWebsiteSolutionName } from "../lib/solutionCatalog";
+import {
+  canonicalSolutionCatalogType,
+  fallbackSolutionOptions,
+  isWebsiteSolutionName
+} from "../lib/solutionCatalog";
 import { getSupabaseClient, hasSupabaseConfig } from "../lib/supabase";
 import { MonthlyReportsPanel } from "./MonthlyReportsPanel";
 import { InterventionRequestModal } from "./InterventionRequestModal";
@@ -1832,14 +1836,18 @@ export function AdminConsolePage() {
             companyName: selectedClient.companyName,
             solutions: selectedClient.solutions
               .filter((solution) => solutionStatusKind(solution.status) === "active")
-              .map((solution) => ({
-                id: solution.id,
-                type: solution.type,
-                typeLabel: solutionOptions.find((option) => option.type === solution.type)?.label ?? solution.type,
-                name: solution.name,
-                domain: solution.domain,
-                url: solution.urlOrIndication
-              }))
+              .map((solution) => {
+                const type = canonicalSolutionCatalogType(solution.type);
+
+                return {
+                  id: solution.id,
+                  type: type ?? solution.type,
+                  typeLabel: type ? solutionOptions.find((option) => option.type === type)?.label ?? solution.type : solution.type,
+                  name: solution.name,
+                  domain: solution.domain,
+                  url: solution.urlOrIndication
+                };
+              })
           }}
           email={selectedClient.email}
           isOpen={isAdminInterventionOpen}

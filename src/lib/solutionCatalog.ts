@@ -39,6 +39,49 @@ export function normalizeSolutionCatalogValue(value: string): string {
     .replace(/\s+/g, " ");
 }
 
+function normalizeSolutionType(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+const solutionTypeAliases: Record<SolutionCatalogType, string[]> = {
+  visibility_acquisition: [
+    "visibility_acquisition",
+    "visibilite_acquisition",
+    "flux_visibility_acquisition",
+    "flux_visibilite_acquisition",
+    "flux_visibilite_et_acquisition"
+  ],
+  automation_ai: [
+    "automation_ai",
+    "automatisation_ai",
+    "automatisation_ia",
+    "flux_automation_ai",
+    "flux_automatisation_ai",
+    "flux_automatisation_ia"
+  ],
+  assistant_ai: [
+    "assistant_ai",
+    "assistant_ia",
+    "flux_assistant_ai",
+    "flux_assistant_ia"
+  ]
+};
+
+/** Maps legacy Google Sheet labels and technical values to the catalogue type. */
+export function canonicalSolutionCatalogType(value: string): SolutionCatalogType | null {
+  const normalized = normalizeSolutionType(value);
+
+  return (Object.keys(solutionTypeAliases) as SolutionCatalogType[]).find((type) =>
+    solutionTypeAliases[type].includes(normalized)
+  ) ?? null;
+}
+
 export function optionForSolutionType(type: string): SolutionCatalogOption | undefined {
   return solutionCatalog.find((entry) => entry.type === type);
 }
