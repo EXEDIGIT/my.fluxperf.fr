@@ -34,6 +34,29 @@ export type AdminAddClientContactInput = Omit<AdminClientContactInput, "isPrimar
 
 export type AdminClientSolutionInput = AdminCreateClientInput["solutions"][number];
 
+export type AdminInterventionRequestInput = {
+  requesterContactId: string;
+  service: AdminSolutionType;
+  solutionIds: string[];
+  needs: string[];
+  priority: "normal" | "urgent" | "critical";
+  message: string;
+  files: File[];
+  sendAcknowledgment: boolean;
+};
+
+export type AdminInterventionRequestResponse = {
+  status: "received";
+  requestId: string;
+  notification: {
+    status: "requested" | "skipped";
+    email: string;
+  };
+  history: {
+    status: "logged" | "failed";
+  };
+};
+
 export type AdminClientQualityWarning = {
   code: "COMPANY_EXISTS" | "ACTIVE_DOMAIN_EXISTS";
   message: string;

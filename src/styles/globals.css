@@ -2441,6 +2441,52 @@ svg {
   gap: 18px;
 }
 
+.intervention-admin-requester {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid rgba(0, 111, 120, 0.2);
+  border-radius: var(--radius);
+  background: var(--green-soft);
+}
+
+.intervention-admin-requester > label:first-child {
+  display: grid;
+  gap: 8px;
+  color: var(--ink);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.intervention-admin-requester select {
+  min-height: 42px;
+  width: 100%;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--white);
+  color: var(--ink);
+  font: inherit;
+}
+
+.intervention-acknowledgment {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.intervention-acknowledgment input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--green);
+}
+
 .intervention-panel-heading {
   display: flex;
   align-items: center;
@@ -4935,9 +4981,14 @@ svg {
   .priority-row,
   .upload-grid,
   .review-grid,
+  .intervention-admin-requester,
   .access-field-grid,
   .intervention-side {
     grid-template-columns: 1fr;
+  }
+
+  .intervention-acknowledgment {
+    align-items: flex-start;
   }
 
   .intervention-choice {

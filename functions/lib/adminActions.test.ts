@@ -55,7 +55,7 @@ describe("admin action log", () => {
           actorEmail: "admin@fluxperf.fr"
         }
       )
-    ).resolves.toBeUndefined();
+    ).resolves.toBe(false);
 
     expect(consoleError).toHaveBeenCalledWith(
       "admin_action_log_failed",

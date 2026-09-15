@@ -3,6 +3,7 @@ import {
   Ban,
   BarChart3,
   CheckCircle2,
+  FilePlus2,
   LayoutDashboard,
   Loader2,
   LockKeyhole,
@@ -43,6 +44,7 @@ import {
 import { fallbackSolutionOptions, isWebsiteSolutionName } from "../lib/solutionCatalog";
 import { getSupabaseClient, hasSupabaseConfig } from "../lib/supabase";
 import { MonthlyReportsPanel } from "./MonthlyReportsPanel";
+import { InterventionRequestModal } from "./InterventionRequestModal";
 import type {
   AdminClientDetail,
   AdminClientContactInput,
@@ -373,6 +375,7 @@ export function AdminConsolePage() {
   const [clientError, setClientError] = useState<string | null>(null);
   const [isAdminDataLoading, setIsAdminDataLoading] = useState(false);
   const [isClientActionPending, setIsClientActionPending] = useState(false);
+  const [isAdminInterventionOpen, setIsAdminInterventionOpen] = useState(false);
   const [clientSolutionType, setClientSolutionType] = useState<AdminSolutionType>("visibility_acquisition");
   const [clientSolutionName, setClientSolutionName] = useState(fallbackSolutionOptions[0].defaultName);
   const [clientSolutionValue, setClientSolutionValue] = useState("");
@@ -600,6 +603,16 @@ export function AdminConsolePage() {
     } finally {
       setIsAdminDataLoading(false);
     }
+  }
+
+  async function handleAdminInterventionSubmitted() {
+    if (!selectedClient) {
+      return;
+    }
+
+    setClientError(null);
+    setClientMessage("Demande d'intervention transmise depuis la console.");
+    await refreshAdminData(selectedClient.id);
   }
 
   function openClientFromDashboard(clientId: string) {
@@ -1389,6 +1402,20 @@ export function AdminConsolePage() {
 
               <div className="admin-detail-actions">
                 {clientAccessIsActive(selectedClient) ? (
+                  <button
+                    type="button"
+                    disabled={isClientActionPending || !selectedClient.contacts.some((contact) => ["actif", "active"].includes(contact.status.trim().toLowerCase()))}
+                    onClick={() => {
+                      setClientError(null);
+                      setClientMessage(null);
+                      setIsAdminInterventionOpen(true);
+                    }}
+                  >
+                    <FilePlus2 aria-hidden="true" />
+                    Nouvelle demande
+                  </button>
+                ) : null}
+                {clientAccessIsActive(selectedClient) ? (
                   <>
                     <button type="button" disabled={isClientActionPending} onClick={() => handleDeactivateClient(selectedClient)}>
                       <Ban aria-hidden="true" />
@@ -1796,6 +1823,32 @@ export function AdminConsolePage() {
             </section>
           )}
         </section>
+      ) : null}
+
+      {selectedClient && isAdminInterventionOpen ? (
+        <InterventionRequestModal
+          client={{
+            id: selectedClient.id,
+            companyName: selectedClient.companyName,
+            solutions: selectedClient.solutions
+              .filter((solution) => solutionStatusKind(solution.status) === "active")
+              .map((solution) => ({
+                id: solution.id,
+                type: solution.type,
+                typeLabel: solutionOptions.find((option) => option.type === solution.type)?.label ?? solution.type,
+                name: solution.name,
+                domain: solution.domain,
+                url: solution.urlOrIndication
+              }))
+          }}
+          email={selectedClient.email}
+          isOpen={isAdminInterventionOpen}
+          adminRequest={{
+            contacts: selectedClient.contacts,
+            onSubmitted: handleAdminInterventionSubmitted
+          }}
+          onClose={() => setIsAdminInterventionOpen(false)}
+        />
       ) : null}
 
       {activeTab === "monthly-reports" ? <MonthlyReportsPanel /> : null}

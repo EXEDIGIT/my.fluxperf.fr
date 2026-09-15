@@ -28,13 +28,32 @@ import {
   type InterventionPriority,
   type InterventionService
 } from "../lib/api";
+import { submitAdminInterventionRequest } from "../lib/adminApi";
+import type { AdminInterventionRequestResponse } from "../types/admin";
 import type { Client, ClientSolution } from "../types/client";
 
+type InterventionRequestClient = Pick<Client, "id" | "companyName"> & {
+  solutions: Array<Pick<ClientSolution, "id" | "type" | "typeLabel" | "name" | "domain" | "url">>;
+};
+
+type AdminRequestContext = {
+  contacts: Array<{
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    status: string;
+    isPrimary: boolean;
+  }>;
+  onSubmitted?: (result: AdminInterventionRequestResponse) => Promise<void> | void;
+};
+
 type InterventionRequestModalProps = {
-  client: Client;
+  client: InterventionRequestClient;
   email: string;
   isOpen: boolean;
-  onSupportRequest: (preset: { subject: string; message: string }) => void;
+  onSupportRequest?: (preset: { subject: string; message: string }) => void;
+  adminRequest?: AdminRequestContext;
   onClose: () => void;
 };
 
@@ -172,15 +191,15 @@ function labelForNeed(service: InterventionService | null, id: string): string {
   return [...serviceNeeds, ...allNeedOptions].find((item) => item.id === id)?.label ?? id;
 }
 
-function solutionLabel(solution: ClientSolution): string {
+function solutionLabel(solution: InterventionRequestClient["solutions"][number]): string {
   return solution.url || solution.domain || solution.name || solution.id;
 }
 
-function solutionSummaryLabel(solution: ClientSolution): string {
+function solutionSummaryLabel(solution: InterventionRequestClient["solutions"][number]): string {
   return solution.name || solutionLabel(solution);
 }
 
-function solutionSummaryUrl(solution: ClientSolution): string {
+function solutionSummaryUrl(solution: InterventionRequestClient["solutions"][number]): string {
   return solution.url || solution.domain;
 }
 
@@ -189,11 +208,18 @@ export function InterventionRequestModal({
   email,
   isOpen,
   onSupportRequest,
+  adminRequest,
   onClose
 }: InterventionRequestModalProps) {
   const solutions = useMemo(() => client.solutions ?? [], [client.solutions]);
+  const activeContacts = useMemo(
+    () => (adminRequest?.contacts ?? []).filter((contact) => ["actif", "active"].includes(contact.status.trim().toLowerCase()) && contact.email),
+    [adminRequest?.contacts]
+  );
   const [step, setStep] = useState(0);
   const [service, setService] = useState<InterventionService | null>(null);
+  const [requesterContactId, setRequesterContactId] = useState("");
+  const [sendAcknowledgment, setSendAcknowledgment] = useState(true);
   const [solutionIds, setSolutionIds] = useState<string[]>([]);
   const [needs, setNeeds] = useState<InterventionNeed[]>([]);
   const [priority, setPriority] = useState<InterventionPriority>("normal");
@@ -202,6 +228,7 @@ export function InterventionRequestModal({
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [requestId, setRequestId] = useState<string | null>(null);
+  const [adminSubmission, setAdminSubmission] = useState<AdminInterventionRequestResponse | null>(null);
   const wasOpen = useRef(false);
 
   const selectedService = service ? serviceOptions.find((option) => option.id === service) ?? null : null;
@@ -215,6 +242,11 @@ export function InterventionRequestModal({
     () => serviceSolutions.filter((solution) => solutionIds.includes(solution.id)),
     [serviceSolutions, solutionIds]
   );
+  const selectedRequester = useMemo(
+    () => activeContacts.find((contact) => contact.id === requesterContactId) ?? null,
+    [activeContacts, requesterContactId]
+  );
+  const requesterEmail = selectedRequester?.email || email;
 
   useEffect(() => {
     if (!isOpen) {
@@ -228,6 +260,8 @@ export function InterventionRequestModal({
 
     setStep(0);
     setService(null);
+    setRequesterContactId(activeContacts.find((contact) => contact.isPrimary)?.id ?? activeContacts[0]?.id ?? "");
+    setSendAcknowledgment(true);
     setSolutionIds([]);
     setNeeds([]);
     setPriority("normal");
@@ -236,7 +270,8 @@ export function InterventionRequestModal({
     setFormError(null);
     setIsSubmitting(false);
     setRequestId(null);
-  }, [isOpen]);
+    setAdminSubmission(null);
+  }, [activeContacts, isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -270,6 +305,10 @@ export function InterventionRequestModal({
   }
 
   function validateStep(index: number): string | null {
+    if (index === 0 && adminRequest && !selectedRequester) {
+      return "Sélectionnez un contact actif pour cette demande.";
+    }
+
     if (index === 0 && !service) {
       return "Sélectionnez le flux concerné.";
     }
@@ -378,6 +417,10 @@ export function InterventionRequestModal({
   }
 
   function requestSolutionInfo() {
+    if (!onSupportRequest) {
+      return;
+    }
+
     const serviceLabel = selectedService?.label ?? "Fluxperf";
 
     onSupportRequest({
@@ -405,16 +448,39 @@ export function InterventionRequestModal({
     setFormError(null);
 
     try {
-      const result = await submitInterventionRequest({
-        service,
-        solutionIds,
-        needs,
-        priority,
-        message: message.trim(),
-        files
-      });
+      if (adminRequest) {
+        if (!selectedRequester) {
+          setFormError("Sélectionnez un contact actif pour cette demande.");
+          setStep(0);
+          return;
+        }
 
-      setRequestId(result.requestId);
+        const result = await submitAdminInterventionRequest(client.id, {
+          requesterContactId: selectedRequester.id,
+          service,
+          solutionIds,
+          needs,
+          priority,
+          message: message.trim(),
+          files,
+          sendAcknowledgment
+        });
+
+        setAdminSubmission(result);
+        setRequestId(result.requestId);
+        await adminRequest.onSubmitted?.(result);
+      } else {
+        const result = await submitInterventionRequest({
+          service,
+          solutionIds,
+          needs,
+          priority,
+          message: message.trim(),
+          files
+        });
+
+        setRequestId(result.requestId);
+      }
     } catch (error) {
       setFormError(
         error instanceof ApiError
@@ -433,6 +499,29 @@ export function InterventionRequestModal({
           <span>1</span>
           <h3>{steps[0].title}</h3>
         </div>
+        {adminRequest ? (
+          <div className="intervention-admin-requester">
+            <label>
+              <span>Demande saisie pour le compte de</span>
+              <select value={requesterContactId} onChange={(event) => setRequesterContactId(event.target.value)}>
+                <option value="">Sélectionnez un contact</option>
+                {activeContacts.map((contact) => (
+                  <option key={contact.id} value={contact.id}>
+                    {[contact.firstName, contact.lastName].filter(Boolean).join(" ") || contact.email} - {contact.email}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="intervention-acknowledgment">
+              <input
+                type="checkbox"
+                checked={sendAcknowledgment}
+                onChange={(event) => setSendAcknowledgment(event.target.checked)}
+              />
+              <span>Envoyer un accusé de réception au client</span>
+            </label>
+          </div>
+        ) : null}
         <div className="intervention-service-grid">
           {serviceOptions.map((option) => {
             const Icon = option.icon;
@@ -502,10 +591,12 @@ export function InterventionRequestModal({
           ) : (
             <div className="intervention-empty">
               <span>Aucune solution active n'est rattachée à ce flux.</span>
-              <button type="button" className="secondary-action" onClick={requestSolutionInfo}>
-                <Sparkles aria-hidden="true" />
-                Contacter l'équipe
-              </button>
+              {onSupportRequest ? (
+                <button type="button" className="secondary-action" onClick={requestSolutionInfo}>
+                  <Sparkles aria-hidden="true" />
+                  Contacter l'équipe
+                </button>
+              ) : null}
             </div>
           )}
         </div>
@@ -628,11 +719,19 @@ export function InterventionRequestModal({
       return (
         <div className="intervention-success">
           <CheckCircle2 aria-hidden="true" />
-          <h3>Demande reçue</h3>
+          <h3>{adminRequest ? "Demande transmise" : "Demande reçue"}</h3>
           <p>
-            Votre demande a bien été transmise à l'équipe Fluxperf. Référence :{" "}
+            {adminRequest ? "La demande a bien été transmise à l'équipe Fluxperf." : "Votre demande a bien été transmise à l'équipe Fluxperf."} Référence :{" "}
             <strong>{requestId}</strong>
           </p>
+          {adminSubmission ? (
+            <p>
+              {adminSubmission.notification.status === "requested"
+                ? `Un accusé de réception a été demandé pour ${adminSubmission.notification.email}.`
+                : "L'accusé de réception client a été désactivé pour cette demande."}
+              {adminSubmission.history.status === "failed" ? " L'historique de la console sera à vérifier." : ""}
+            </p>
+          ) : null}
         </div>
       );
     }
@@ -648,6 +747,13 @@ export function InterventionRequestModal({
             <small>Service</small>
             <strong>{selectedService?.label ?? "Non sélectionné"}</strong>
           </div>
+          {adminRequest ? (
+            <div>
+              <small>Demandeur</small>
+              <strong>{selectedRequester ? ([selectedRequester.firstName, selectedRequester.lastName].filter(Boolean).join(" ") || selectedRequester.email) : "Non sélectionné"}</strong>
+              {selectedRequester ? <small>{selectedRequester.email}</small> : null}
+            </div>
+          ) : null}
           <div>
             <small>Priorité</small>
             <strong>{labelFor(priorityOptions, priority)}</strong>
@@ -676,6 +782,12 @@ export function InterventionRequestModal({
                 : "Aucune"}
             </strong>
           </div>
+          {adminRequest ? (
+            <div>
+              <small>Accusé de réception</small>
+              <strong>{sendAcknowledgment ? "Demandé au client" : "Désactivé"}</strong>
+            </div>
+          ) : null}
         </div>
       </div>
     );
@@ -748,7 +860,7 @@ export function InterventionRequestModal({
 
           <aside className="intervention-side">
             <strong>{client.companyName}</strong>
-            <span>{email}</span>
+            <span>{adminRequest ? `Saisie pour : ${requesterEmail}` : email}</span>
             <div>
               <Paperclip aria-hidden="true" />
               <span>

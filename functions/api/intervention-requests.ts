@@ -1,215 +1,16 @@
-import { getAuthenticatedEmail, isProduction } from "../lib/auth";
+import { getAuthenticatedEmail } from "../lib/auth";
 import { findClientForEmailInWorkbook } from "../lib/clients";
-import { formatCompactFrenchDate } from "../lib/dateFormats";
 import { readGoogleWorkbookValues } from "../lib/googleSheets";
+import {
+  buildInterventionRequestId,
+  buildInterventionWebhookPayload,
+  forwardInterventionRequest,
+  parseInterventionRequest,
+  validateInterventionFiles,
+  validateInterventionRequest
+} from "../lib/interventionRequests";
 import { json, jsonError } from "../lib/response";
-import type { ClientDto, ClientSolutionDto, PagesContext } from "../lib/types";
-
-const MAX_FILES = 5;
-const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
-const MAX_TOTAL_FILE_SIZE_BYTES = 15 * 1024 * 1024;
-
-const allowedServices = new Set(["visibility_acquisition", "automation_ai", "assistant_ai"]);
-const allowedPriorities = new Set(["normal", "urgent", "critical"]);
-const allowedNeeds = new Set([
-  "content_update",
-  "technical_issue",
-  "new_creation",
-  "page_creation",
-  "seo",
-  "advertising_campaign",
-  "tracking_analytics",
-  "performance_optimization",
-  "automation",
-  "dashboard_reporting",
-  "process_automation",
-  "tool_integration",
-  "workflow_issue",
-  "data_sync",
-  "ai_prompt_optimization",
-  "scenario_improvement",
-  "ai_assistant",
-  "answer_adjustment",
-  "knowledge_base",
-  "prompt_instructions",
-  "access_issue",
-  "new_capability",
-  "conversation_analysis",
-  "user_support",
-  "other"
-]);
-
-type IncomingPayload = {
-  service?: unknown;
-  solutionIds?: unknown;
-  siteIds?: unknown;
-  needs?: unknown;
-  priority?: unknown;
-  message?: unknown;
-};
-
-function isString(value: unknown): value is string {
-  return typeof value === "string";
-}
-
-function asStringArray(value: unknown): string[] {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return Array.from(
-    new Set(value.filter(isString).map((item) => item.trim()).filter(Boolean))
-  );
-}
-
-function parsePayload(value: FormDataEntryValue | null): IncomingPayload | null {
-  if (!isString(value)) {
-    return null;
-  }
-
-  try {
-    const parsed = JSON.parse(value) as unknown;
-
-    return parsed && typeof parsed === "object" ? (parsed as IncomingPayload) : null;
-  } catch {
-    return null;
-  }
-}
-
-function buildRequestId(now = new Date()): string {
-  const date = formatCompactFrenchDate(now);
-  const bytes = new Uint8Array(2);
-  crypto.getRandomValues(bytes);
-  const suffix = Array.from(bytes)
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("")
-    .toUpperCase();
-
-  return `FP-${date}-${suffix}`;
-}
-
-function validateFiles(files: File[]): Response | null {
-  if (files.length > MAX_FILES) {
-    return jsonError(400, "TOO_MANY_FILES", `Vous pouvez joindre ${MAX_FILES} fichiers maximum.`);
-  }
-
-  const totalSize = files.reduce((sum, file) => sum + file.size, 0);
-
-  if (totalSize > MAX_TOTAL_FILE_SIZE_BYTES) {
-    return jsonError(
-      400,
-      "FILES_TOTAL_TOO_LARGE",
-      "L'ensemble des fichiers joints dépasse la limite de 15 Mo."
-    );
-  }
-
-  const oversizedFile = files.find((file) => file.size > MAX_FILE_SIZE_BYTES);
-
-  if (oversizedFile) {
-    return jsonError(
-      400,
-      "FILE_TOO_LARGE",
-      `Le fichier "${oversizedFile.name}" dépasse la limite de 10 Mo.`
-    );
-  }
-
-  return null;
-}
-
-function validateRequest(
-  payload: IncomingPayload | null,
-  client: ClientDto
-):
-  | {
-      service: string;
-      solutionIds: string[];
-      selectedSolutions: ClientSolutionDto[];
-      needs: string[];
-      priority: string;
-      message: string;
-    }
-  | Response {
-  if (!payload) {
-    return jsonError(400, "INVALID_PAYLOAD", "La demande est invalide.");
-  }
-
-  const service = isString(payload.service) ? payload.service.trim() : "";
-  const priority = isString(payload.priority) ? payload.priority.trim() : "";
-  const message = isString(payload.message) ? payload.message.trim() : "";
-  const needs = asStringArray(payload.needs);
-  const solutionIds = asStringArray(payload.solutionIds);
-
-  if (!allowedServices.has(service)) {
-    return jsonError(400, "INVALID_SERVICE", "Le service sélectionné est invalide.");
-  }
-
-  if (!allowedPriorities.has(priority)) {
-    return jsonError(400, "INVALID_PRIORITY", "La priorité sélectionnée est invalide.");
-  }
-
-  if (needs.length === 0 || needs.some((need) => !allowedNeeds.has(need))) {
-    return jsonError(400, "INVALID_NEEDS", "Sélectionnez au moins un besoin valide.");
-  }
-
-  if (message.length < 10) {
-    return jsonError(400, "MESSAGE_REQUIRED", "Précisez votre demande en quelques mots.");
-  }
-
-  const availableSolutions = (client.solutions ?? []).filter((solution) => solution.type === service);
-  const selectedSolutions = availableSolutions.filter((solution) => solutionIds.includes(solution.id));
-  const invalidSolutionIds = solutionIds.filter(
-    (solutionId) => !availableSolutions.some((solution) => solution.id === solutionId)
-  );
-
-  if (invalidSolutionIds.length > 0) {
-    return jsonError(400, "SOLUTION_NOT_ALLOWED", "Une solution sélectionnée ne correspond pas à votre compte.");
-  }
-
-  if (availableSolutions.length === 0) {
-    return jsonError(400, "SOLUTION_NOT_ACTIVE", "Aucune solution active ne correspond à ce flux.");
-  }
-
-  if (selectedSolutions.length === 0) {
-    return jsonError(400, "SOLUTION_REQUIRED", "Sélectionnez la solution concernée par votre demande.");
-  }
-
-  return {
-    service,
-    solutionIds,
-    selectedSolutions,
-    needs,
-    priority,
-    message
-  };
-}
-
-function buildForwardedPayload(
-  request: Request,
-  requestId: string,
-  email: string,
-  client: ClientDto,
-  validated: Exclude<ReturnType<typeof validateRequest>, Response>
-) {
-  return {
-    requestId,
-    submittedAt: new Date().toISOString(),
-    source: {
-      app: "my-fluxperf",
-      hostname: new URL(request.url).hostname
-    },
-    requester: {
-      email,
-      firstName: client.firstName,
-      lastName: client.lastName
-    },
-    client: {
-      id: client.id,
-      companyName: client.companyName,
-      fluxperfContact: client.fluxperfContact
-    },
-    request: validated
-  };
-}
+import type { PagesContext } from "../lib/types";
 
 export async function onRequestPost(context: PagesContext): Promise<Response> {
   const email = await getAuthenticatedEmail(context.request, context.env);
@@ -232,53 +33,40 @@ export async function onRequestPost(context: PagesContext): Promise<Response> {
 
     const formData = await context.request.formData();
     const files = formData.getAll("files[]").filter((entry): entry is File => entry instanceof File);
-    const fileError = validateFiles(files);
+    const fileError = validateInterventionFiles(files);
 
     if (fileError) {
       return fileError;
     }
 
-    const validated = validateRequest(parsePayload(formData.get("payload")), result.client);
+    const validated = validateInterventionRequest(parseInterventionRequest(formData.get("payload")), result.client.solutions);
 
     if (validated instanceof Response) {
       return validated;
     }
 
-    const requestId = buildRequestId();
-    const forwardedPayload = buildForwardedPayload(
+    const requestId = buildInterventionRequestId();
+    const forwardedPayload = buildInterventionWebhookPayload(
       context.request,
       requestId,
-      email,
-      result.client,
+      {
+        client: {
+          id: result.client.id,
+          companyName: result.client.companyName,
+          fluxperfContact: result.client.fluxperfContact
+        },
+        requester: {
+          email,
+          firstName: result.client.firstName,
+          lastName: result.client.lastName
+        },
+        source: { app: "my-fluxperf" }
+      },
       validated
     );
-    const webhookUrl = context.env.N8N_INTERVENTION_WEBHOOK_URL?.trim();
+    const forwardingError = await forwardInterventionRequest(context.env, files, forwardedPayload);
 
-    if (!webhookUrl) {
-      if (isProduction(context.env)) {
-        return jsonError(503, "WEBHOOK_NOT_CONFIGURED", "Le service de demande est indisponible.");
-      }
-
-      return json({ status: "received", requestId }, { status: 202 });
-    }
-
-    const outbound = new FormData();
-    outbound.append("payload", JSON.stringify(forwardedPayload));
-    files.forEach((file) => outbound.append("files[]", file, file.name));
-
-    const webhookResponse = await fetch(webhookUrl, {
-      method: "POST",
-      headers: context.env.N8N_INTERVENTION_WEBHOOK_SECRET
-        ? {
-            "X-Fluxperf-Webhook-Secret": context.env.N8N_INTERVENTION_WEBHOOK_SECRET
-          }
-        : undefined,
-      body: outbound
-    });
-
-    if (!webhookResponse.ok) {
-      return jsonError(502, "WEBHOOK_FAILED", "La demande n'a pas pu être transmise à nos équipes.");
-    }
+    if (forwardingError) return forwardingError;
 
     return json({ status: "received", requestId }, { status: 202 });
   } catch {

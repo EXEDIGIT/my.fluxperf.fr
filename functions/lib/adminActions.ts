@@ -7,6 +7,7 @@ type AdminActionInput = {
   type: string;
   label: string;
   actorEmail: string;
+  requesterEmail?: string;
   reference?: string;
   status?: string;
   details?: string;
@@ -25,7 +26,7 @@ function actionId(now = new Date()): string {
   return `ACT-${formatCompactFrenchDate(now)}-${suffix}`;
 }
 
-export async function logAdminAction(env: AppEnv, input: AdminActionInput): Promise<void> {
+export async function logAdminAction(env: AppEnv, input: AdminActionInput): Promise<boolean> {
   const now = new Date();
   const details = [input.details?.trim(), `Action par ${input.actorEmail}`].filter(Boolean).join(" - ");
   const row = [
@@ -35,7 +36,7 @@ export async function logAdminAction(env: AppEnv, input: AdminActionInput): Prom
     input.type,
     input.label,
     input.reference?.trim() ?? "",
-    input.actorEmail,
+    input.requesterEmail?.trim() || input.actorEmail,
     "fp-console",
     input.status ?? "realisee",
     details
@@ -43,11 +44,13 @@ export async function logAdminAction(env: AppEnv, input: AdminActionInput): Prom
 
   try {
     await appendGoogleSheetValues(env, getGoogleWriteRanges(env).actions, [row]);
+    return true;
   } catch (error) {
     console.error("admin_action_log_failed", {
       clientId: input.clientId,
       type: input.type,
       message: error instanceof Error ? error.message : "Unknown Google Sheets error"
     });
+    return false;
   }
 }

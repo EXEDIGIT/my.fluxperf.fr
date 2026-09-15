@@ -16,7 +16,9 @@ import type {
   AdminMonthlyReportsResponse,
   AdminMonthlyReportDetailResponse,
   AdminMonthlyReportRetryResponse,
-  AdminMonthlyReportTestResponse
+  AdminMonthlyReportTestResponse,
+  AdminInterventionRequestInput,
+  AdminInterventionRequestResponse
 } from "../types/admin";
 import { ApiError } from "./api";
 import { getSupabaseAccessToken } from "./supabase";
@@ -27,7 +29,7 @@ async function adminFetch<T>(url: string, init: RequestInit = {}): Promise<T> {
 
   headers.set("Accept", "application/json");
 
-  if (init.body) {
+  if (init.body && !(init.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
   }
 
@@ -220,6 +222,35 @@ export function reactivateAdminClientSolution(
     `/api/admin/clients/${encodeURIComponent(clientId)}/solutions/${encodeURIComponent(solutionId)}/reactivate`,
     {
       method: "POST"
+    }
+  );
+}
+
+export function submitAdminInterventionRequest(
+  clientId: string,
+  input: AdminInterventionRequestInput
+): Promise<AdminInterventionRequestResponse> {
+  const formData = new FormData();
+
+  formData.append(
+    "payload",
+    JSON.stringify({
+      requesterContactId: input.requesterContactId,
+      service: input.service,
+      solutionIds: input.solutionIds,
+      needs: input.needs,
+      priority: input.priority,
+      message: input.message,
+      sendAcknowledgment: input.sendAcknowledgment
+    })
+  );
+  input.files.forEach((file) => formData.append("files[]", file, file.name));
+
+  return adminFetch<AdminInterventionRequestResponse>(
+    `/api/admin/clients/${encodeURIComponent(clientId)}/intervention-requests`,
+    {
+      method: "POST",
+      body: formData
     }
   );
 }
